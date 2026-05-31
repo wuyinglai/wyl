@@ -140,6 +140,14 @@ export class BattleScene extends Phaser.Scene {
         this.scene.start('MapScene');
       }
     });
+    // J 键：让第一个角色 HP=0（dev-only 调试键，阶段3.1验收用）
+    this.input.keyboard?.on('keydown-J', () => {
+      const firstChar = this.battleManager.state.characters[0];
+      if (firstChar) {
+        firstChar.currentHp = 0;
+        console.log(`[战斗调试J] ${firstChar.def.name} HP设为0，将在战斗结束时进入重伤`);
+      }
+    });
 
     console.log('[余烬商队] 战斗场景初始化完成');
     console.log('队伍:', characters.map(c => c.def.name).join(', '));

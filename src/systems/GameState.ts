@@ -80,7 +80,7 @@ export function createInitialGameState(): GameState {
     characterStates: {} as Record<CharacterId, CharacterState>,
 
     day: 1,
-    maxDay: 60,
+    maxDay: 120, // 阶段3.1验收：延长测试期限
     food: 8,
     morale: 3,
     caravanHp: 45,
