@@ -17,6 +17,11 @@ export class DeckManager {
     char.discardPile = [];
     char.hand = [];
 
+    // P0-29: 打印 drawPile 初始化日志，用于验证奖励卡是否正确加载
+    console.log(
+      `[DeckManager] drawPile 初始卡牌列表 (${char.def?.name ?? "unknown"}): ${char.drawPile.map((c) => c.name).join(", ")}`,
+    );
+
     // 初始抽2张牌
     this.drawCards(char, 2);
   }

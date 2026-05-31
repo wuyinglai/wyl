@@ -468,6 +468,15 @@ export class MapScene extends Phaser.Scene {
           this.scene.start("BattleScene", { battleType: "normal" });
           break;
         }
+        case "e": {
+          // E 键：直接进入精英战斗（阶段4.2验收用调试键，测试精英胜利弹奖励）
+          const gsE = getGameState();
+          gsE.currentBattleType = "elite";
+          setGameState(gsE);
+          console.log("[调试E] 直接进入精英战斗");
+          this.scene.start("BattleScene");
+          break;
+        }
         case "x": {
           // X 键：直接进入Boss战斗（阶段4验收用调试键，测试Boss胜利不弹奖励）
           const gsX = getGameState();
@@ -2645,8 +2654,15 @@ export class MapScene extends Phaser.Scene {
       const hp = char.state?.currentHp ?? char.def.maxHp;
       const maxHp = char.def.maxHp;
       let statusText = `HP: ${hp}/${maxHp}`;
-      if (char.state?.isDead) statusText += " [死亡]";
-      else if (char.state?.isWounded) statusText += " [重伤]";
+      if (char.state?.isDead) {
+        statusText += " [死亡]";
+      } else if (char.state?.isWounded) {
+        statusText += ` [重伤 restNodes=${char.state.restNodes}]`;
+      }
+      const gw = char.state?.graveWounds ?? 0;
+      if (gw > 0) {
+        statusText += ` 重伤次数:${gw}/3`;
+      }
 
       const hpText = this.add
         .text(0, 28, statusText, {
@@ -2724,6 +2740,7 @@ export class MapScene extends Phaser.Scene {
       closeViewer();
       this._deckViewerOpen = false;
       this._deckViewerClose = undefined;
+      console.log("[牌组查看] 已关闭，UI 对象已销毁");
     };
   }
 
