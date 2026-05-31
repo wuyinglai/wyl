@@ -122,22 +122,15 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown-E', () => this.endTurn());
     this.input.keyboard?.on('keydown-ENTER', () => this.endTurn());
     this.input.keyboard?.on('keydown-R', () => this.restart());
-    // Q 键：强制胜利（测试用，配合自动移动测试）
+    // Q 键：强制胜利（dev-only 调试键，阶段3.1验收用）
+    // 必须走 onBattleEnd(true) 统一流程，确保重伤同步逻辑执行
     this.input.keyboard?.on('keydown-Q', () => {
       if (!this.battleEnded) {
-        console.log('[战斗调试] 强制胜利（测试用）');
-        this.battleEnded = true;
-        const gameState = getGameState();
-        gameState.battleResult = 'victory';
-        gameState.caravanHp = this.battleManager.state.caravanDurability;
-        const { x, y } = gameState.currentPosition;
-        const cell = gameState.mapCells[y][x];
-        cell.isCleared = true;
-        cell.isRevealed = true;
-        gameState.currentBattleType = null;
-        updateReachableCells(gameState);
-        setGameState(gameState);
-        this.scene.start('MapScene');
+        console.log('[战斗调试Q] 强制胜利，走统一战斗结束流程');
+        // 直接杀死所有敌人
+        this.battleManager.state.enemies.forEach(e => e.currentHp = 0);
+        // 调用统一的战斗结束处理
+        this.onBattleEnd(true);
       }
     });
     // J 键：让第一个角色 HP=0（dev-only 调试键，阶段3.1验收用）
