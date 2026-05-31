@@ -3,6 +3,12 @@ import { MainMenuScene } from "./scenes/MainMenuScene";
 import { CharacterSelectScene } from "./scenes/CharacterSelectScene";
 import { MapScene } from "./scenes/MapScene";
 import { BattleScene } from "./scenes/BattleScene";
+import {
+  getGameState,
+  setGameState,
+  getMovableNeighbors,
+  resolveQuestionCell,
+} from "./systems/GameState";
 
 // 全局错误处理
 window.onerror = (message, source, lineno, colno, error) => {
@@ -30,4 +36,9 @@ const config: Phaser.Types.Core.GameConfig = {
 const game = new Phaser.Game(config);
 // 暴露到 window 以便调试
 (window as any).game = game;
+(window as any).getGameState = getGameState;
+(window as any).setGameState = setGameState;
+(window as any).getMovableNeighbors = getMovableNeighbors;
+(window as any).resolveQuestionCell = resolveQuestionCell;
+
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

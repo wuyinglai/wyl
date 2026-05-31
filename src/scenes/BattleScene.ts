@@ -47,6 +47,9 @@ export class BattleScene extends Phaser.Scene {
   private rewardKeyHandler?: Function;
   private battleResultKeyHandler?: Function;
 
+  // dev-only: 暴露奖励卡列表，供自动化测试直接调用 selectRewardCard
+  private _rewardCards: CardDef[] = [];
+
   constructor() {
     super({ key: "BattleScene" });
   }
@@ -61,6 +64,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.off("keydown-Q");
     this.input.keyboard?.off("keydown-J");
     this.input.keyboard?.off("keydown-R");
+    this.input.keyboard?.off("keydown-F");
     if (this.rewardKeyHandler) {
       this.input.keyboard?.off("keydown", this.rewardKeyHandler);
       this.rewardKeyHandler = undefined;
@@ -1234,12 +1238,16 @@ export class BattleScene extends Phaser.Scene {
     const h = this.scale.height;
     const gameState = getGameState();
 
+    // 重置 battleEnded 以允许奖励卡选择（onBattleEnd 会先设为 true）
+    this.battleEnded = false;
+
     // 生成3张奖励卡
     // P0-9: 奖励池排除死亡角色
     const aliveTeamIds = gameState.selectedCharacters.filter(
       (id) => !gameState.characterStates[id]?.isDead,
     );
     const rewardCards = generateRewardCards(aliveTeamIds);
+    this._rewardCards = rewardCards; // dev-only: 暴露给自动化测试
 
     // 遮罩
     const overlay = this.add.graphics();
@@ -1468,6 +1476,14 @@ export class BattleScene extends Phaser.Scene {
       }
     };
     this.input.keyboard?.on("keydown", this.rewardKeyHandler);
+
+    // F 键：dev-only 快捷键，自动选择第1张奖励卡（用于自动化测试）
+    this.input.keyboard?.on("keydown-F", () => {
+      if (rewardCards.length > 0 && !this.battleEnded) {
+        console.log("[奖励调试F] 自动选择第1张奖励卡:", rewardCards[0].name);
+        this.selectRewardCard(rewardCards[0]);
+      }
+    });
 
     // 底部提示
     const hint = this.add
