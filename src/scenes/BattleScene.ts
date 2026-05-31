@@ -813,29 +813,30 @@ export class BattleScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // 遮罩
-    const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.7);
-    overlay.fillRect(0, 0, w, h);
-
-    // 显示结果
+    // 显示结果（先创建按钮，再创建遮罩，确保按钮在上层）
     const resultText = this.add.text(w / 2, h / 2 - 40,
       victory ? '🎉 战 斗 胜 利 🎉' : '💀 战 斗 失 败 💀', {
       fontSize: '36px', color: victory ? '#44ff44' : '#ff4444',
       fontStyle: 'bold', fontFamily: 'monospace',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(100);
 
     // 结果说明
     const resultDesc = this.add.text(w / 2, h / 2 + 10,
       victory ? '所有敌人被击败！' : '队伍全灭或商队被摧毁！', {
       fontSize: '16px', color: '#aaaaaa', fontFamily: 'monospace',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(100);
 
     // 返回地图按钮
     const btn = this.add.text(w / 2, h / 2 + 60, victory ? '【返回地图】' : '【重新开始】', {
       fontSize: '18px', color: '#ffffff', backgroundColor: victory ? '#2a8a4a' : '#444466',
       padding: { x: 20, y: 10 }, fontFamily: 'monospace',
-    }).setOrigin(0.5).setInteractive();
+    }).setOrigin(0.5).setInteractive().setDepth(100);
+
+    // 遮罩（放在底层）
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.7);
+    overlay.fillRect(0, 0, w, h);
+    overlay.setDepth(50);
 
     btn.on('pointerdown', () => {
       if (victory) {
@@ -892,25 +893,13 @@ export class BattleScene extends Phaser.Scene {
     const h = this.scale.height;
     const gameState = getGameState();
 
-    // 遮罩
-    const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.8);
-    overlay.fillRect(0, 0, w, h);
-
-    // 弹窗背景
-    const popupBg = this.add.graphics();
-    popupBg.fillStyle(0x2a2a3e, 1);
-    popupBg.fillRect(w / 2 - 250, h / 2 - 120, 500, 240);
-    popupBg.lineStyle(3, 0xffcc44, 1);
-    popupBg.strokeRect(w / 2 - 250, h / 2 - 120, 500, 240);
-
-    // 标题
+    // 标题（先创建UI元素）
     const titleText = this.add.text(w / 2, h / 2 - 70, '🎉 远征胜利！', {
       fontSize: '36px',
       color: '#ffcc44',
       fontFamily: 'monospace',
       fontStyle: 'bold',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(100);
 
     // 消息
     const goalMsg = gameState.expeditionGoal === 'boss'
@@ -920,7 +909,7 @@ export class BattleScene extends Phaser.Scene {
       fontSize: '20px',
       color: '#cccccc',
       fontFamily: 'monospace',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(100);
 
     // 返回主菜单按钮
     const btn = this.add.text(w / 2, h / 2 + 60, '【返回主菜单】', {
@@ -929,7 +918,21 @@ export class BattleScene extends Phaser.Scene {
       backgroundColor: '#2a4a8a',
       padding: { x: 40, y: 12 },
       fontFamily: 'monospace',
-    }).setOrigin(0.5).setInteractive();
+    }).setOrigin(0.5).setInteractive().setDepth(100);
+
+    // 弹窗背景
+    const popupBg = this.add.graphics();
+    popupBg.fillStyle(0x2a2a3e, 1);
+    popupBg.fillRect(w / 2 - 250, h / 2 - 120, 500, 240);
+    popupBg.lineStyle(3, 0xffcc44, 1);
+    popupBg.strokeRect(w / 2 - 250, h / 2 - 120, 500, 240);
+    popupBg.setDepth(90);
+
+    // 遮罩（放在最底层）
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.8);
+    overlay.fillRect(0, 0, w, h);
+    overlay.setDepth(50);
 
     btn.on('pointerdown', () => {
       resetGameState();
@@ -943,22 +946,25 @@ export class BattleScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    const overlay = this.add.graphics();
-    overlay.fillStyle(0x000000, 0.8);
-    overlay.fillRect(0, 0, w, h);
-
+    // 先创建UI元素（确保在上层）
     this.add.text(w / 2, h / 2 - 60, '💀 远征失败 💀', {
       fontSize: '36px', color: '#ff4444', fontStyle: 'bold', fontFamily: 'monospace',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(100);
 
     this.add.text(w / 2, h / 2, '全队重伤或死亡，无法继续远征', {
       fontSize: '16px', color: '#aaaaaa', fontFamily: 'monospace',
-    }).setOrigin(0.5);
+    }).setOrigin(0.5).setDepth(100);
 
     const btn = this.add.text(w / 2, h / 2 + 60, '【返回主菜单】', {
       fontSize: '18px', color: '#ffffff', backgroundColor: '#444466',
       padding: { x: 20, y: 10 }, fontFamily: 'monospace',
-    }).setOrigin(0.5).setInteractive();
+    }).setOrigin(0.5).setInteractive().setDepth(100);
+
+    // 遮罩（放在底层）
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.8);
+    overlay.fillRect(0, 0, w, h);
+    overlay.setDepth(50);
 
     btn.on('pointerdown', () => {
       resetGameState();
