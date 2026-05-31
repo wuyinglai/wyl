@@ -109,10 +109,10 @@
 | R | 打开卡牌奖励 | BattleScene |
 | H | 商队HP-20 | MapScene |
 | U | 全队HP-10 | MapScene |
-| K | 打开营地 | MapScene |
-| M | 打开补给 | MapScene |
+| K | 触发补给点弹窗 | MapScene |
+| M | 触发营地弹窗 | MapScene |
 | P | 商队状态日志 | MapScene |
-| L | 补给修复商队 | MapScene |
+| L | 全队进入重伤 / 测试远征失败 | MapScene |
 | V | 查看牌组 | MapScene |
 | T | 自动移动测试 | MapScene |
 | Y | 点击模拟测试 | MapScene |
