@@ -3024,13 +3024,13 @@ export class MapScene extends Phaser.Scene {
     const cardLines = cs.deck
       .map(
         (c, i) =>
-          `${i + 1}. ⚡${c.cost} ${c.name}${c.upgraded ? "+" : ""} [${c.type}] ${c.description}`,
+          `${i + 1}. ⚡${c.cost} ${c.name} [${c.type}] ${c.description}`,
       )
       .join("\n");
 
     const options: { text: string; action: () => void }[] = cs.deck.map(
       (card, index) => ({
-        text: `${index + 1}. ${card.name}${card.upgraded ? "+" : ""}`,
+        text: `${index + 1}. ${card.name}`,
         action: () => {
           // 按 instanceId 精确定位删除
           const targetIdx = cs.deck.findIndex((c) => c.instanceId === card.instanceId);
