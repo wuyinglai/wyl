@@ -65,6 +65,7 @@ export class BattleScene extends Phaser.Scene {
     this.input.keyboard?.off("keydown-J");
     this.input.keyboard?.off("keydown-R");
     this.input.keyboard?.off("keydown-F");
+    this.input.keyboard?.off("keydown-T");
     if (this.rewardKeyHandler) {
       this.input.keyboard?.off("keydown", this.rewardKeyHandler);
       this.rewardKeyHandler = undefined;
@@ -232,6 +233,51 @@ export class BattleScene extends Phaser.Scene {
         console.log("[战斗调试R] 直接打开卡牌奖励界面");
         this.showCardRewardScreen();
       }
+    });
+
+    // T 键：dev-only，将一张升级卡注入第一个角色的手牌（用于测试升级卡实际出牌效果）
+    this.input.keyboard?.on("keydown-T", () => {
+      if (this.battleEnded) return;
+      const char = this.battleManager.state.characters[0];
+      if (!char || char.currentHp <= 0) {
+        console.log("[战斗调试T] 第一个角色不可用");
+        return;
+      }
+      // 优先查找举盾（guardian_shield_up），用于测试升级卡护甲效果
+      const upgradable = char.deck.find(
+        (c) =>
+          c.id === "guardian_shield_up" ||
+          c.id === "guardian_heavy_strike" ||
+          c.id === "guardian_intercept" ||
+          c.id === "guardian_shield_bash",
+      );
+      if (!upgradable) {
+        console.log("[战斗调试T] 未找到可升级的护路人卡牌");
+        return;
+      }
+      // 构造升级卡（模拟 upgradeCard 逻辑）
+      const upgradedCard: CardDef = {
+        ...upgradable,
+        name: `${upgradable.name}+`,
+        upgraded: true,
+        effects: upgradable.effects.map((eff) => {
+          if (
+            eff.type === "damage" ||
+            eff.type === "heal" ||
+            eff.type === "armor" ||
+            eff.type === "repair_caravan"
+          ) {
+            return { ...eff, value: eff.value + 3 };
+          }
+          return { ...eff };
+        }),
+      };
+      char.hand.push(upgradedCard);
+      console.log(
+        `[战斗调试T] 注入升级卡【${upgradedCard.name}】到手牌，effects=${JSON.stringify(upgradedCard.effects)}`,
+      );
+      console.log(`[战斗调试T] 当前手牌: ${char.hand.map((c) => c.name).join(", ")}`);
+      this.updateUI();
     });
 
     console.log("[余烬商队] 战斗场景初始化完成");

@@ -2718,7 +2718,7 @@ export class MapScene extends Phaser.Scene {
       const cardStartY = 75;
 
       cardsToShow.forEach((card, cardIdx) => {
-        const cardName = card.upgraded ? `${card.name}+` : card.name;
+        const cardName = card.name; // upgradeCard已将name改为"举盾+"，无需再拼
         const cardColor = card.upgraded ? "#44ff88" : "#cccccc";
         const cardText = this.add
           .text(0, cardStartY + cardIdx * 18, `⚡${card.cost} ${cardName}`, {
@@ -2779,7 +2779,7 @@ export class MapScene extends Phaser.Scene {
   private upgradeCard(card: CardDef): CardDef {
     const upgradedCard: CardDef = {
       ...card,
-      id: `${card.id}_up`,
+      // 保留原 id 和 instanceId，不生成 _up 后缀（避免同名卡升级后 id 重复）
       name: `${card.name}+`,
       upgraded: true,
       effects: card.effects.map((eff) => {
@@ -2913,12 +2913,17 @@ export class MapScene extends Phaser.Scene {
       .join("\n");
 
     const options: { text: string; action: () => void }[] =
-      upgradableWithIndex.map(({ card, deckIndex }, index) => ({
+      upgradableWithIndex.map(({ card }, index) => ({
         text: `${index + 1}. ${card.name}`,
         action: () => {
-          // 执行升级：直接用 deckIndex 替换
+          // 按 instanceId 精确定位
+          const targetIdx = cs.deck.findIndex((c) => c.instanceId === card.instanceId);
+          if (targetIdx === -1) {
+            console.warn(`[补给] 升级失败: instanceId=${card.instanceId} 在deck中未找到`);
+            return;
+          }
           const upgradedCard = this.upgradeCard(card);
-          cs.deck[deckIndex] = upgradedCard;
+          cs.deck[targetIdx] = upgradedCard;
           setGameState(gameState);
           console.log(
             `[补给] 升级卡牌: ${cs.def.name} ${card.name} → ${upgradedCard.name}`,
@@ -3027,8 +3032,13 @@ export class MapScene extends Phaser.Scene {
       (card, index) => ({
         text: `${index + 1}. ${card.name}${card.upgraded ? "+" : ""}`,
         action: () => {
-          // 执行删除
-          const removedCard = cs.deck.splice(index, 1)[0];
+          // 按 instanceId 精确定位删除
+          const targetIdx = cs.deck.findIndex((c) => c.instanceId === card.instanceId);
+          if (targetIdx === -1) {
+            console.warn(`[补给] 删除失败: instanceId=${card.instanceId} 在deck中未找到`);
+            return;
+          }
+          const removedCard = cs.deck.splice(targetIdx, 1)[0];
           setGameState(gameState);
           console.log(
             `[牌组] ${cs.def.name} 删除卡牌：${removedCard.name}，当前 deck=${cs.deck.length}`,
