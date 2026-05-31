@@ -203,6 +203,9 @@ export class MapScene extends Phaser.Scene {
     // 如果有弹窗打开，不处理地图点击
     if (this.modalContainer) return;
 
+    // Bug 1 (Item 1 P0): 如果牌组查看界面打开，不处理地图点击
+    if (this._deckViewerOpen) return;
+
     // 将鼠标坐标转换为地图容器内坐标
     const worldX = pointer.x - this.mapContainer.x;
     const worldY = pointer.y - this.mapContainer.y;
@@ -464,8 +467,14 @@ export class MapScene extends Phaser.Scene {
         // ========== 阶段 3.1-C 补充验收调试键 ==========
         case "b": {
           // B 键：直接进入普通战斗（阶段3.1-C验收用调试键）
-          console.log("[调试B] 直接进入普通战斗");
-          this.scene.start("BattleScene", { battleType: "normal" });
+          // Item 33 (P0): 检查全队是否可用
+          if (checkExpeditionFailed()) {
+            console.log("[调试B] 全队重伤/死亡，无法进入战斗");
+            this.showExpeditionFailedModal();
+          } else {
+            console.log("[调试B] 直接进入普通战斗");
+            this.scene.start("BattleScene", { battleType: "normal" });
+          }
           break;
         }
         case "e": {

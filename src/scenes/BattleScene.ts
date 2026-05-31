@@ -203,8 +203,14 @@ export class BattleScene extends Phaser.Scene {
     });
     // R 键：直接打开卡牌奖励界面（dev-only 调试键，阶段4验收用）
     // 不需要打战斗就能测试奖励UI
+    // Item 39 (P0): Boss 战中禁用 R 键，避免误判
     this.input.keyboard?.on("keydown-R", () => {
       if (!this.battleEnded) {
+        const gs = getGameState();
+        if (gs.currentBattleType === "boss") {
+          console.log("[战斗调试R] Boss战中禁用R键奖励调试");
+          return;
+        }
         this.battleEnded = true;
         // 同步商队耐久
         const gameState = getGameState();
@@ -1057,6 +1063,11 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private onBattleEnd(victory: boolean): void {
+    // Item 9/34 (P0): 防止重复触发
+    if (this.battleEnded) {
+      console.log("[战斗] onBattleEnd 已执行过，忽略重复调用");
+      return;
+    }
     this.battleEnded = true;
 
     // 更新游戏状态
