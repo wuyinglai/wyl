@@ -8,6 +8,7 @@ import {
   setGameState,
   getMovableNeighbors,
   resolveQuestionCell,
+  resetGameState,
 } from "./systems/GameState";
 
 // 全局错误处理
@@ -40,5 +41,6 @@ const game = new Phaser.Game(config);
 (window as any).setGameState = setGameState;
 (window as any).getMovableNeighbors = getMovableNeighbors;
 (window as any).resolveQuestionCell = resolveQuestionCell;
+(window as any).resetGameState = resetGameState;
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

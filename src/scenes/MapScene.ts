@@ -61,6 +61,9 @@ export class MapScene extends Phaser.Scene {
   private _deckViewerOpen = false;
   private _deckViewerClose?: () => void;
 
+  // 终局界面状态（胜利/失败弹窗）
+  private _victoryOverlayOpen = false;
+
   constructor() {
     super({ key: "MapScene" });
   }
@@ -77,6 +80,7 @@ export class MapScene extends Phaser.Scene {
       this._deckViewerClose();
       this._deckViewerOpen = false;
     }
+    this._victoryOverlayOpen = false;
     this.input.keyboard?.off("keydown");
     this.input.off("pointerdown");
   }
@@ -249,6 +253,9 @@ export class MapScene extends Phaser.Scene {
     this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
 
+      // 终局界面打开时，禁止所有键盘操作
+      if (this._victoryOverlayOpen) return;
+
       // 牌组查看器打开时，只允许 V/ESC 关闭，其他键忽略（Bug 1）
       if (this._deckViewerOpen) {
         if (key === "v" || key === "escape") {
@@ -306,12 +313,15 @@ export class MapScene extends Phaser.Scene {
           this.centerCameraOnPlayer();
           break;
         case "t":
+          // dev-only: 鼠标点击模拟测试，正式版本移除
           this.clickSimulationTest();
           break;
         case "y":
+          // dev-only: 自动移动测试，正式版本移除
           this.autoMoveTest();
           break;
         case "g": {
+          // dev-only: 方向点击测试，正式版本移除
           this.directionalClickTest();
           break;
         }
@@ -1632,10 +1642,12 @@ export class MapScene extends Phaser.Scene {
   }
 
   private showExpeditionFailedModal(): void {
+    this._victoryOverlayOpen = true;
     this.openModal("💀 远征失败", "全队重伤或死亡，无法继续远征", [
       {
         text: "返回主菜单",
         action: () => {
+          this._victoryOverlayOpen = false;
           resetGameState();
           this.closeModal();
           this.scene.start("MainMenuScene");
@@ -1940,6 +1952,8 @@ export class MapScene extends Phaser.Scene {
     const h = this.scale.height;
     const gameState = getGameState();
 
+    this._victoryOverlayOpen = true;
+
     const overlay = this.add.graphics();
     overlay.fillStyle(0x000000, 0.8);
     overlay.fillRect(0, 0, w, h);
@@ -1978,6 +1992,7 @@ export class MapScene extends Phaser.Scene {
       .setInteractive();
 
     btn.on("pointerdown", () => {
+      this._victoryOverlayOpen = false;
       resetGameState();
       this.scene.start("MainMenuScene");
     });

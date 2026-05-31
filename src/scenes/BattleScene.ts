@@ -84,6 +84,7 @@ export class BattleScene extends Phaser.Scene {
     this.selectedCard = null;
     this.selectedEnemy = null;
     this.battleEnded = false;
+    this._rewardCards = [];
     this.skillTooltip = null;
 
     const w = this.scale.width;
@@ -197,6 +198,7 @@ export class BattleScene extends Phaser.Scene {
     });
     // J 键：让第一个角色 HP=0（dev-only 调试键，阶段3.1验收用）
     this.input.keyboard?.on("keydown-J", () => {
+      if (this.battleEnded) return;
       const firstChar = this.battleManager.state.characters[0];
       if (firstChar) {
         firstChar.currentHp = 0;
