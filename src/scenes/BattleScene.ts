@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BattleManager } from '../systems/BattleManager';
-import { createCharacterState, getStartingDeck, CHARACTER_DEFS } from '../data/characters';
+import { createCharacterState, getStartingDeck, CHARACTER_DEFS, generateRewardCards } from '../data/characters';
 import { createEnemyState, ENEMY_DEFS, ENEMY_ACTIONS, getEnemyNextAction } from '../data/enemies';
 import { CharacterState, EnemyState, CardDef } from '../data/types';
 import { getGameState, setGameState, resetGameState, checkVictory, updateReachableCells, getAvailableCharacters, syncCharacterStatesFromBattle, checkExpeditionFailed } from '../systems/GameState';
@@ -61,7 +61,7 @@ export class BattleScene extends Phaser.Scene {
         this.showExpeditionFailed();
         return;
       }
-      // 为每个可用角色创建战斗副本（保留HP和重伤状态，但重置牌组）
+      // 为每个可用角色创建战斗副本（保留HP和重伤状态，使用持久化牌组）
       characters = available.map(cs => {
         const fresh = createCharacterState(cs.def.id);
         fresh.currentHp = cs.currentHp;
@@ -69,6 +69,9 @@ export class BattleScene extends Phaser.Scene {
         fresh.isWounded = cs.isWounded;
         fresh.restNodes = cs.restNodes;
         fresh.isDead = cs.isDead;
+        // 使用持久化牌组（包含奖励卡），而非初始牌组
+        fresh.deck = cs.deck.map(c => ({ ...c, effects: c.effects.map(e => ({ ...e })) }));
+        console.log(`[战斗] ${cs.def.name} 牌组: ${fresh.deck.length}张`);
         return fresh;
       });
       console.log(`[战斗] 可用角色: ${characters.map(c => c.def.name).join(', ')}`);
@@ -121,7 +124,7 @@ export class BattleScene extends Phaser.Scene {
     // 键盘快捷键
     this.input.keyboard?.on('keydown-E', () => this.endTurn());
     this.input.keyboard?.on('keydown-ENTER', () => this.endTurn());
-    this.input.keyboard?.on('keydown-R', () => this.restart());
+    // R 键已移至下方绑定卡牌奖励调试功能（阶段4）
     // Q 键：强制胜利（dev-only 调试键，阶段3.1验收用）
     // 必须走 onBattleEnd(true) 统一流程，确保重伤同步逻辑执行
     this.input.keyboard?.on('keydown-Q', () => {
@@ -139,6 +142,26 @@ export class BattleScene extends Phaser.Scene {
       if (firstChar) {
         firstChar.currentHp = 0;
         console.log(`[战斗调试J] ${firstChar.def.name} HP设为0，将在战斗结束时进入重伤`);
+      }
+    });
+    // R 键：直接打开卡牌奖励界面（dev-only 调试键，阶段4验收用）
+    // 不需要打战斗就能测试奖励UI
+    this.input.keyboard?.on('keydown-R', () => {
+      if (!this.battleEnded) {
+        this.battleEnded = true;
+        // 同步商队耐久
+        const gameState = getGameState();
+        gameState.caravanHp = this.battleManager.state.caravanDurability;
+        syncCharacterStatesFromBattle(this.battleManager.state.characters);
+        // 标记当前格子为已清理
+        const { x, y } = gameState.currentPosition;
+        const cell = gameState.mapCells[y][x];
+        cell.isCleared = true;
+        cell.isRevealed = true;
+        gameState.currentBattleType = null;
+        setGameState(gameState);
+        console.log('[战斗调试R] 直接打开卡牌奖励界面');
+        this.showCardRewardScreen();
       }
     });
 
@@ -789,6 +812,7 @@ export class BattleScene extends Phaser.Scene {
 
     // 如果是Boss战且胜利，标记远征胜利
     if (victory && gameState.currentBattleType === 'boss') {
+      console.log('[战斗] Boss战胜利，进入远征胜利（不弹卡牌奖励）');
       gameState.battleResult = 'victory';
       setGameState(gameState);
       this.showExpeditionVictory();
@@ -810,82 +834,272 @@ export class BattleScene extends Phaser.Scene {
 
     setGameState(gameState);
 
+    if (victory) {
+      // 非Boss胜利：显示卡牌奖励界面
+      console.log('[战斗] 胜利，进入卡牌奖励选择');
+      this.showCardRewardScreen();
+    } else {
+      // 失败：显示失败界面
+      this.showBattleResultOverlay(false);
+    }
+  }
+
+  /** 返回地图的统一入口 */
+  private returnToMap(): void {
+    const gameState = getGameState();
+    updateReachableCells(gameState);
+    setGameState(gameState);
+    console.log('[战斗] 返回地图，已重新计算可移动格子');
+    this.scene.start('MapScene');
+  }
+
+  /** 显示战斗结果遮罩（仅用于失败） */
+  private showBattleResultOverlay(victory: boolean): void {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // 显示结果（先创建按钮，再创建遮罩，确保按钮在上层）
     const resultText = this.add.text(w / 2, h / 2 - 40,
       victory ? '🎉 战 斗 胜 利 🎉' : '💀 战 斗 失 败 💀', {
       fontSize: '36px', color: victory ? '#44ff44' : '#ff4444',
       fontStyle: 'bold', fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(100);
 
-    // 结果说明
     const resultDesc = this.add.text(w / 2, h / 2 + 10,
       victory ? '所有敌人被击败！' : '队伍全灭或商队被摧毁！', {
       fontSize: '16px', color: '#aaaaaa', fontFamily: 'monospace',
     }).setOrigin(0.5).setDepth(100);
 
-    // 返回地图按钮
-    const btn = this.add.text(w / 2, h / 2 + 60, victory ? '【返回地图】' : '【重新开始】', {
-      fontSize: '18px', color: '#ffffff', backgroundColor: victory ? '#2a8a4a' : '#444466',
+    const btn = this.add.text(w / 2, h / 2 + 60, '【返回地图】', {
+      fontSize: '18px', color: '#ffffff', backgroundColor: '#444466',
       padding: { x: 20, y: 10 }, fontFamily: 'monospace',
     }).setOrigin(0.5).setInteractive().setDepth(100);
 
-    // 遮罩（放在底层）
     const overlay = this.add.graphics();
     overlay.fillStyle(0x000000, 0.7);
     overlay.fillRect(0, 0, w, h);
     overlay.setDepth(50);
 
     btn.on('pointerdown', () => {
-      if (victory) {
-        // 胜利：重新计算可到达格子并返回地图
-        const gameState = getGameState();
-        updateReachableCells(gameState);
-        setGameState(gameState);
-        console.log('[战斗] 返回地图，已重新计算可移动格子');
-        this.scene.start('MapScene');
+      const gameState = getGameState();
+      const isTestMode = gameState._isDirectionalTesting || gameState._isAutoMoving || gameState._isClickTesting;
+      if (isTestMode) {
+        // 测试模式失败不重置
+        gameState._isDirectionalTesting = false;
+        gameState._directionalTestStep = 0;
+        gameState._directionalTestResumeStep = 0;
+        gameState._isAutoMoving = false;
+        gameState._autoMoveResumeStep = 0;
+        gameState._autoMovePrevPos = null;
+        gameState._isClickTesting = false;
+        gameState._clickTestStep = 0;
+        gameState._clickTestResumeStep = 0;
+        this.returnToMap();
       } else {
-        // 失败：测试模式下不重置游戏，直接返回地图
-        const gameState = getGameState();
-        const isTestMode = gameState._isDirectionalTesting || gameState._isAutoMoving || gameState._isClickTesting;
-        if (isTestMode) {
-          const testName = gameState._isDirectionalTesting ? '方向测试'
-            : gameState._isAutoMoving ? '自动移动测试' : '点击模拟测试';
-          console.log(`[战斗] ${testName}中战斗失败，不重置游戏，返回地图`);
-          gameState._isDirectionalTesting = false;
-          gameState._directionalTestStep = 0;
-          gameState._directionalTestResumeStep = 0;
-          gameState._isAutoMoving = false;
-          gameState._autoMoveResumeStep = 0;
-          gameState._autoMovePrevPos = null;
-          gameState._isClickTesting = false;
-          gameState._clickTestStep = 0;
-          gameState._clickTestResumeStep = 0;
-          updateReachableCells(gameState);
-          setGameState(gameState);
-          this.scene.start('MapScene');
-        } else {
-          // 正式模式失败：重置游戏并返回主菜单
-          resetGameState();
-          this.scene.start('MainMenuScene');
-        }
+        resetGameState();
+        this.scene.start('MainMenuScene');
       }
     });
-    btn.on('pointerover', () => btn.setStyle({ backgroundColor: victory ? '#3aca6a' : '#555577' }));
-    btn.on('pointerout', () => btn.setStyle({ backgroundColor: victory ? '#2a8a4a' : '#444466' }));
+    btn.on('pointerover', () => btn.setStyle({ backgroundColor: '#555577' }));
+    btn.on('pointerout', () => btn.setStyle({ backgroundColor: '#444466' }));
 
-    // 添加键盘快捷键返回地图（方便测试）
     this.input.keyboard?.on('keydown-ENTER', () => {
-      if (victory) {
-        const gameState = getGameState();
-        updateReachableCells(gameState);
-        setGameState(gameState);
-        console.log('[战斗] 按Enter返回地图');
-        this.scene.start('MapScene');
+      const gameState = getGameState();
+      const isTestMode = gameState._isDirectionalTesting || gameState._isAutoMoving || gameState._isClickTesting;
+      if (isTestMode) {
+        this.returnToMap();
+      } else {
+        resetGameState();
+        this.scene.start('MainMenuScene');
       }
     });
+  }
+
+  /** 显示卡牌奖励选择界面 */
+  private showCardRewardScreen(): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const gameState = getGameState();
+
+    // 生成3张奖励卡
+    const rewardCards = generateRewardCards(gameState.selectedCharacters);
+
+    // 遮罩
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.85);
+    overlay.fillRect(0, 0, w, h);
+    overlay.setDepth(200);
+
+    // 标题
+    const title = this.add.text(w / 2, 30, '🎉 战斗胜利！选择一张卡牌奖励', {
+      fontSize: '24px', color: '#ffcc44', fontStyle: 'bold', fontFamily: 'monospace',
+    }).setOrigin(0.5).setDepth(210);
+
+    // 卡牌类型颜色映射
+    const typeColors: Record<string, string> = {
+      attack: '#ff6644',
+      defense: '#4488ff',
+      skill: '#ffcc44',
+      heal: '#44cc88',
+      repair: '#cc88ff',
+    };
+
+    // 卡牌容器
+    const cardWidth = 320;
+    const cardHeight = 200;
+    const gap = 30;
+    const totalWidth = rewardCards.length * cardWidth + (rewardCards.length - 1) * gap;
+    const startX = (w - totalWidth) / 2;
+    const cardY = 80;
+
+    for (let i = 0; i < rewardCards.length; i++) {
+      const card = rewardCards[i];
+      const charDef = CHARACTER_DEFS[card.characterId];
+      const cx = startX + i * (cardWidth + gap);
+
+      // 卡牌背景
+      const cardBg = this.add.graphics();
+      cardBg.fillStyle(0x2a2a4a, 1);
+      cardBg.fillRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+      cardBg.lineStyle(2, charDef.color, 1);
+      cardBg.strokeRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+      cardBg.setDepth(210);
+
+      // 卡牌编号
+      const numText = this.add.text(cx + 10, cardY + 8, `${i + 1}`, {
+        fontSize: '14px', color: '#888888', fontFamily: 'monospace',
+      }).setDepth(210);
+
+      // 卡牌名称
+      const nameText = this.add.text(cx + cardWidth / 2, cardY + 20, card.name, {
+        fontSize: '20px', color: '#ffffff', fontStyle: 'bold', fontFamily: 'monospace',
+      }).setOrigin(0.5, 0).setDepth(210);
+
+      // 所属角色 + 图标
+      const charText = this.add.text(cx + cardWidth / 2, cardY + 48, `${charDef.icon} ${charDef.name}`, {
+        fontSize: '14px', color: '#aaaaaa', fontFamily: 'monospace',
+      }).setOrigin(0.5, 0).setDepth(210);
+
+      // 费用
+      const costText = this.add.text(cx + 15, cardY + 70, `⚡${card.cost}`, {
+        fontSize: '16px', color: '#ffcc44', fontStyle: 'bold', fontFamily: 'monospace',
+      }).setDepth(210);
+
+      // 类型
+      const typeColor = typeColors[card.type] || '#ffffff';
+      const typeNames: Record<string, string> = {
+        attack: '攻击', defense: '防御', skill: '技能', heal: '治疗', repair: '修理',
+      };
+      const typeText = this.add.text(cx + 70, cardY + 70, typeNames[card.type] || card.type, {
+        fontSize: '14px', color: typeColor, fontFamily: 'monospace',
+      }).setDepth(210);
+
+      // 描述（自动换行）
+      const descText = this.add.text(cx + 15, cardY + 95, card.description, {
+        fontSize: '13px', color: '#cccccc', fontFamily: 'monospace',
+        wordWrap: { width: cardWidth - 30 },
+      }).setDepth(210);
+
+      // 效果简述
+      const effectStr = card.effects.map(e => {
+        const names: Record<string, string> = {
+          damage: '伤害', heal: '治疗', armor: '护甲', draw: '抽牌',
+          mark: '标记', repair_caravan: '修商队', add_action: '行动力', morale: '士气', special: '特殊',
+        };
+        const targets: Record<string, string> = {
+          enemy: '→敌', self: '→自己', ally: '→队友', all_allies: '→全队',
+          all_enemies: '→全体敌', caravan: '→商队', none: '',
+        };
+        return `${names[e.type] || e.type}${e.value}${targets[e.target] || ''}`;
+      }).join(', ');
+      const effectText = this.add.text(cx + 15, cardY + 140, effectStr, {
+        fontSize: '12px', color: '#888888', fontFamily: 'monospace',
+        wordWrap: { width: cardWidth - 30 },
+      }).setDepth(210);
+
+      // 点击区域（不可见，覆盖整个卡牌）
+      const hitArea = this.add.rectangle(cx + cardWidth / 2, cardY + cardHeight / 2, cardWidth, cardHeight, 0x000000, 0);
+      hitArea.setInteractive({ useHandCursor: true }).setDepth(215);
+
+      // 悬停效果
+      hitArea.on('pointerover', () => {
+        cardBg.clear();
+        cardBg.fillStyle(0x3a3a6a, 1);
+        cardBg.fillRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+        cardBg.lineStyle(3, 0xffcc44, 1);
+        cardBg.strokeRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+      });
+      hitArea.on('pointerout', () => {
+        cardBg.clear();
+        cardBg.fillStyle(0x2a2a4a, 1);
+        cardBg.fillRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+        cardBg.lineStyle(2, charDef.color, 1);
+        cardBg.strokeRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+      });
+
+      // 点击选择
+      hitArea.on('pointerdown', () => {
+        this.selectRewardCard(card);
+      });
+    }
+
+    // 跳过奖励按钮
+    const skipBtn = this.add.text(w / 2, cardY + cardHeight + 40, '【跳过奖励】', {
+      fontSize: '18px', color: '#aaaaaa', backgroundColor: '#333344',
+      padding: { x: 20, y: 10 }, fontFamily: 'monospace',
+    }).setOrigin(0.5).setInteractive().setDepth(210);
+
+    skipBtn.on('pointerdown', () => {
+      console.log('[奖励] 玩家跳过卡牌奖励');
+      this.returnToMap();
+    });
+    skipBtn.on('pointerover', () => skipBtn.setStyle({ backgroundColor: '#444466', color: '#ffffff' }));
+    skipBtn.on('pointerout', () => skipBtn.setStyle({ backgroundColor: '#333344', color: '#aaaaaa' }));
+
+    // 数字键快捷选择（1-3选择卡牌，0/S跳过）
+    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+      const key = event.key;
+      if (key >= '1' && key <= '3') {
+        const idx = parseInt(key) - 1;
+        if (idx < rewardCards.length) {
+          this.selectRewardCard(rewardCards[idx]);
+        }
+      } else if (key === '0' || key.toLowerCase() === 's') {
+        console.log('[奖励] 玩家跳过卡牌奖励');
+        this.returnToMap();
+      }
+    });
+
+    // 底部提示
+    const hint = this.add.text(w / 2, h - 30, '按 1/2/3 选择卡牌 | 按 0 或 S 跳过', {
+      fontSize: '14px', color: '#666666', fontFamily: 'monospace',
+    }).setOrigin(0.5).setDepth(210);
+  }
+
+  /** 选择奖励卡并加入角色牌组 */
+  private selectRewardCard(card: CardDef): void {
+    const gameState = getGameState();
+    const charId = card.characterId;
+    const charState = gameState.characterStates[charId];
+
+    if (!charState) {
+      console.error(`[奖励] 角色状态不存在: ${charId}`);
+      this.returnToMap();
+      return;
+    }
+
+    // 深拷贝卡牌并加入牌组
+    const newCard: CardDef = {
+      ...card,
+      effects: card.effects.map(e => ({ ...e })),
+    };
+    charState.deck.push(newCard);
+    setGameState(gameState);
+
+    const charName = CHARACTER_DEFS[charId].name;
+    console.log(`[奖励] 加入卡牌: ${card.name} → ${charName}，当前牌组: ${charState.deck.length}张`);
+    console.log(`[奖励] ${charName} 牌组: ${charState.deck.map(c => c.name).join(', ')}`);
+
+    this.returnToMap();
   }
 
   private showExpeditionVictory(): void {

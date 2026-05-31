@@ -349,3 +349,57 @@ export function createCharacterState(characterId: CharacterId) {
     hand: [] as CardDef[],
   };
 }
+
+/**
+ * 为当前队伍生成3张奖励卡牌。
+ * 规则：
+ * 1. 从队伍中未死亡角色的卡池里随机抽
+ * 2. 尽量保证3张卡来自不同角色
+ * 3. 不重复同一张卡
+ * 4. 重伤角色也参与（牌组成长≠当前上场）
+ */
+export function generateRewardCards(teamCharacterIds: CharacterId[]): CardDef[] {
+  // 收集每个角色的可用卡池
+  const pools: Map<CharacterId, CardDef[]> = new Map();
+  for (const charId of teamCharacterIds) {
+    const cards = ALL_CARDS.filter(c => c.characterId === charId);
+    if (cards.length > 0) {
+      pools.set(charId, cards);
+    }
+  }
+
+  const rewards: CardDef[] = [];
+  const usedCardIds = new Set<string>();
+  const charIds = [...pools.keys()];
+
+  // Fisher-Yates 洗牌角色顺序，尽量不同角色
+  const shuffled = charIds.sort(() => Math.random() - 0.5);
+
+  // 第一轮：尽量每个角色出一张
+  for (const charId of shuffled) {
+    if (rewards.length >= 3) break;
+    const pool = pools.get(charId)!;
+    const available = pool.filter(c => !usedCardIds.has(c.id));
+    if (available.length > 0) {
+      const card = available[Math.floor(Math.random() * available.length)];
+      rewards.push(card);
+      usedCardIds.add(card.id);
+    }
+  }
+
+  // 第二轮：如果不够3张，从所有角色池中补充
+  if (rewards.length < 3) {
+    const allAvailable = ALL_CARDS.filter(c =>
+      teamCharacterIds.includes(c.characterId) && !usedCardIds.has(c.id)
+    );
+    const remaining = allAvailable.sort(() => Math.random() - 0.5);
+    while (rewards.length < 3 && remaining.length > 0) {
+      const card = remaining.shift()!;
+      rewards.push(card);
+      usedCardIds.add(card.id);
+    }
+  }
+
+  console.log(`[奖励] 生成 ${rewards.length} 张奖励卡: ${rewards.map(c => `${c.name}(${CHARACTER_DEFS[c.characterId].name})`).join(', ')}`);
+  return rewards;
+}

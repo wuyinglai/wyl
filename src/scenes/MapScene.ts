@@ -431,6 +431,15 @@ export class MapScene extends Phaser.Scene {
           this.scene.start('BattleScene', { battleType: 'normal' });
           break;
         }
+        case 'x': {
+          // X 键：直接进入Boss战斗（阶段4验收用调试键，测试Boss胜利不弹奖励）
+          const gsX = getGameState();
+          gsX.currentBattleType = 'boss';
+          setGameState(gsX);
+          console.log('[调试X] 直接进入Boss战斗');
+          this.scene.start('BattleScene');
+          break;
+        }
         case 'h': {
           // H 键：商队 HP -20（阶段3.1-C验收用调试键）
           const gsH = getGameState();
