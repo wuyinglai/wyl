@@ -358,6 +358,7 @@ export class MapScene extends Phaser.Scene {
               }));
             }
           }
+          console.log(`[调试P] 商队: ${gs.caravanHp}/${gs.caravanMaxHp}, 士气: ${gs.morale}, 金币: ${gs.gold}, 天数: ${gs.day}`);
           console.log('[调试P] ====================================');
           break;
         }
@@ -1370,6 +1371,7 @@ export class MapScene extends Phaser.Scene {
       text: '修复商队 (+20)',
       action: () => {
         gameState.caravanHp = Math.min(gameState.caravanMaxHp, gameState.caravanHp + 20);
+        console.log(`[补给] 修复商队: ${gameState.caravanHp}/${gameState.caravanMaxHp}`);
         setGameState(gameState);
         this.completeCell(cell);
         this.closeModal();
@@ -1389,6 +1391,7 @@ export class MapScene extends Phaser.Scene {
           cs.currentHp = Math.min(cs.def.maxHp, cs.currentHp + 8);
         }
         gameState.morale = Math.min(10, gameState.morale + 1);
+        console.log(`[补给] 全队休整: morale=${gameState.morale}`);
         setGameState(gameState);
         this.completeCell(cell);
         this.closeModal();
