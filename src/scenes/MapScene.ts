@@ -410,6 +410,37 @@ export class MapScene extends Phaser.Scene {
           this.showCampPopup(mockCampCell);
           break;
         }
+        // ========== 阶段 3.1-C 补充验收调试键 ==========
+        case 'b': {
+          // B 键：直接进入普通战斗（阶段3.1-C验收用调试键）
+          console.log('[调试B] 直接进入普通战斗');
+          this.scene.start('BattleScene', { battleType: 'normal' });
+          break;
+        }
+        case 'h': {
+          // H 键：商队 HP -20（阶段3.1-C验收用调试键）
+          const gsH = getGameState();
+          gsH.caravanHp = Math.max(0, gsH.caravanHp - 20);
+          setGameState(gsH);
+          this.updateResourceDisplay();
+          console.log(`[调试H] 商队 HP -20，当前=${gsH.caravanHp}/${gsH.caravanMaxHp}`);
+          break;
+        }
+        case 'u': {
+          // U 键：所有角色 HP -10（阶段3.1-C验收用调试键）
+          const gsU = getGameState();
+          for (const id of gsU.selectedCharacters) {
+            const cs = gsU.characterStates[id];
+            if (cs && !cs.isDead) {
+              cs.currentHp = Math.max(1, cs.currentHp - 10);
+              console.log(`[调试U] ${cs.def.name} HP -10，当前=${cs.currentHp}/${cs.def.maxHp}`);
+            }
+          }
+          setGameState(gsU);
+          this.updatePartyDisplay();
+          console.log('[调试U] 全队HP-10完成');
+          break;
+        }
         default:
           return;
       }

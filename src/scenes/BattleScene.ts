@@ -874,6 +874,17 @@ export class BattleScene extends Phaser.Scene {
     });
     btn.on('pointerover', () => btn.setStyle({ backgroundColor: victory ? '#3aca6a' : '#555577' }));
     btn.on('pointerout', () => btn.setStyle({ backgroundColor: victory ? '#2a8a4a' : '#444466' }));
+
+    // 添加键盘快捷键返回地图（方便测试）
+    this.input.keyboard?.on('keydown-ENTER', () => {
+      if (victory) {
+        const gameState = getGameState();
+        updateReachableCells(gameState);
+        setGameState(gameState);
+        console.log('[战斗] 按Enter返回地图');
+        this.scene.start('MapScene');
+      }
+    });
   }
 
   private showExpeditionVictory(): void {
