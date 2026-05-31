@@ -1514,10 +1514,11 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // 深拷贝卡牌并加入牌组
+    // 深拷贝卡牌并加入牌组（生成唯一 instanceId）
     const newCard: CardDef = {
       ...card,
       effects: card.effects.map((e) => ({ ...e })),
+      instanceId: `${card.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     };
     charState.deck.push(newCard);
     setGameState(gameState);

@@ -54,6 +54,7 @@ export interface CardDef {
   description: string;
   effects: CardEffect[];
   upgraded?: boolean; // 阶段5：是否已升级
+  instanceId?: string; // 阶段5：实例唯一标识，用于精确删除/升级同名卡
 }
 
 // 运行时角色状态

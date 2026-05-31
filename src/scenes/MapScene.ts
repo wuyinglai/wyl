@@ -2718,10 +2718,12 @@ export class MapScene extends Phaser.Scene {
       const cardStartY = 75;
 
       cardsToShow.forEach((card, cardIdx) => {
+        const cardName = card.upgraded ? `${card.name}+` : card.name;
+        const cardColor = card.upgraded ? "#44ff88" : "#cccccc";
         const cardText = this.add
-          .text(0, cardStartY + cardIdx * 18, `⚡${card.cost} ${card.name}`, {
+          .text(0, cardStartY + cardIdx * 18, `⚡${card.cost} ${cardName}`, {
             fontSize: "12px",
-            color: "#cccccc",
+            color: cardColor,
             fontFamily: "monospace",
           })
           .setOrigin(0.5);

@@ -268,6 +268,7 @@ function copyCard(cardDef: CardDef): CardDef {
   return {
     ...cardDef,
     effects: cardDef.effects.map((e) => ({ ...e })),
+    instanceId: `${cardDef.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
   };
 }
 
