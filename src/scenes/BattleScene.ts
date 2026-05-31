@@ -43,8 +43,32 @@ export class BattleScene extends Phaser.Scene {
   private selectedEnemy: number | null = null;
   private battleEnded: boolean = false;
 
+  // 键盘监听器引用（Bug 7: 用于 shutdown 清理）
+  private rewardKeyHandler?: Function;
+  private battleResultKeyHandler?: Function;
+
   constructor() {
     super({ key: "BattleScene" });
+  }
+
+  /**
+   * 场景关闭时清理所有全局键盘监听器（Bug 11）。
+   * this.input.keyboard 是全局 InputManager，其 listener 不会随 scene 关闭而自动移除。
+   */
+  shutdown() {
+    this.input.keyboard?.off("keydown-E");
+    this.input.keyboard?.off("keydown-ENTER");
+    this.input.keyboard?.off("keydown-Q");
+    this.input.keyboard?.off("keydown-J");
+    this.input.keyboard?.off("keydown-R");
+    if (this.rewardKeyHandler) {
+      this.input.keyboard?.off("keydown", this.rewardKeyHandler);
+      this.rewardKeyHandler = undefined;
+    }
+    if (this.battleResultKeyHandler) {
+      this.input.keyboard?.off("keydown-ENTER", this.battleResultKeyHandler);
+      this.battleResultKeyHandler = undefined;
+    }
   }
 
   create() {
@@ -1176,7 +1200,8 @@ export class BattleScene extends Phaser.Scene {
     btn.on("pointerover", () => btn.setStyle({ backgroundColor: "#555577" }));
     btn.on("pointerout", () => btn.setStyle({ backgroundColor: "#444466" }));
 
-    this.input.keyboard?.on("keydown-ENTER", () => {
+    // Bug 7: 存储监听器引用以便 shutdown 清理
+    this.battleResultKeyHandler = () => {
       const gameState = getGameState();
       const isTestMode =
         gameState._isDirectionalTesting ||
@@ -1188,7 +1213,8 @@ export class BattleScene extends Phaser.Scene {
         resetGameState();
         this.scene.start("MainMenuScene");
       }
-    });
+    };
+    this.input.keyboard?.on("keydown-ENTER", this.battleResultKeyHandler);
   }
 
   /** 显示卡牌奖励选择界面 */
@@ -1413,7 +1439,8 @@ export class BattleScene extends Phaser.Scene {
     );
 
     // 数字键快捷选择（1-3选择卡牌，0/S跳过）
-    this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
+    // Bug 7: 存储监听器引用以便 shutdown 清理
+    this.rewardKeyHandler = (event: KeyboardEvent) => {
       const key = event.key;
       if (key >= "1" && key <= "3") {
         const idx = parseInt(key) - 1;
@@ -1424,7 +1451,8 @@ export class BattleScene extends Phaser.Scene {
         console.log("[奖励] 玩家跳过卡牌奖励");
         this.showSkipRewardToast();
       }
-    });
+    };
+    this.input.keyboard?.on("keydown", this.rewardKeyHandler);
 
     // 底部提示
     const hint = this.add
@@ -1439,6 +1467,10 @@ export class BattleScene extends Phaser.Scene {
 
   /** 选择奖励卡并加入角色牌组 */
   private selectRewardCard(card: CardDef): void {
+    // Bug 9/30: 防止重复触发
+    if (this.battleEnded) return;
+    this.battleEnded = true;
+
     const gameState = getGameState();
     const charId = card.characterId;
     const charState = gameState.characterStates[charId];
@@ -1505,6 +1537,10 @@ export class BattleScene extends Phaser.Scene {
 
   /** 显示跳过奖励提示，延迟后返回地图（阶段4.1） */
   private showSkipRewardToast(): void {
+    // Bug 9/30: 防止重复触发
+    if (this.battleEnded) return;
+    this.battleEnded = true;
+
     const w = this.scale.width;
     const h = this.scale.height;
 

@@ -57,6 +57,10 @@ export class MapScene extends Phaser.Scene {
   // 自动测试状态
   private _autoTestTimer?: Phaser.Time.TimerEvent;
 
+  // 牌组查看器状态
+  private _deckViewerOpen = false;
+  private _deckViewerClose?: () => void;
+
   constructor() {
     super({ key: "MapScene" });
   }
@@ -68,6 +72,11 @@ export class MapScene extends Phaser.Scene {
    * 其 listener 不会随 scene 关闭而自动移除，必须手动清理。
    */
   shutdown() {
+    // 清理牌组查看器（Bug 5: 场景切换时UI残留）
+    if (this._deckViewerOpen && this._deckViewerClose) {
+      this._deckViewerClose();
+      this._deckViewerOpen = false;
+    }
     this.input.keyboard?.off("keydown");
     this.input.off("pointerdown");
   }
@@ -236,6 +245,16 @@ export class MapScene extends Phaser.Scene {
   private setupKeyboard(): void {
     this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
+
+      // 牌组查看器打开时，只允许 V/ESC 关闭，其他键忽略（Bug 1）
+      if (this._deckViewerOpen) {
+        if (key === "v" || key === "escape") {
+          this._deckViewerOpen = false;
+          this._deckViewerClose?.();
+          this._deckViewerClose = undefined;
+        }
+        return;
+      }
 
       // 弹窗打开时，允许数字键选择选项，Escape 关闭弹窗，禁止移动和测试快捷键
       if (this.modalContainer) {
@@ -488,7 +507,14 @@ export class MapScene extends Phaser.Scene {
         }
         case "v": {
           // V 键：查看牌组（阶段4.1验收用）
-          this.showDeckViewer();
+          // Bug 2: 统一在 setupKeyboard 中处理开关，不再使用 once 监听器
+          if (this._deckViewerOpen) {
+            this._deckViewerOpen = false;
+            this._deckViewerClose?.();
+            this._deckViewerClose = undefined;
+          } else {
+            this.showDeckViewer();
+          }
           break;
         }
         default:
@@ -2541,6 +2567,14 @@ export class MapScene extends Phaser.Scene {
 
   /** 显示牌组查看界面 */
   private showDeckViewer(): void {
+    // Bug 3: 防止重复打开叠加多层UI
+    if (this._deckViewerOpen) {
+      this._deckViewerClose?.();
+      this._deckViewerOpen = false;
+    }
+
+    this._deckViewerOpen = true;
+
     const w = this.scale.width;
     const h = this.scale.height;
     const gameState = getGameState();
@@ -2683,18 +2717,14 @@ export class MapScene extends Phaser.Scene {
       title.destroy();
       closeHint.destroy();
       charContainers.forEach((c) => c.destroy());
-      keyHandler?.destroy();
     };
 
-    // 按键关闭
-    const keyHandler = this.input.keyboard?.once(
-      "keydown",
-      (event: KeyboardEvent) => {
-        if (event.key === "v" || event.key === "V" || event.key === "Escape") {
-          closeViewer();
-        }
-      },
-    );
+    // Bug 2: 存储关闭函数，由 setupKeyboard 统一处理按键关闭
+    this._deckViewerClose = () => {
+      closeViewer();
+      this._deckViewerOpen = false;
+      this._deckViewerClose = undefined;
+    };
   }
 
   // ==================== 阶段5：补给点卡牌升级/删除 ====================
