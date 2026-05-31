@@ -1,8 +1,20 @@
 // 核心类型定义
 
-export type CharacterId = 'guardian' | 'sharpshooter' | 'repairman' | 'scout' | 'inspirer';
-export type CardType = 'attack' | 'defense' | 'skill' | 'heal' | 'repair';
-export type TargetType = 'enemy' | 'self' | 'ally' | 'all_enemies' | 'all_allies' | 'caravan' | 'none';
+export type CharacterId =
+  | "guardian"
+  | "sharpshooter"
+  | "repairman"
+  | "scout"
+  | "inspirer";
+export type CardType = "attack" | "defense" | "skill" | "heal" | "repair";
+export type TargetType =
+  | "enemy"
+  | "self"
+  | "ally"
+  | "all_enemies"
+  | "all_allies"
+  | "caravan"
+  | "none";
 
 // 角色定义
 export interface CharacterDef {
@@ -17,7 +29,16 @@ export interface CharacterDef {
 
 // 卡牌效果
 export interface CardEffect {
-  type: 'damage' | 'heal' | 'armor' | 'draw' | 'mark' | 'repair_caravan' | 'add_action' | 'morale' | 'special';
+  type:
+    | "damage"
+    | "heal"
+    | "armor"
+    | "draw"
+    | "mark"
+    | "repair_caravan"
+    | "add_action"
+    | "morale"
+    | "special";
   value: number;
   target: TargetType;
   condition?: string;
@@ -73,7 +94,7 @@ export interface EnemyAction {
   name: string;
   description: string;
   damage?: number;
-  target: 'random_character' | 'caravan' | 'lowest_hp_character';
+  target: "random_character" | "caravan" | "lowest_hp_character";
 }
 
 // 战斗状态

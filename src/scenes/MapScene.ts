@@ -1,4 +1,4 @@
-import Phaser from 'phaser';
+import Phaser from "phaser";
 import {
   getGameState,
   setGameState,
@@ -13,9 +13,9 @@ import {
   getMovableNeighbors,
   processInjuryRecovery,
   checkExpeditionFailed,
-} from '../systems/GameState';
-import { CHARACTER_DEFS, createCharacterState } from '../data/characters';
-import { CharacterState } from '../data/types';
+} from "../systems/GameState";
+import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
+import { CharacterState } from "../data/types";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -58,7 +58,7 @@ export class MapScene extends Phaser.Scene {
   private _autoTestTimer?: Phaser.Time.TimerEvent;
 
   constructor() {
-    super({ key: 'MapScene' });
+    super({ key: "MapScene" });
   }
 
   /**
@@ -68,8 +68,8 @@ export class MapScene extends Phaser.Scene {
    * 其 listener 不会随 scene 关闭而自动移除，必须手动清理。
    */
   shutdown() {
-    this.input.keyboard?.off('keydown');
-    this.input.off('pointerdown');
+    this.input.keyboard?.off("keydown");
+    this.input.off("pointerdown");
   }
 
   // ==================== 场景创建 ====================
@@ -114,21 +114,21 @@ export class MapScene extends Phaser.Scene {
     // 检查游戏状态
     this.checkGameStatus(gameState);
 
-    console.log('[地图V2] 地图场景已加载');
+    console.log("[地图V2] 地图场景已加载");
 
     // 如果是从战斗返回的自动移动测试，继续执行
     const gs = getGameState();
     if (gs._isAutoMoving && gs._autoMoveResumeStep > 0) {
       const gameOver = checkGameOver(gs);
       if (gameOver.isOver) {
-        console.log('[地图V2] 自动移动测试停止：游戏结束');
+        console.log("[地图V2] 自动移动测试停止：游戏结束");
         gs._isAutoMoving = false;
         gs._autoMoveResumeStep = 0;
         gs._autoMovePrevPos = null;
         setGameState(gs);
       } else {
         console.log(
-          `[地图V2] 从战斗/弹窗返回，继续自动移动测试 step=${gs._autoMoveResumeStep}`
+          `[地图V2] 从战斗/弹窗返回，继续自动移动测试 step=${gs._autoMoveResumeStep}`,
         );
         this.time.delayedCall(500, () => {
           this.autoMoveStep(gs._autoMoveResumeStep);
@@ -140,14 +140,14 @@ export class MapScene extends Phaser.Scene {
     if (gs._isClickTesting && gs._clickTestResumeStep > 0) {
       const gameOver2 = checkGameOver(gs);
       if (gameOver2.isOver) {
-        console.log('[鼠标模拟测试] 停止：游戏结束');
+        console.log("[鼠标模拟测试] 停止：游戏结束");
         gs._isClickTesting = false;
         gs._clickTestResumeStep = 0;
         gs._clickTestStep = 0;
         setGameState(gs);
       } else {
         console.log(
-          `[鼠标模拟测试] 从战斗返回，继续点击模拟测试 step=${gs._clickTestResumeStep}`
+          `[鼠标模拟测试] 从战斗返回，继续点击模拟测试 step=${gs._clickTestResumeStep}`,
         );
         gs._clickTestStep = gs._clickTestResumeStep;
         gs._clickTestResumeStep = 0;
@@ -162,14 +162,14 @@ export class MapScene extends Phaser.Scene {
     if (gs._isDirectionalTesting && gs._directionalTestResumeStep > 0) {
       const gameOver3 = checkGameOver(gs);
       if (gameOver3.isOver) {
-        console.log('[方向模拟测试] 停止：游戏结束');
+        console.log("[方向模拟测试] 停止：游戏结束");
         gs._isDirectionalTesting = false;
         gs._directionalTestResumeStep = 0;
         gs._directionalTestStep = 0;
         setGameState(gs);
       } else {
         console.log(
-          `[方向模拟测试] 从战斗返回，继续方向模拟测试 step=${gs._directionalTestResumeStep}`
+          `[方向模拟测试] 从战斗返回，继续方向模拟测试 step=${gs._directionalTestResumeStep}`,
         );
         gs._directionalTestStep = gs._directionalTestResumeStep;
         gs._directionalTestResumeStep = 0;
@@ -184,7 +184,7 @@ export class MapScene extends Phaser.Scene {
   // ==================== 单一 pointerdown 监听 ====================
 
   private setupMapPointer(): void {
-    this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
       this.handleMapPointer(pointer);
     });
   }
@@ -198,54 +198,57 @@ export class MapScene extends Phaser.Scene {
     const worldX = pointer.x - this.mapContainer.x;
     const worldY = pointer.y - this.mapContainer.y;
 
-      // 换算成格子坐标
-      const cellX = Math.floor(worldX / (this.cellSize + this.cellGap));
-      const cellY = Math.floor(worldY / (this.cellSize + this.cellGap));
+    // 换算成格子坐标
+    const cellX = Math.floor(worldX / (this.cellSize + this.cellGap));
+    const cellY = Math.floor(worldY / (this.cellSize + this.cellGap));
 
-      // 检查是否在格子范围内（排除间隙区域）
-      const pixelX = cellX * (this.cellSize + this.cellGap);
-      const pixelY = cellY * (this.cellSize + this.cellGap);
-      const inCellX = worldX - pixelX;
-      const inCellY = worldY - pixelY;
+    // 检查是否在格子范围内（排除间隙区域）
+    const pixelX = cellX * (this.cellSize + this.cellGap);
+    const pixelY = cellY * (this.cellSize + this.cellGap);
+    const inCellX = worldX - pixelX;
+    const inCellY = worldY - pixelY;
 
-      if (inCellX < 0 || inCellX >= this.cellSize) return;
-      if (inCellY < 0 || inCellY >= this.cellSize) return;
+    if (inCellX < 0 || inCellX >= this.cellSize) return;
+    if (inCellY < 0 || inCellY >= this.cellSize) return;
 
-      const gameState = getGameState();
-      if (
-        cellX < 0 || cellY < 0 ||
-        cellX >= gameState.mapWidth ||
-        cellY >= gameState.mapHeight
-      ) {
-        return;
-      }
+    const gameState = getGameState();
+    if (
+      cellX < 0 ||
+      cellY < 0 ||
+      cellX >= gameState.mapWidth ||
+      cellY >= gameState.mapHeight
+    ) {
+      return;
+    }
 
-      console.log(
-        `[地图V2] 点击格子 (${cellX}, ${cellY})`,
-        `pointer=(${pointer.x},${pointer.y})`,
-        `world=(${worldX},${worldY})`
-      );
+    console.log(
+      `[地图V2] 点击格子 (${cellX}, ${cellY})`,
+      `pointer=(${pointer.x},${pointer.y})`,
+      `world=(${worldX},${worldY})`,
+    );
 
-      // 统一调用 tryMoveTo
-      this.tryMoveTo(cellX, cellY);
+    // 统一调用 tryMoveTo
+    this.tryMoveTo(cellX, cellY);
   }
 
   // ==================== 键盘事件 ====================
 
   private setupKeyboard(): void {
-    this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
+    this.input.keyboard?.on("keydown", (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
 
       // 弹窗打开时，允许数字键选择选项，Escape 关闭弹窗，禁止移动和测试快捷键
       if (this.modalContainer) {
-        if (key === 'escape') {
+        if (key === "escape") {
           this.closeModal();
           return;
         }
         // 数字键 1-9 选择弹窗选项
         const num = parseInt(key);
         if (num >= 1 && num <= 9 && this.modalActions.length >= num) {
-          console.log(`[弹窗] 数字键 ${num} 选择选项: ${this.modalActions[num - 1] ? '执行' : '无'}`);
+          console.log(
+            `[弹窗] 数字键 ${num} 选择选项: ${this.modalActions[num - 1] ? "执行" : "无"}`,
+          );
           this.modalActions[num - 1]();
           return;
         }
@@ -253,46 +256,46 @@ export class MapScene extends Phaser.Scene {
       }
 
       switch (key) {
-        case 'w':
-        case 'arrowup': {
+        case "w":
+        case "arrowup": {
           const gs = getGameState();
           this.tryMoveTo(gs.currentPosition.x, gs.currentPosition.y - 1);
           break;
         }
-        case 's':
-        case 'arrowdown': {
+        case "s":
+        case "arrowdown": {
           const gs = getGameState();
           this.tryMoveTo(gs.currentPosition.x, gs.currentPosition.y + 1);
           break;
         }
-        case 'a':
-        case 'arrowleft': {
+        case "a":
+        case "arrowleft": {
           const gs = getGameState();
           this.tryMoveTo(gs.currentPosition.x - 1, gs.currentPosition.y);
           break;
         }
-        case 'd':
-        case 'arrowright': {
+        case "d":
+        case "arrowright": {
           const gs = getGameState();
           this.tryMoveTo(gs.currentPosition.x + 1, gs.currentPosition.y);
           break;
         }
-        case ' ':
+        case " ":
           this.centerCameraOnPlayer();
           break;
-        case 't':
+        case "t":
           this.clickSimulationTest();
           break;
-        case 'y':
+        case "y":
           this.autoMoveTest();
           break;
-        case 'g': {
+        case "g": {
           this.directionalClickTest();
           break;
         }
-        case 'escape':
+        case "escape":
           if (this.modalContainer) {
-            console.log('[地图V2] Escape 关闭弹窗');
+            console.log("[地图V2] Escape 关闭弹窗");
             this.closeModal();
             // 如果自动移动测试正在进行，关闭弹窗后继续
             const gs = getGameState();
@@ -304,7 +307,7 @@ export class MapScene extends Phaser.Scene {
           }
           break;
         // ========== 调试键（阶段 3 验收用） ==========
-        case 'i': {
+        case "i": {
           // I 键：让第一个角色进入重伤
           const gs = getGameState();
           const firstId = gs.selectedCharacters[0];
@@ -315,14 +318,22 @@ export class MapScene extends Phaser.Scene {
             cs.restNodes = 3;
             cs.graveWounds += 1;
             setGameState(gs);
-            console.log(`[调试I] ${cs.def.name} 已进入重伤:`, JSON.stringify({ currentHp: cs.currentHp, isWounded: cs.isWounded, restNodes: cs.restNodes, graveWounds: cs.graveWounds }));
+            console.log(
+              `[调试I] ${cs.def.name} 已进入重伤:`,
+              JSON.stringify({
+                currentHp: cs.currentHp,
+                isWounded: cs.isWounded,
+                restNodes: cs.restNodes,
+                graveWounds: cs.graveWounds,
+              }),
+            );
             this.updatePartyDisplay();
           } else {
-            console.log('[调试I] 没有找到第一个角色');
+            console.log("[调试I] 没有找到第一个角色");
           }
           break;
         }
-        case 'o': {
+        case "o": {
           // O 键：让第一个角色累计重伤 +1
           const gs = getGameState();
           const firstId = gs.selectedCharacters[0];
@@ -334,35 +345,42 @@ export class MapScene extends Phaser.Scene {
               cs.isWounded = false;
               console.log(`[调试O] ${cs.def.name} 重伤次数达到3次，已死亡！`);
             } else {
-              console.log(`[调试O] ${cs.def.name} 重伤次数+1，当前=${cs.graveWounds}/3`);
+              console.log(
+                `[调试O] ${cs.def.name} 重伤次数+1，当前=${cs.graveWounds}/3`,
+              );
             }
             setGameState(gs);
             this.updatePartyDisplay();
           }
           break;
         }
-        case 'p': {
+        case "p": {
           // P 键：打印当前 characterStates
           const gs = getGameState();
-          console.log('[调试P] ========== characterStates ==========');
+          console.log("[调试P] ========== characterStates ==========");
           for (const id of gs.selectedCharacters) {
             const cs = gs.characterStates[id];
             if (cs) {
-              console.log(`  ${cs.def.name}:`, JSON.stringify({
-                currentHp: cs.currentHp,
-                maxHp: cs.def.maxHp,
-                isWounded: cs.isWounded,
-                isDead: cs.isDead,
-                restNodes: cs.restNodes,
-                graveWounds: cs.graveWounds
-              }));
+              console.log(
+                `  ${cs.def.name}:`,
+                JSON.stringify({
+                  currentHp: cs.currentHp,
+                  maxHp: cs.def.maxHp,
+                  isWounded: cs.isWounded,
+                  isDead: cs.isDead,
+                  restNodes: cs.restNodes,
+                  graveWounds: cs.graveWounds,
+                }),
+              );
             }
           }
-          console.log(`[调试P] 商队: ${gs.caravanHp}/${gs.caravanMaxHp}, 士气: ${gs.morale}, 金币: ${gs.gold}, 天数: ${gs.day}`);
-          console.log('[调试P] ====================================');
+          console.log(
+            `[调试P] 商队: ${gs.caravanHp}/${gs.caravanMaxHp}, 士气: ${gs.morale}, 金币: ${gs.gold}, 天数: ${gs.day}`,
+          );
+          console.log("[调试P] ====================================");
           break;
         }
-        case 'l': {
+        case "l": {
           // L 键：让全队进入重伤（测试远征失败）
           const gs = getGameState();
           for (const id of gs.selectedCharacters) {
@@ -379,18 +397,18 @@ export class MapScene extends Phaser.Scene {
           this.updatePartyDisplay();
           // 检查远征失败
           if (checkExpeditionFailed()) {
-            console.log('[调试L] 全队重伤，远征失败！');
+            console.log("[调试L] 全队重伤，远征失败！");
             this.showExpeditionFailedModal();
           }
           break;
         }
-        case 'k': {
+        case "k": {
           // K 键：触发补给点弹窗（测试补给功能）
           const gsK = getGameState();
           const mockSupplyCell: MapCell = {
             x: gsK.currentPosition.x,
             y: gsK.currentPosition.y,
-            type: 'supply',
+            type: "supply",
             resolvedType: null,
             visited: false,
             isCurrent: false,
@@ -400,17 +418,17 @@ export class MapScene extends Phaser.Scene {
             isGoal: false,
             rewardType: null,
           };
-          console.log('[调试K] 触发补给点弹窗');
+          console.log("[调试K] 触发补给点弹窗");
           this.showSupplyPopup(mockSupplyCell);
           break;
         }
-        case 'm': {
+        case "m": {
           // M 键：触发营地弹窗（测试营地功能）
           const gsM = getGameState();
           const mockCampCell: MapCell = {
             x: gsM.currentPosition.x,
             y: gsM.currentPosition.y,
-            type: 'camp',
+            type: "camp",
             resolvedType: null,
             visited: false,
             isCurrent: false,
@@ -420,48 +438,57 @@ export class MapScene extends Phaser.Scene {
             isGoal: false,
             rewardType: null,
           };
-          console.log('[调试M] 触发营地弹窗');
+          console.log("[调试M] 触发营地弹窗");
           this.showCampPopup(mockCampCell);
           break;
         }
         // ========== 阶段 3.1-C 补充验收调试键 ==========
-        case 'b': {
+        case "b": {
           // B 键：直接进入普通战斗（阶段3.1-C验收用调试键）
-          console.log('[调试B] 直接进入普通战斗');
-          this.scene.start('BattleScene', { battleType: 'normal' });
+          console.log("[调试B] 直接进入普通战斗");
+          this.scene.start("BattleScene", { battleType: "normal" });
           break;
         }
-        case 'x': {
+        case "x": {
           // X 键：直接进入Boss战斗（阶段4验收用调试键，测试Boss胜利不弹奖励）
           const gsX = getGameState();
-          gsX.currentBattleType = 'boss';
+          gsX.currentBattleType = "boss";
           setGameState(gsX);
-          console.log('[调试X] 直接进入Boss战斗');
-          this.scene.start('BattleScene');
+          console.log("[调试X] 直接进入Boss战斗");
+          this.scene.start("BattleScene");
           break;
         }
-        case 'h': {
+        case "h": {
           // H 键：商队 HP -20（阶段3.1-C验收用调试键）
           const gsH = getGameState();
           gsH.caravanHp = Math.max(0, gsH.caravanHp - 20);
           setGameState(gsH);
           this.updateResourceDisplay();
-          console.log(`[调试H] 商队 HP -20，当前=${gsH.caravanHp}/${gsH.caravanMaxHp}`);
+          console.log(
+            `[调试H] 商队 HP -20，当前=${gsH.caravanHp}/${gsH.caravanMaxHp}`,
+          );
           break;
         }
-        case 'u': {
+        case "u": {
           // U 键：所有角色 HP -10（阶段3.1-C验收用调试键）
           const gsU = getGameState();
           for (const id of gsU.selectedCharacters) {
             const cs = gsU.characterStates[id];
             if (cs && !cs.isDead) {
               cs.currentHp = Math.max(1, cs.currentHp - 10);
-              console.log(`[调试U] ${cs.def.name} HP -10，当前=${cs.currentHp}/${cs.def.maxHp}`);
+              console.log(
+                `[调试U] ${cs.def.name} HP -10，当前=${cs.currentHp}/${cs.def.maxHp}`,
+              );
             }
           }
           setGameState(gsU);
           this.updatePartyDisplay();
-          console.log('[调试U] 全队HP-10完成');
+          console.log("[调试U] 全队HP-10完成");
+          break;
+        }
+        case "v": {
+          // V 键：查看牌组（阶段4.1验收用）
+          this.showDeckViewer();
           break;
         }
         default:
@@ -493,7 +520,7 @@ export class MapScene extends Phaser.Scene {
     if (!canMoveTo(gameState, x, y)) {
       console.log(
         `[地图V2] 不能移动到 (${x}, ${y})`,
-        `current=(${gameState.currentPosition.x},${gameState.currentPosition.y})`
+        `current=(${gameState.currentPosition.x},${gameState.currentPosition.y})`,
       );
       return;
     }
@@ -512,11 +539,11 @@ export class MapScene extends Phaser.Scene {
     const cell = gameState.mapCells[y][x];
     if (!cell.isRevealed) {
       cell.isRevealed = true;
-      if (cell.type === 'question') {
+      if (cell.type === "question") {
         cell.resolvedType = resolveQuestionCell(
           cell,
           gameState.startPosition,
-          gameState.bossPosition
+          gameState.bossPosition,
         );
       }
       setGameState(gameState);
@@ -551,7 +578,7 @@ export class MapScene extends Phaser.Scene {
       this.modalContainer.destroy(true);
       this.modalContainer = undefined;
       this.modalActions = [];
-      console.log('[弹窗] 已关闭 modalContainer=undefined');
+      console.log("[弹窗] 已关闭 modalContainer=undefined");
     }
   }
 
@@ -559,7 +586,7 @@ export class MapScene extends Phaser.Scene {
   private openModal(
     title: string,
     desc: string,
-    options: { text: string; action: () => void }[]
+    options: { text: string; action: () => void }[],
   ): void {
     // 先关闭旧弹窗
     this.closeModal();
@@ -585,21 +612,25 @@ export class MapScene extends Phaser.Scene {
     this.modalContainer.add(popupBg);
 
     // 标题
-    const titleText = this.add.text(w / 2, h / 2 - 90, title, {
-      fontSize: '24px',
-      color: '#ffcc44',
-      fontFamily: 'monospace',
-      fontStyle: 'bold',
-    }).setOrigin(0.5);
+    const titleText = this.add
+      .text(w / 2, h / 2 - 90, title, {
+        fontSize: "24px",
+        color: "#ffcc44",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5);
     this.modalContainer.add(titleText);
 
     // 描述
-    const descText = this.add.text(w / 2, h / 2 - 30, desc, {
-      fontSize: '16px',
-      color: '#cccccc',
-      fontFamily: 'monospace',
-      align: 'center',
-    }).setOrigin(0.5);
+    const descText = this.add
+      .text(w / 2, h / 2 - 30, desc, {
+        fontSize: "16px",
+        color: "#cccccc",
+        fontFamily: "monospace",
+        align: "center",
+      })
+      .setOrigin(0.5);
     this.modalContainer.add(descText);
 
     // 选项按钮
@@ -608,34 +639,26 @@ export class MapScene extends Phaser.Scene {
     const startX = w / 2 - ((options.length - 1) * btnSpacing) / 2;
 
     options.forEach((opt, index) => {
-      const btn = this.add.text(
-        startX + index * btnSpacing,
-        btnY,
-        opt.text,
-        {
-          fontSize: '16px',
-          color: '#ffffff',
-          backgroundColor: '#2a4a6a',
+      const btn = this.add
+        .text(startX + index * btnSpacing, btnY, opt.text, {
+          fontSize: "16px",
+          color: "#ffffff",
+          backgroundColor: "#2a4a6a",
           padding: { x: 15, y: 8 },
-          fontFamily: 'monospace',
-        }
-      )
+          fontFamily: "monospace",
+        })
         .setOrigin(0.5)
         .setInteractive();
       this.modalContainer!.add(btn);
       this.modalActions.push(opt.action);
 
-      btn.on('pointerdown', opt.action);
-      btn.on('pointerover', () =>
-        btn.setStyle({ backgroundColor: '#3a6aaa' })
-      );
-      btn.on('pointerout', () =>
-        btn.setStyle({ backgroundColor: '#2a4a6a' })
-      );
+      btn.on("pointerdown", opt.action);
+      btn.on("pointerover", () => btn.setStyle({ backgroundColor: "#3a6aaa" }));
+      btn.on("pointerout", () => btn.setStyle({ backgroundColor: "#2a4a6a" }));
     });
 
     console.log(
-      `[弹窗] 已打开: ${title} modalContainer=${this.modalContainer ? 'ok' : 'undefined'}`
+      `[弹窗] 已打开: ${title} modalContainer=${this.modalContainer ? "ok" : "undefined"}`,
     );
   }
 
@@ -657,7 +680,7 @@ export class MapScene extends Phaser.Scene {
     cell.isRevealed = true;
     setGameState(getGameState());
     console.log(
-      `[地图V2] 格子 (${cell.x}, ${cell.y}) 已完成，type=${cell.type}`
+      `[地图V2] 格子 (${cell.x}, ${cell.y}) 已完成，type=${cell.type}`,
     );
   }
 
@@ -669,76 +692,76 @@ export class MapScene extends Phaser.Scene {
     const spacing = 130;
     const startX = w / 2 - spacing * 2;
 
-    this.resourceTexts['day'] = this.add.text(
+    this.resourceTexts["day"] = this.add.text(
       startX,
       y,
       `📅 ${gameState.day}/${gameState.maxDay}`,
       {
-        fontSize: '14px',
-        color: '#ffffff',
-        fontFamily: 'monospace',
-      }
+        fontSize: "14px",
+        color: "#ffffff",
+        fontFamily: "monospace",
+      },
     );
 
-    this.resourceTexts['food'] = this.add.text(
+    this.resourceTexts["food"] = this.add.text(
       startX + spacing,
       y,
       `🍞 ${gameState.food}`,
       {
-        fontSize: '14px',
-        color: '#88ff88',
-        fontFamily: 'monospace',
-      }
+        fontSize: "14px",
+        color: "#88ff88",
+        fontFamily: "monospace",
+      },
     );
 
     const moraleColor =
       gameState.morale >= 3
-        ? '#ffcc44'
+        ? "#ffcc44"
         : gameState.morale > 0
-          ? '#ff8844'
-          : '#ff4444';
-    this.resourceTexts['morale'] = this.add.text(
+          ? "#ff8844"
+          : "#ff4444";
+    this.resourceTexts["morale"] = this.add.text(
       startX + spacing * 2,
       y,
       `💪 ${gameState.morale}`,
       {
-        fontSize: '14px',
+        fontSize: "14px",
         color: moraleColor,
-        fontFamily: 'monospace',
-      }
+        fontFamily: "monospace",
+      },
     );
 
     const caravanColor =
       gameState.caravanHp > gameState.caravanMaxHp * 0.5
-        ? '#88ccff'
-        : '#ffaa44';
-    this.resourceTexts['caravan'] = this.add.text(
+        ? "#88ccff"
+        : "#ffaa44";
+    this.resourceTexts["caravan"] = this.add.text(
       startX + spacing * 3,
       y,
       `🚗 ${gameState.caravanHp}/${gameState.caravanMaxHp}`,
       {
-        fontSize: '14px',
+        fontSize: "14px",
         color: caravanColor,
-        fontFamily: 'monospace',
-      }
+        fontFamily: "monospace",
+      },
     );
 
-    this.resourceTexts['gold'] = this.add.text(
+    this.resourceTexts["gold"] = this.add.text(
       startX + spacing * 4,
       y,
       `💰 ${gameState.gold}`,
       {
-        fontSize: '14px',
-        color: '#ffdd44',
-        fontFamily: 'monospace',
-      }
+        fontSize: "14px",
+        color: "#ffdd44",
+        fontFamily: "monospace",
+      },
     );
 
     // 调试信息
-    this.debugTexts['pos'] = this.add.text(10, y, '', {
-      fontSize: '12px',
-      color: '#aaaaaa',
-      fontFamily: 'monospace',
+    this.debugTexts["pos"] = this.add.text(10, y, "", {
+      fontSize: "12px",
+      color: "#aaaaaa",
+      fontFamily: "monospace",
     });
 
     // 操作提示
@@ -746,19 +769,17 @@ export class MapScene extends Phaser.Scene {
       .text(
         w / 2,
         h - 20,
-        'WASD/方向键=移动商队 | Space=居中 | T=随机走 | Y=自动200步 | 点击格子移动',
+        "WASD/方向键=移动商队 | Space=居中 | T=随机走 | Y=自动200步 | 点击格子移动",
         {
-          fontSize: '12px',
-          color: '#888888',
-          fontFamily: 'monospace',
-        }
+          fontSize: "12px",
+          color: "#888888",
+          fontFamily: "monospace",
+        },
       )
       .setOrigin(0.5);
   }
 
-  private createMapGrid(
-    gameState: ReturnType<typeof getGameState>
-  ): void {
+  private createMapGrid(gameState: ReturnType<typeof getGameState>): void {
     for (let y = 0; y < gameState.mapHeight; y++) {
       this.cellGraphics[y] = [];
       this.cellTexts[y] = [];
@@ -777,14 +798,9 @@ export class MapScene extends Phaser.Scene {
         // 格子内容图标
         const icon = this.getCellIcon(cell);
         const text = this.add
-          .text(
-            px + this.cellSize / 2,
-            py + this.cellSize / 2,
-            icon,
-            {
-              fontSize: '20px',
-            }
-          )
+          .text(px + this.cellSize / 2, py + this.cellSize / 2, icon, {
+            fontSize: "20px",
+          })
           .setOrigin(0.5);
         this.cellTexts[y][x] = text;
         this.mapContainer.add(text);
@@ -798,12 +814,12 @@ export class MapScene extends Phaser.Scene {
     graphics: Phaser.GameObjects.Graphics,
     cell: MapCell,
     x: number,
-    y: number
+    y: number,
   ): void {
     let fillColor = 0x333344;
     let borderColor = 0x555566;
 
-    if (cell.type === 'obstacle') {
+    if (cell.type === "obstacle") {
       fillColor = 0x222233;
       borderColor = 0x444455;
     } else if (cell.isCurrent) {
@@ -824,40 +840,40 @@ export class MapScene extends Phaser.Scene {
   }
 
   private getCellIcon(cell: MapCell): string {
-    if (cell.isCurrent) return '🚶';
-    if (cell.type === 'obstacle') return '⬛';
-    if (cell.type === 'boss') return '👹';
-    if (cell.type === 'elite') return cell.isCleared ? '✓' : '💀';
-    if (cell.type === 'camp') return cell.isCleared ? '✓' : '⛺';
-    if (cell.type === 'supply') return cell.isCleared ? '✓' : '📦';
-    if (cell.type === 'reward') return cell.isCleared ? '✓' : '🎁';
+    if (cell.isCurrent) return "🚶";
+    if (cell.type === "obstacle") return "⬛";
+    if (cell.type === "boss") return "👹";
+    if (cell.type === "elite") return cell.isCleared ? "✓" : "💀";
+    if (cell.type === "camp") return cell.isCleared ? "✓" : "⛺";
+    if (cell.type === "supply") return cell.isCleared ? "✓" : "📦";
+    if (cell.type === "reward") return cell.isCleared ? "✓" : "🎁";
 
     if (cell.isGoal) {
       const gameState = getGameState();
-      return gameState.expeditionGoal === 'boss' ? '👹' : '🏠';
+      return gameState.expeditionGoal === "boss" ? "👹" : "🏠";
     }
 
     // 已揭示的问号格
     if (cell.isRevealed && cell.resolvedType) {
       switch (cell.resolvedType) {
-        case 'combat':
-          return cell.isCleared ? '✓' : '⚔️';
-        case 'event':
-          return cell.isCleared ? '✓' : '❓';
-        case 'opportunity':
-          return cell.isCleared ? '✓' : '✨';
-        case 'danger':
-          return cell.isCleared ? '✓' : '⚠️';
-        case 'reward':
-          return cell.isCleared ? '✓' : '🎁';
+        case "combat":
+          return cell.isCleared ? "✓" : "⚔️";
+        case "event":
+          return cell.isCleared ? "✓" : "❓";
+        case "opportunity":
+          return cell.isCleared ? "✓" : "✨";
+        case "danger":
+          return cell.isCleared ? "✓" : "⚠️";
+        case "reward":
+          return cell.isCleared ? "✓" : "🎁";
         default:
-          return '·';
+          return "·";
       }
     }
 
-    if (cell.type === 'question') return '?';
-    if (cell.visited) return '·';
-    return '';
+    if (cell.type === "question") return "?";
+    if (cell.visited) return "·";
+    return "";
   }
 
   private redrawMap(): void {
@@ -910,9 +926,7 @@ export class MapScene extends Phaser.Scene {
   private handleCellContent(cell: MapCell): void {
     // 已清理的格子：不触发任何内容
     if (cell.isCleared) {
-      console.log(
-        `[地图V2] 格子 (${cell.x}, ${cell.y}) 已清理，跳过`
-      );
+      console.log(`[地图V2] 格子 (${cell.x}, ${cell.y}) 已清理，跳过`);
       return;
     }
 
@@ -921,10 +935,10 @@ export class MapScene extends Phaser.Scene {
     const isDirectionalTesting = gameState._isDirectionalTesting;
 
     // Boss 格直接进入战斗（自动测试/方向测试时跳过）
-    if (cell.type === 'boss') {
+    if (cell.type === "boss") {
       if (isAutoMoving || isDirectionalTesting) {
         console.log(
-          `[地图压力测试] 跳过Boss战斗 (${cell.x},${cell.y})，直接标记已清理`
+          `[地图压力测试] 跳过Boss战斗 (${cell.x},${cell.y})，直接标记已清理`,
         );
         cell.isCleared = true;
         setGameState(gameState);
@@ -932,17 +946,17 @@ export class MapScene extends Phaser.Scene {
         this.updateResourceDisplay();
         return;
       }
-      gameState.currentBattleType = 'boss';
+      gameState.currentBattleType = "boss";
       setGameState(gameState);
-      this.scene.start('BattleScene');
+      this.scene.start("BattleScene");
       return;
     }
 
     // 强敌格进入精英战斗（自动测试/方向测试时跳过）
-    if (cell.type === 'elite') {
+    if (cell.type === "elite") {
       if (isAutoMoving || isDirectionalTesting) {
         console.log(
-          `[地图压力测试] 跳过精英战斗 (${cell.x},${cell.y})，直接标记已清理`
+          `[地图压力测试] 跳过精英战斗 (${cell.x},${cell.y})，直接标记已清理`,
         );
         cell.isCleared = true;
         setGameState(gameState);
@@ -950,18 +964,16 @@ export class MapScene extends Phaser.Scene {
         this.updateResourceDisplay();
         return;
       }
-      gameState.currentBattleType = 'elite';
+      gameState.currentBattleType = "elite";
       setGameState(gameState);
-      this.scene.start('BattleScene');
+      this.scene.start("BattleScene");
       return;
     }
 
     // 营地格（自动测试/方向测试时直接标记清理）
-    if (cell.type === 'camp') {
+    if (cell.type === "camp") {
       if (isAutoMoving || isDirectionalTesting) {
-        console.log(
-          `[地图压力测试] 自动处理营地 (${cell.x},${cell.y})`
-        );
+        console.log(`[地图压力测试] 自动处理营地 (${cell.x},${cell.y})`);
         cell.isCleared = true;
         setGameState(gameState);
         this.redrawMap();
@@ -973,11 +985,9 @@ export class MapScene extends Phaser.Scene {
     }
 
     // 补给点（自动测试/方向测试时直接标记清理）
-    if (cell.type === 'supply') {
+    if (cell.type === "supply") {
       if (isAutoMoving || isDirectionalTesting) {
-        console.log(
-          `[地图压力测试] 自动处理补给 (${cell.x},${cell.y})`
-        );
+        console.log(`[地图压力测试] 自动处理补给 (${cell.x},${cell.y})`);
         cell.isCleared = true;
         setGameState(gameState);
         this.redrawMap();
@@ -989,11 +999,9 @@ export class MapScene extends Phaser.Scene {
     }
 
     // 奖励点（自动测试/方向测试时直接标记清理）
-    if (cell.type === 'reward') {
+    if (cell.type === "reward") {
       if (isAutoMoving || isDirectionalTesting) {
-        console.log(
-          `[地图压力测试] 自动处理奖励 (${cell.x},${cell.y})`
-        );
+        console.log(`[地图压力测试] 自动处理奖励 (${cell.x},${cell.y})`);
         cell.isCleared = true;
         setGameState(gameState);
         this.redrawMap();
@@ -1005,12 +1013,12 @@ export class MapScene extends Phaser.Scene {
     }
 
     // 目标点（sanctuary 类型）
-    if (cell.isGoal && gameState.expeditionGoal === 'sanctuary') {
+    if (cell.isGoal && gameState.expeditionGoal === "sanctuary") {
       return;
     }
 
     // 问号格：根据揭示的内容触发
-    if (cell.type === 'question' && cell.resolvedType) {
+    if (cell.type === "question" && cell.resolvedType) {
       this.triggerResolvedContent(cell);
     }
   }
@@ -1023,10 +1031,10 @@ export class MapScene extends Phaser.Scene {
     const isDirectionalTesting = gameState._isDirectionalTesting;
 
     switch (cell.resolvedType) {
-      case 'combat':
+      case "combat":
         if (isAutoMoving || isDirectionalTesting) {
           console.log(
-            `[地图压力测试] 跳过战斗 (${cell.x},${cell.y})，resolvedType=combat，直接标记已清理`
+            `[地图压力测试] 跳过战斗 (${cell.x},${cell.y})，resolvedType=combat，直接标记已清理`,
           );
           cell.isCleared = true;
           setGameState(gameState);
@@ -1036,11 +1044,9 @@ export class MapScene extends Phaser.Scene {
         }
         this.enterCombat(cell);
         break;
-      case 'event':
+      case "event":
         if (isAutoMoving || isDirectionalTesting) {
-          console.log(
-            `[地图压力测试] 自动处理事件 (${cell.x},${cell.y})`
-          );
+          console.log(`[地图压力测试] 自动处理事件 (${cell.x},${cell.y})`);
           cell.isCleared = true;
           setGameState(gameState);
           this.redrawMap();
@@ -1049,11 +1055,9 @@ export class MapScene extends Phaser.Scene {
         }
         this.showEventPopup(cell);
         break;
-      case 'opportunity':
+      case "opportunity":
         if (isAutoMoving || isDirectionalTesting) {
-          console.log(
-            `[地图压力测试] 自动处理机遇 (${cell.x},${cell.y})`
-          );
+          console.log(`[地图压力测试] 自动处理机遇 (${cell.x},${cell.y})`);
           cell.isCleared = true;
           setGameState(gameState);
           this.redrawMap();
@@ -1062,10 +1066,10 @@ export class MapScene extends Phaser.Scene {
         }
         this.showOpportunityPopup(cell);
         break;
-      case 'danger':
+      case "danger":
         if (isAutoMoving || isDirectionalTesting) {
           console.log(
-            `[地图压力测试] 跳过危险 (${cell.x},${cell.y})，resolvedType=danger，直接标记已清理`
+            `[地图压力测试] 跳过危险 (${cell.x},${cell.y})，resolvedType=danger，直接标记已清理`,
           );
           cell.isCleared = true;
           setGameState(gameState);
@@ -1075,11 +1079,9 @@ export class MapScene extends Phaser.Scene {
         }
         this.showDangerPopup(cell);
         break;
-      case 'reward':
+      case "reward":
         if (isAutoMoving || isDirectionalTesting) {
-          console.log(
-            `[地图压力测试] 自动处理奖励 (${cell.x},${cell.y})`
-          );
+          console.log(`[地图压力测试] 自动处理奖励 (${cell.x},${cell.y})`);
           cell.isCleared = true;
           setGameState(gameState);
           this.redrawMap();
@@ -1093,9 +1095,9 @@ export class MapScene extends Phaser.Scene {
 
   private enterCombat(cell: MapCell): void {
     const gameState = getGameState();
-    gameState.currentBattleType = 'normal';
+    gameState.currentBattleType = "normal";
     setGameState(gameState);
-    this.scene.start('BattleScene');
+    this.scene.start("BattleScene");
   }
 
   // ==================== 弹窗：事件 ====================
@@ -1103,11 +1105,11 @@ export class MapScene extends Phaser.Scene {
   private showEventPopup(cell: MapCell): void {
     const events = [
       {
-        name: '废弃货箱',
-        desc: '发现一个废弃的货箱',
+        name: "废弃货箱",
+        desc: "发现一个废弃的货箱",
         options: [
           {
-            text: '搜索',
+            text: "搜索",
             action: () => {
               this.modifyFood(2);
               this.completeCell(cell);
@@ -1117,7 +1119,7 @@ export class MapScene extends Phaser.Scene {
             },
           },
           {
-            text: '谨慎离开',
+            text: "谨慎离开",
             action: () => {
               this.completeCell(cell);
               this.closeModal();
@@ -1128,11 +1130,11 @@ export class MapScene extends Phaser.Scene {
         ],
       },
       {
-        name: '风暴前兆',
-        desc: '天空阴沉，风暴即将来临',
+        name: "风暴前兆",
+        desc: "天空阴沉，风暴即将来临",
         options: [
           {
-            text: '强行前进',
+            text: "强行前进",
             action: () => {
               this.modifyCaravanHp(-5);
               this.completeCell(cell);
@@ -1142,7 +1144,7 @@ export class MapScene extends Phaser.Scene {
             },
           },
           {
-            text: '原地等待',
+            text: "原地等待",
             action: () => {
               this.modifyDay(1);
               this.completeCell(cell);
@@ -1154,11 +1156,11 @@ export class MapScene extends Phaser.Scene {
         ],
       },
       {
-        name: '陌生旅人',
-        desc: '遇到一位疲惫的旅人',
+        name: "陌生旅人",
+        desc: "遇到一位疲惫的旅人",
         options: [
           {
-            text: '交易',
+            text: "交易",
             action: () => {
               this.modifyFood(1);
               this.modifyMorale(-1);
@@ -1169,7 +1171,7 @@ export class MapScene extends Phaser.Scene {
             },
           },
           {
-            text: '帮助他',
+            text: "帮助他",
             action: () => {
               this.modifyMorale(1);
               this.completeCell(cell);
@@ -1182,8 +1184,7 @@ export class MapScene extends Phaser.Scene {
       },
     ];
 
-    const event =
-      events[Math.floor(Math.random() * events.length)];
+    const event = events[Math.floor(Math.random() * events.length)];
     this.openModal(event.name, event.desc, event.options);
   }
 
@@ -1192,33 +1193,32 @@ export class MapScene extends Phaser.Scene {
   private showOpportunityPopup(cell: MapCell): void {
     const opportunities = [
       {
-        name: '发现补给',
-        desc: '找到一些食物',
+        name: "发现补给",
+        desc: "找到一些食物",
         effect: () => this.modifyFood(2),
       },
       {
-        name: '士气提升',
-        desc: '队伍状态良好',
+        name: "士气提升",
+        desc: "队伍状态良好",
         effect: () => this.modifyMorale(1),
       },
       {
-        name: '发现零件',
-        desc: '可以修理商队',
+        name: "发现零件",
+        desc: "可以修理商队",
         effect: () => this.modifyCaravanHp(5),
       },
       {
-        name: '短暂休息',
-        desc: '一位角色恢复了一些体力',
+        name: "短暂休息",
+        desc: "一位角色恢复了一些体力",
         effect: () => this.healRandomCharacter(3),
       },
     ];
 
-    const opp =
-      opportunities[Math.floor(Math.random() * opportunities.length)];
+    const opp = opportunities[Math.floor(Math.random() * opportunities.length)];
     opp.effect();
-    this.openModal('机遇', opp.desc, [
+    this.openModal("机遇", opp.desc, [
       {
-        text: '确定',
+        text: "确定",
         action: () => {
           this.completeCell(cell);
           this.closeModal();
@@ -1234,31 +1234,30 @@ export class MapScene extends Phaser.Scene {
   private showDangerPopup(cell: MapCell): void {
     const dangers = [
       {
-        name: '陷阱',
-        desc: '商队触发了陷阱',
+        name: "陷阱",
+        desc: "商队触发了陷阱",
         effect: () => this.modifyCaravanHp(-5),
       },
       {
-        name: '偷袭',
-        desc: '一名角色受了轻伤',
+        name: "偷袭",
+        desc: "一名角色受了轻伤",
         effect: () => this.damageRandomCharacter(3),
       },
       {
-        name: '恶劣天气',
-        desc: '士气下降',
+        name: "恶劣天气",
+        desc: "士气下降",
         effect: () => this.modifyMorale(-1),
       },
     ];
 
-    const danger =
-      dangers[Math.floor(Math.random() * dangers.length)];
+    const danger = dangers[Math.floor(Math.random() * dangers.length)];
     danger.effect();
 
     // 50% 概率进入战斗
     if (Math.random() < 0.5) {
-      this.openModal('危险', danger.desc + '\n\n遭遇敌人！', [
+      this.openModal("危险", danger.desc + "\n\n遭遇敌人！", [
         {
-          text: '进入战斗',
+          text: "进入战斗",
           action: () => {
             this.closeModal();
             this.enterCombat(cell);
@@ -1266,9 +1265,9 @@ export class MapScene extends Phaser.Scene {
         },
       ]);
     } else {
-      this.openModal('危险', danger.desc, [
+      this.openModal("危险", danger.desc, [
         {
-          text: '确定',
+          text: "确定",
           action: () => {
             this.completeCell(cell);
             this.closeModal();
@@ -1285,9 +1284,9 @@ export class MapScene extends Phaser.Scene {
   private showQuestionRewardPopup(cell: MapCell): void {
     const goldAmount = 5 + Math.floor(Math.random() * 10);
     this.modifyGold(goldAmount);
-    this.openModal('意外收获', `发现了 ${goldAmount} 枚金币！`, [
+    this.openModal("意外收获", `发现了 ${goldAmount} 枚金币！`, [
       {
-        text: '收下',
+        text: "收下",
         action: () => {
           this.completeCell(cell);
           this.closeModal();
@@ -1319,19 +1318,26 @@ export class MapScene extends Phaser.Scene {
     setGameState(gameState);
 
     // 构建状态描述
-    const statusLines = gameState.selectedCharacters.map(id => {
-      const cs = gameState.characterStates[id];
-      if (!cs) return '';
-      const status = cs.isDead ? '💀离队' : cs.isWounded ? `🩹重伤(剩${cs.restNodes}节点)` : `❤️${cs.currentHp}/${cs.def.maxHp}`;
-      return `${cs.def.name}: ${status}`;
-    }).filter(Boolean).join('\n');
+    const statusLines = gameState.selectedCharacters
+      .map((id) => {
+        const cs = gameState.characterStates[id];
+        if (!cs) return "";
+        const status = cs.isDead
+          ? "💀离队"
+          : cs.isWounded
+            ? `🩹重伤(剩${cs.restNodes}节点)`
+            : `❤️${cs.currentHp}/${cs.def.maxHp}`;
+        return `${cs.def.name}: ${status}`;
+      })
+      .filter(Boolean)
+      .join("\n");
 
     this.openModal(
-      '🏕️ 营地',
+      "🏕️ 营地",
       `在营地休息恢复\n\n所有未死亡角色 HP +5\n重伤角色休息倒计时 -1\n士气 +1\n\n${statusLines}`,
       [
         {
-          text: '继续',
+          text: "继续",
           action: () => {
             this.completeCell(cell);
             this.closeModal();
@@ -1340,7 +1346,7 @@ export class MapScene extends Phaser.Scene {
             this.updatePartyDisplay();
           },
         },
-      ]
+      ],
     );
   }
 
@@ -1350,25 +1356,32 @@ export class MapScene extends Phaser.Scene {
     const gameState = getGameState();
 
     // 构建角色状态信息
-    const charStatusLines = gameState.selectedCharacters.map(id => {
-      const cs = gameState.characterStates[id];
-      if (!cs) return '';
-      const status = cs.isDead ? '💀离队' : cs.isWounded ? `🩹重伤(剩${cs.restNodes}节点)` : `❤️${cs.currentHp}/${cs.def.maxHp}`;
-      return `${cs.def.name}: ${status}`;
-    }).filter(Boolean).join('\n');
+    const charStatusLines = gameState.selectedCharacters
+      .map((id) => {
+        const cs = gameState.characterStates[id];
+        if (!cs) return "";
+        const status = cs.isDead
+          ? "💀离队"
+          : cs.isWounded
+            ? `🩹重伤(剩${cs.restNodes}节点)`
+            : `❤️${cs.currentHp}/${cs.def.maxHp}`;
+        return `${cs.def.name}: ${status}`;
+      })
+      .filter(Boolean)
+      .join("\n");
 
     const desc = `剩余金币: ${gameState.gold}\n商队: ${gameState.caravanHp}/${gameState.caravanMaxHp}\n\n队伍状态:\n${charStatusLines}\n\n选择补给项目：`;
 
     const options: { text: string; action: () => void }[] = [];
 
     // 选项1：深度治疗（选择一名角色）
-    const woundedChars = gameState.selectedCharacters.filter(id => {
+    const woundedChars = gameState.selectedCharacters.filter((id) => {
       const cs = gameState.characterStates[id];
       return cs && !cs.isDead;
     });
     if (woundedChars.length > 0) {
       options.push({
-        text: '深度治疗 (选角色)',
+        text: "深度治疗 (选角色)",
         action: () => {
           this.showDeepHealPopup(cell);
         },
@@ -1377,10 +1390,15 @@ export class MapScene extends Phaser.Scene {
 
     // 选项2：修复商队
     options.push({
-      text: '修复商队 (+20)',
+      text: "修复商队 (+20)",
       action: () => {
-        gameState.caravanHp = Math.min(gameState.caravanMaxHp, gameState.caravanHp + 20);
-        console.log(`[补给] 修复商队: ${gameState.caravanHp}/${gameState.caravanMaxHp}`);
+        gameState.caravanHp = Math.min(
+          gameState.caravanMaxHp,
+          gameState.caravanHp + 20,
+        );
+        console.log(
+          `[补给] 修复商队: ${gameState.caravanHp}/${gameState.caravanMaxHp}`,
+        );
         setGameState(gameState);
         this.completeCell(cell);
         this.closeModal();
@@ -1392,7 +1410,7 @@ export class MapScene extends Phaser.Scene {
 
     // 选项3：全队休整
     options.push({
-      text: '全队休整 (HP+8, 士气+1)',
+      text: "全队休整 (HP+8, 士气+1)",
       action: () => {
         for (const id of gameState.selectedCharacters) {
           const cs = gameState.characterStates[id];
@@ -1412,7 +1430,7 @@ export class MapScene extends Phaser.Scene {
 
     // 离开选项
     options.push({
-      text: '离开',
+      text: "离开",
       action: () => {
         this.completeCell(cell);
         this.closeModal();
@@ -1421,40 +1439,42 @@ export class MapScene extends Phaser.Scene {
       },
     });
 
-    this.openModal('补给站', desc, options);
+    this.openModal("补给站", desc, options);
   }
 
   private showDeepHealPopup(supplyCell: MapCell): void {
     const gameState = getGameState();
-    const healableChars = gameState.selectedCharacters.filter(id => {
+    const healableChars = gameState.selectedCharacters.filter((id) => {
       const cs = gameState.characterStates[id];
       return cs && !cs.isDead;
     });
 
-    const options: { text: string; action: () => void }[] = healableChars.map(id => {
-      const cs = gameState.characterStates[id];
-      const woundedTag = cs.isWounded ? ' [🩹重伤]' : '';
-      return {
-        text: `${cs.def.name}${woundedTag} (${cs.currentHp}/${cs.def.maxHp})`,
-        action: () => {
-          // 深度治疗：HP恢复满，清除重伤
-          cs.currentHp = cs.def.maxHp;
-          cs.isWounded = false;
-          cs.restNodes = 0;
-          // injuryCount 不减少
-          setGameState(gameState);
-          console.log(`[补给] 深度治疗: ${cs.def.name} → HP满, 重伤清除`);
-          this.completeCell(supplyCell);
-          this.closeModal();
-          this.redrawMap();
-          this.updateResourceDisplay();
-          this.updatePartyDisplay();
-        },
-      };
-    });
+    const options: { text: string; action: () => void }[] = healableChars.map(
+      (id) => {
+        const cs = gameState.characterStates[id];
+        const woundedTag = cs.isWounded ? " [🩹重伤]" : "";
+        return {
+          text: `${cs.def.name}${woundedTag} (${cs.currentHp}/${cs.def.maxHp})`,
+          action: () => {
+            // 深度治疗：HP恢复满，清除重伤
+            cs.currentHp = cs.def.maxHp;
+            cs.isWounded = false;
+            cs.restNodes = 0;
+            // injuryCount 不减少
+            setGameState(gameState);
+            console.log(`[补给] 深度治疗: ${cs.def.name} → HP满, 重伤清除`);
+            this.completeCell(supplyCell);
+            this.closeModal();
+            this.redrawMap();
+            this.updateResourceDisplay();
+            this.updatePartyDisplay();
+          },
+        };
+      },
+    );
 
     options.push({
-      text: '取消',
+      text: "取消",
       action: () => {
         this.closeModal();
         // 重新显示补给站弹窗
@@ -1462,24 +1482,24 @@ export class MapScene extends Phaser.Scene {
       },
     });
 
-    this.openModal('深度治疗', '选择一名角色进行深度治疗\n\nHP 恢复到最大值\n清除当前重伤状态\n(重伤次数不减少)', options);
+    this.openModal(
+      "深度治疗",
+      "选择一名角色进行深度治疗\n\nHP 恢复到最大值\n清除当前重伤状态\n(重伤次数不减少)",
+      options,
+    );
   }
 
   private showExpeditionFailedModal(): void {
-    this.openModal(
-      '💀 远征失败',
-      '全队重伤或死亡，无法继续远征',
-      [
-        {
-          text: '返回主菜单',
-          action: () => {
-            resetGameState();
-            this.closeModal();
-            this.scene.start('MainMenuScene');
-          },
+    this.openModal("💀 远征失败", "全队重伤或死亡，无法继续远征", [
+      {
+        text: "返回主菜单",
+        action: () => {
+          resetGameState();
+          this.closeModal();
+          this.scene.start("MainMenuScene");
         },
-      ]
-    );
+      },
+    ]);
   }
 
   // ==================== 弹窗：奖励点 ====================
@@ -1495,11 +1515,11 @@ export class MapScene extends Phaser.Scene {
         morale?: number;
       }
     > = {
-      small: { name: '小货箱', gold: 10, food: 1 },
-      medium: { name: '商队残骸', gold: 15, caravanHp: 5 },
-      large: { name: '旧世界储藏箱', gold: 25, morale: 1 },
+      small: { name: "小货箱", gold: 10, food: 1 },
+      medium: { name: "商队残骸", gold: 15, caravanHp: 5 },
+      large: { name: "旧世界储藏箱", gold: 25, morale: 1 },
     };
-    const reward = rewards[cell.rewardType || 'small'];
+    const reward = rewards[cell.rewardType || "small"];
     this.modifyGold(reward.gold);
     if (reward.food) this.modifyFood(reward.food);
     if (reward.caravanHp) this.modifyCaravanHp(reward.caravanHp);
@@ -1507,16 +1527,15 @@ export class MapScene extends Phaser.Scene {
 
     const descParts = [`金币 +${reward.gold}`];
     if (reward.food) descParts.push(`食物 +${reward.food}`);
-    if (reward.caravanHp)
-      descParts.push(`商队耐久 +${reward.caravanHp}`);
+    if (reward.caravanHp) descParts.push(`商队耐久 +${reward.caravanHp}`);
     if (reward.morale) descParts.push(`士气 +${reward.morale}`);
 
     this.openModal(
       reward.name,
-      `发现了${reward.name}！\n\n${descParts.join('\n')}`,
+      `发现了${reward.name}！\n\n${descParts.join("\n")}`,
       [
         {
-          text: '继续',
+          text: "继续",
           action: () => {
             this.completeCell(cell);
             this.closeModal();
@@ -1524,7 +1543,7 @@ export class MapScene extends Phaser.Scene {
             this.updateResourceDisplay();
           },
         },
-      ]
+      ],
     );
   }
 
@@ -1546,7 +1565,7 @@ export class MapScene extends Phaser.Scene {
     const gameState = getGameState();
     gameState.caravanHp = Math.max(
       0,
-      Math.min(gameState.caravanMaxHp, gameState.caravanHp + delta)
+      Math.min(gameState.caravanMaxHp, gameState.caravanHp + delta),
     );
     setGameState(gameState);
   }
@@ -1569,7 +1588,9 @@ export class MapScene extends Phaser.Scene {
       const cs = gameState.characterStates[id];
       if (!cs || cs.isDead) continue;
       cs.currentHp = Math.min(cs.def.maxHp, cs.currentHp + amount);
-      console.log(`[地图V2] ${cs.def.name} 恢复 ${amount} HP → ${cs.currentHp}/${cs.def.maxHp}`);
+      console.log(
+        `[地图V2] ${cs.def.name} 恢复 ${amount} HP → ${cs.currentHp}/${cs.def.maxHp}`,
+      );
     }
     setGameState(gameState);
   }
@@ -1587,43 +1608,41 @@ export class MapScene extends Phaser.Scene {
   private updateResourceDisplay(): void {
     const gameState = getGameState();
 
-    this.resourceTexts['day'].setText(
-      `📅 ${gameState.day}/${gameState.maxDay}`
+    this.resourceTexts["day"].setText(
+      `📅 ${gameState.day}/${gameState.maxDay}`,
     );
-    this.resourceTexts['food'].setText(`🍞 ${gameState.food}`);
+    this.resourceTexts["food"].setText(`🍞 ${gameState.food}`);
 
     const moraleColor =
       gameState.morale >= 3
-        ? '#ffcc44'
+        ? "#ffcc44"
         : gameState.morale > 0
-          ? '#ff8844'
-          : '#ff4444';
-    this.resourceTexts['morale'].setText(`💪 ${gameState.morale}`);
-    this.resourceTexts['morale'].setColor(moraleColor);
+          ? "#ff8844"
+          : "#ff4444";
+    this.resourceTexts["morale"].setText(`💪 ${gameState.morale}`);
+    this.resourceTexts["morale"].setColor(moraleColor);
 
     const caravanColor =
       gameState.caravanHp > gameState.caravanMaxHp * 0.5
-        ? '#88ccff'
-        : '#ffaa44';
-    this.resourceTexts['caravan'].setText(
-      `🚗 ${gameState.caravanHp}/${gameState.caravanMaxHp}`
+        ? "#88ccff"
+        : "#ffaa44";
+    this.resourceTexts["caravan"].setText(
+      `🚗 ${gameState.caravanHp}/${gameState.caravanMaxHp}`,
     );
-    this.resourceTexts['caravan'].setColor(caravanColor);
+    this.resourceTexts["caravan"].setColor(caravanColor);
 
-    this.resourceTexts['gold'].setText(`💰 ${gameState.gold}`);
+    this.resourceTexts["gold"].setText(`💰 ${gameState.gold}`);
 
     // 调试信息
     const movable = getMovableNeighbors(gameState);
-    if (this.debugTexts['pos']) {
-      this.debugTexts['pos'].setText(
-        `位置:(${gameState.currentPosition.x},${gameState.currentPosition.y}) 可走:${movable.length} 弹窗:${this.modalContainer ? '开' : '关'}`
+    if (this.debugTexts["pos"]) {
+      this.debugTexts["pos"].setText(
+        `位置:(${gameState.currentPosition.x},${gameState.currentPosition.y}) 可走:${movable.length} 弹窗:${this.modalContainer ? "开" : "关"}`,
       );
     }
   }
 
-  private createPartyDisplay(
-    gameState: ReturnType<typeof getGameState>
-  ): void {
+  private createPartyDisplay(gameState: ReturnType<typeof getGameState>): void {
     this.partyDisplayContainer = this.add.container(0, 0);
     this.updatePartyDisplay();
   }
@@ -1656,16 +1675,20 @@ export class MapScene extends Phaser.Scene {
         bg.fillStyle(charDef.color, 0.3);
       }
       bg.fillRect(px - 25, startY - 5, 50, 50);
-      bg.lineStyle(2, cs?.isDead ? 0x444444 : cs?.isWounded ? 0xaa3333 : charDef.color, 1);
+      bg.lineStyle(
+        2,
+        cs?.isDead ? 0x444444 : cs?.isWounded ? 0xaa3333 : charDef.color,
+        1,
+      );
       bg.strokeRect(px - 25, startY - 5, 50, 50);
       this.partyDisplayContainer.add(bg);
 
       // 角色名
       this.add
         .text(px, startY + 5, charDef.name.slice(0, 2), {
-          fontSize: '14px',
-          color: cs?.isDead ? '#666666' : '#ffffff',
-          fontFamily: 'monospace',
+          fontSize: "14px",
+          color: cs?.isDead ? "#666666" : "#ffffff",
+          fontFamily: "monospace",
         })
         .setOrigin(0.5);
 
@@ -1673,20 +1696,26 @@ export class MapScene extends Phaser.Scene {
       if (cs) {
         if (cs.isDead) {
           this.add
-            .text(px, startY + 22, '💀离队', {
-              fontSize: '10px', color: '#ff4444', fontFamily: 'monospace',
+            .text(px, startY + 22, "💀离队", {
+              fontSize: "10px",
+              color: "#ff4444",
+              fontFamily: "monospace",
             })
             .setOrigin(0.5);
         } else if (cs.isWounded) {
           this.add
             .text(px, startY + 22, `🩹${cs.restNodes}`, {
-              fontSize: '10px', color: '#ff8844', fontFamily: 'monospace',
+              fontSize: "10px",
+              color: "#ff8844",
+              fontFamily: "monospace",
             })
             .setOrigin(0.5);
         } else {
           this.add
             .text(px, startY + 22, `${cs.currentHp}/${cs.def.maxHp}`, {
-              fontSize: '10px', color: '#88ff88', fontFamily: 'monospace',
+              fontSize: "10px",
+              color: "#88ff88",
+              fontFamily: "monospace",
             })
             .setOrigin(0.5);
         }
@@ -1695,7 +1724,9 @@ export class MapScene extends Phaser.Scene {
         if (cs.graveWounds > 0) {
           this.add
             .text(px, startY + 35, `${cs.graveWounds}/3`, {
-              fontSize: '9px', color: cs.graveWounds >= 3 ? '#ff4444' : '#ffaa44', fontFamily: 'monospace',
+              fontSize: "9px",
+              color: cs.graveWounds >= 3 ? "#ff4444" : "#ffaa44",
+              fontFamily: "monospace",
             })
             .setOrigin(0.5);
         }
@@ -1705,9 +1736,7 @@ export class MapScene extends Phaser.Scene {
 
   // ==================== 游戏状态检查 ====================
 
-  private checkGameStatus(
-    gameState: ReturnType<typeof getGameState>
-  ): boolean {
+  private checkGameStatus(gameState: ReturnType<typeof getGameState>): boolean {
     const gameOver = checkGameOver(gameState);
     if (gameOver.isOver) {
       this.showGameOver(gameOver.reason!);
@@ -1731,36 +1760,36 @@ export class MapScene extends Phaser.Scene {
     overlay.fillRect(0, 0, w, h);
 
     const title = this.add
-      .text(w / 2, h / 2 - 40, '💀 远征失败', {
-        fontSize: '36px',
-        color: '#ff4444',
-        fontFamily: 'monospace',
-        fontStyle: 'bold',
+      .text(w / 2, h / 2 - 40, "💀 远征失败", {
+        fontSize: "36px",
+        color: "#ff4444",
+        fontFamily: "monospace",
+        fontStyle: "bold",
       })
       .setOrigin(0.5);
 
     const desc = this.add
       .text(w / 2, h / 2 + 10, reason, {
-        fontSize: '18px',
-        color: '#aaaaaa',
-        fontFamily: 'monospace',
+        fontSize: "18px",
+        color: "#aaaaaa",
+        fontFamily: "monospace",
       })
       .setOrigin(0.5);
 
     const btn = this.add
-      .text(w / 2, h / 2 + 60, '【返回主菜单】', {
-        fontSize: '18px',
-        color: '#ffffff',
-        backgroundColor: '#444466',
+      .text(w / 2, h / 2 + 60, "【返回主菜单】", {
+        fontSize: "18px",
+        color: "#ffffff",
+        backgroundColor: "#444466",
         padding: { x: 20, y: 10 },
-        fontFamily: 'monospace',
+        fontFamily: "monospace",
       })
       .setOrigin(0.5)
       .setInteractive();
 
-    btn.on('pointerdown', () => {
+    btn.on("pointerdown", () => {
       resetGameState();
-      this.scene.start('MainMenuScene');
+      this.scene.start("MainMenuScene");
     });
   }
 
@@ -1774,41 +1803,41 @@ export class MapScene extends Phaser.Scene {
     overlay.fillRect(0, 0, w, h);
 
     const title = this.add
-      .text(w / 2, h / 2 - 40, '🎉 远征胜利！', {
-        fontSize: '36px',
-        color: '#ffcc44',
-        fontFamily: 'monospace',
-        fontStyle: 'bold',
+      .text(w / 2, h / 2 - 40, "🎉 远征胜利！", {
+        fontSize: "36px",
+        color: "#ffcc44",
+        fontFamily: "monospace",
+        fontStyle: "bold",
       })
       .setOrigin(0.5);
 
     const victoryText =
-      gameState.expeditionGoal === 'boss'
-        ? '你成功击败了首领，完成了远征！'
-        : '你成功抵达了安全据点，完成了远征！';
+      gameState.expeditionGoal === "boss"
+        ? "你成功击败了首领，完成了远征！"
+        : "你成功抵达了安全据点，完成了远征！";
 
     const desc = this.add
       .text(w / 2, h / 2 + 10, victoryText, {
-        fontSize: '18px',
-        color: '#cccccc',
-        fontFamily: 'monospace',
+        fontSize: "18px",
+        color: "#cccccc",
+        fontFamily: "monospace",
       })
       .setOrigin(0.5);
 
     const btn = this.add
-      .text(w / 2, h / 2 + 60, '【返回主菜单】', {
-        fontSize: '18px',
-        color: '#ffffff',
-        backgroundColor: '#2a4a8a',
+      .text(w / 2, h / 2 + 60, "【返回主菜单】", {
+        fontSize: "18px",
+        color: "#ffffff",
+        backgroundColor: "#2a4a8a",
         padding: { x: 20, y: 10 },
-        fontFamily: 'monospace',
+        fontFamily: "monospace",
       })
       .setOrigin(0.5)
       .setInteractive();
 
-    btn.on('pointerdown', () => {
+    btn.on("pointerdown", () => {
       resetGameState();
-      this.scene.start('MainMenuScene');
+      this.scene.start("MainMenuScene");
     });
   }
 
@@ -1827,13 +1856,13 @@ export class MapScene extends Phaser.Scene {
   private clickSimulationTest(): void {
     const gs = getGameState();
     if (gs._isClickTesting) {
-      console.log('[鼠标模拟测试] 已在进行中，忽略');
+      console.log("[鼠标模拟测试] 已在进行中，忽略");
       return;
     }
     gs._isClickTesting = true;
     gs._clickTestStep = 0;
     setGameState(gs);
-    console.log('[鼠标模拟测试] 开始！模拟人类鼠标点击操作（30步）');
+    console.log("[鼠标模拟测试] 开始！模拟人类鼠标点击操作（30步）");
     this.clickSimStep();
   }
 
@@ -1842,7 +1871,7 @@ export class MapScene extends Phaser.Scene {
     const step = gs._clickTestStep;
 
     if (step >= 30) {
-      console.log('[鼠标模拟测试] 完成！成功模拟 30 步鼠标点击');
+      console.log("[鼠标模拟测试] 完成！成功模拟 30 步鼠标点击");
       gs._isClickTesting = false;
       gs._clickTestStep = 0;
       setGameState(gs);
@@ -1877,7 +1906,9 @@ export class MapScene extends Phaser.Scene {
 
     if (buttons.length > 0) {
       const btn = buttons[0];
-      console.log(`[鼠标模拟测试] step=${step} 模拟点击弹窗按钮: "${btn.text}"`);
+      console.log(
+        `[鼠标模拟测试] step=${step} 模拟点击弹窗按钮: "${btn.text}"`,
+      );
 
       // 保存恢复步数
       if (isDirectional) {
@@ -1888,12 +1919,14 @@ export class MapScene extends Phaser.Scene {
       setGameState(gs);
 
       // 通过游戏对象的 emit 直接触发 pointerdown 事件
-      btn.emit('pointerdown');
+      btn.emit("pointerdown");
 
       // 延迟检查是否进入战斗
       this.time.delayedCall(500, () => {
         if (!this.scene.isActive()) {
-          console.log(`[鼠标模拟测试] step=${step} 弹窗操作后进入战斗，等待返回...`);
+          console.log(
+            `[鼠标模拟测试] step=${step} 弹窗操作后进入战斗，等待返回...`,
+          );
           return;
         }
         const gs2 = getGameState();
@@ -1942,13 +1975,15 @@ export class MapScene extends Phaser.Scene {
     // 计算格子中心在 canvas 中的坐标
     // 格子坐标 = cellIndex * (cellSize + cellGap) + cellSize/2
     // pointer 坐标 = 格子坐标 + mapContainer 位置（因为 handleMapPointer 会减去 mapContainer 位置）
-    const cellCenterX = target.x * (this.cellSize + this.cellGap) + this.cellSize / 2;
-    const cellCenterY = target.y * (this.cellSize + this.cellGap) + this.cellSize / 2;
+    const cellCenterX =
+      target.x * (this.cellSize + this.cellGap) + this.cellSize / 2;
+    const cellCenterY =
+      target.y * (this.cellSize + this.cellGap) + this.cellSize / 2;
 
     console.log(
       `[鼠标模拟测试] step=${step + 1} 模拟点击格子 (${target.x},${target.y})`,
       `mapContainer=(${this.mapContainer.x},${this.mapContainer.y})`,
-      `pointer=(${cellCenterX + this.mapContainer.x},${cellCenterY + this.mapContainer.y})`
+      `pointer=(${cellCenterX + this.mapContainer.x},${cellCenterY + this.mapContainer.y})`,
     );
 
     // 保存恢复步数
@@ -1970,7 +2005,9 @@ export class MapScene extends Phaser.Scene {
     this.time.delayedCall(300, () => {
       // 检查是否弹出了弹窗
       if (this.modalContainer) {
-        console.log(`[鼠标模拟测试] step=${step + 1} 点击后弹出弹窗，自动点击按钮`);
+        console.log(
+          `[鼠标模拟测试] step=${step + 1} 点击后弹出弹窗，自动点击按钮`,
+        );
         this.time.delayedCall(500, () => {
           this.clickSimStep(); // clickSimStep 会检测到弹窗并点击按钮
         });
@@ -1996,21 +2033,21 @@ export class MapScene extends Phaser.Scene {
   private autoMoveTest(): void {
     const gs = getGameState();
     if (gs._isAutoMoving) {
-      console.log('[地图V2] 自动移动测试已在进行中，忽略');
+      console.log("[地图V2] 自动移动测试已在进行中，忽略");
       return;
     }
 
     gs._isAutoMoving = true;
     gs._debugStep = 0;
     setGameState(gs);
-    console.log('[地图V2] 开始自动移动测试（200步）');
+    console.log("[地图V2] 开始自动移动测试（200步）");
 
     this.autoMoveStep(0);
   }
 
   private autoMoveStep(step: number): void {
     if (step >= 200) {
-      console.log('[地图V2] 自动移动测试完成！成功执行 200 步');
+      console.log("[地图V2] 自动移动测试完成！成功执行 200 步");
       const gs = getGameState();
       gs._isAutoMoving = false;
       gs._autoMoveResumeStep = 0;
@@ -2021,9 +2058,7 @@ export class MapScene extends Phaser.Scene {
 
     // 如果有弹窗，先执行弹窗 action
     if (this.modalContainer) {
-      console.log(
-        `[地图压力测试] step=${step} 检测到弹窗，自动执行第一个选项`
-      );
+      console.log(`[地图压力测试] step=${step} 检测到弹窗，自动执行第一个选项`);
       // 保存恢复步数（弹窗 action 可能触发战斗）
       const gs = getGameState();
       gs._autoMoveResumeStep = step + 1;
@@ -2035,7 +2070,7 @@ export class MapScene extends Phaser.Scene {
       this.time.delayedCall(300, () => {
         if (!this.scene.isActive()) {
           console.log(
-            `[地图压力测试] step=${step} 弹窗操作导致进入战斗，等待返回...`
+            `[地图压力测试] step=${step} 弹窗操作导致进入战斗，等待返回...`,
           );
           return;
         }
@@ -2055,20 +2090,25 @@ export class MapScene extends Phaser.Scene {
     if (movable.length === 0) {
       const { x, y } = gameState.currentPosition;
       const dirs = [
-        { name: '上', dx: 0, dy: -1 },
-        { name: '下', dx: 0, dy: 1 },
-        { name: '左', dx: -1, dy: 0 },
-        { name: '右', dx: 1, dy: 0 },
+        { name: "上", dx: 0, dy: -1 },
+        { name: "下", dx: 0, dy: 1 },
+        { name: "左", dx: -1, dy: 0 },
+        { name: "右", dx: 1, dy: 0 },
       ];
 
       // 打印四周状态
       for (const dir of dirs) {
         const nx = x + dir.dx;
         const ny = y + dir.dy;
-        if (nx >= 0 && nx < gameState.mapWidth && ny >= 0 && ny < gameState.mapHeight) {
+        if (
+          nx >= 0 &&
+          nx < gameState.mapWidth &&
+          ny >= 0 &&
+          ny < gameState.mapHeight
+        ) {
           const c = gameState.mapCells[ny][nx];
           console.log(
-            `[地图压力测试]   ${dir.name} (${nx},${ny}): type=${c.type} obstacle=${c.type === 'obstacle'}`
+            `[地图压力测试]   ${dir.name} (${nx},${ny}): type=${c.type} obstacle=${c.type === "obstacle"}`,
           );
         }
       }
@@ -2079,24 +2119,22 @@ export class MapScene extends Phaser.Scene {
         const nx = x + dir.dx;
         const ny = y + dir.dy;
         if (
-          nx >= 0 && nx < gameState.mapWidth &&
-          ny >= 0 && ny < gameState.mapHeight &&
-          gameState.mapCells[ny][nx].type !== 'obstacle'
+          nx >= 0 &&
+          nx < gameState.mapWidth &&
+          ny >= 0 &&
+          ny < gameState.mapHeight &&
+          gameState.mapCells[ny][nx].type !== "obstacle"
         ) {
           nonObstacleNeighbors.push({ x: nx, y: ny });
         }
       }
 
       if (nonObstacleNeighbors.length > 0) {
-        console.log(
-          `[地图错误] movableCount=0，但周围存在非障碍格，自动修复`
-        );
+        console.log(`[地图错误] movableCount=0，但周围存在非障碍格，自动修复`);
         // 允许移动到任意相邻非障碍格
         movable = nonObstacleNeighbors;
       } else {
-        console.log(
-          `[地图压力测试] step=${step + 1} 真正的死胡同，无法继续`
-        );
+        console.log(`[地图压力测试] step=${step + 1} 真正的死胡同，无法继续`);
         const gs = getGameState();
         gs._isAutoMoving = false;
         gs._autoMoveResumeStep = 0;
@@ -2112,7 +2150,7 @@ export class MapScene extends Phaser.Scene {
         `[地图压力测试] step=${step + 1}`,
         `current=(${gameState.currentPosition.x},${gameState.currentPosition.y})`,
         `movableCount=${movable.length}`,
-        `day=${gameState.day}`
+        `day=${gameState.day}`,
       );
     }
 
@@ -2120,13 +2158,18 @@ export class MapScene extends Phaser.Scene {
     const prevPos = gameState._autoMovePrevPos;
     let candidates = movable;
     if (movable.length > 1 && prevPos) {
-      candidates = movable.filter(m => !(m.x === prevPos.x && m.y === prevPos.y));
+      candidates = movable.filter(
+        (m) => !(m.x === prevPos.x && m.y === prevPos.y),
+      );
     }
     const target = candidates[Math.floor(Math.random() * candidates.length)];
 
     // 记录当前位置，供下一步避免走回
     const gsBeforeMove = getGameState();
-    gsBeforeMove._autoMovePrevPos = { x: gsBeforeMove.currentPosition.x, y: gsBeforeMove.currentPosition.y };
+    gsBeforeMove._autoMovePrevPos = {
+      x: gsBeforeMove.currentPosition.x,
+      y: gsBeforeMove.currentPosition.y,
+    };
     setGameState(gsBeforeMove);
 
     // 统一调用 tryMoveTo（内部已处理自动测试跳过战斗逻辑）
@@ -2142,9 +2185,7 @@ export class MapScene extends Phaser.Scene {
       // 下一轮会处理弹窗
       this.time.delayedCall(300, () => {
         if (!this.scene.isActive()) {
-          console.log(
-            `[地图压力测试] step=${step + 1} 进入战斗，等待返回...`
-          );
+          console.log(`[地图压力测试] step=${step + 1} 进入战斗，等待返回...`);
           return;
         }
         const gs2 = getGameState();
@@ -2162,9 +2203,7 @@ export class MapScene extends Phaser.Scene {
 
     this.time.delayedCall(100, () => {
       if (!this.scene.isActive()) {
-        console.log(
-          `[地图压力测试] step=${step + 1} 进入战斗，等待返回...`
-        );
+        console.log(`[地图压力测试] step=${step + 1} 进入战斗，等待返回...`);
         return;
       }
       const gs2 = getGameState();
@@ -2179,7 +2218,7 @@ export class MapScene extends Phaser.Scene {
   private directionalClickTest(): void {
     const gs = getGameState();
     if (gs._isDirectionalTesting) {
-      console.log('[方向模拟测试] 已在进行中，忽略');
+      console.log("[方向模拟测试] 已在进行中，忽略");
       return;
     }
     // 同时关闭T键测试（避免冲突）
@@ -2192,7 +2231,7 @@ export class MapScene extends Phaser.Scene {
     gs._directionalTestStep = 0;
     gs._directionalTestMaxSteps = 200;
     setGameState(gs);
-    console.log('[方向模拟测试] 开始！目标：地图右上角，最多200步');
+    console.log("[方向模拟测试] 开始！目标：地图右上角，最多200步");
     this.directionalSimStep();
   }
 
@@ -2214,7 +2253,7 @@ export class MapScene extends Phaser.Scene {
     if (pos.x >= 17 && pos.y <= 2) {
       console.log(
         `[方向模拟测试] ✅ 已到达右上角区域 (${pos.x},${pos.y})，` +
-        `共 ${step} 步，测试结束！`
+          `共 ${step} 步，测试结束！`,
       );
       gs._isDirectionalTesting = false;
       gs._directionalTestStep = 0;
@@ -2233,7 +2272,7 @@ export class MapScene extends Phaser.Scene {
     if (movable.length === 0) {
       console.log(
         `[方向模拟测试] step=${step} ⛔ 无可走格 ` +
-        `当前位置=(${pos.x},${pos.y})，测试结束`
+          `当前位置=(${pos.x},${pos.y})，测试结束`,
       );
       gs._isDirectionalTesting = false;
       gs._directionalTestStep = 0;
@@ -2247,7 +2286,7 @@ export class MapScene extends Phaser.Scene {
     if (!target) {
       console.log(
         `[方向模拟测试] step=${step + 1} ⛔ BFS 无路径，` +
-        `当前位置=(${pos.x},${pos.y})，测试结束`
+          `当前位置=(${pos.x},${pos.y})，测试结束`,
       );
       gs._isDirectionalTesting = false;
       gs._directionalTestStep = 0;
@@ -2258,8 +2297,8 @@ export class MapScene extends Phaser.Scene {
 
     console.log(
       `[方向模拟测试] step=${step + 1}/${maxSteps} ` +
-      `(${pos.x},${pos.y}) → (${target.x},${target.y}) ` +
-      `目标区域: x≥17,y≤2`
+        `(${pos.x},${pos.y}) → (${target.x},${target.y}) ` +
+        `目标区域: x≥17,y≤2`,
     );
 
     // 保存恢复步数
@@ -2268,8 +2307,10 @@ export class MapScene extends Phaser.Scene {
     setGameState(gs);
 
     // 模拟点击格子
-    const cellCenterX = target.x * (this.cellSize + this.cellGap) + this.cellSize / 2;
-    const cellCenterY = target.y * (this.cellSize + this.cellGap) + this.cellSize / 2;
+    const cellCenterX =
+      target.x * (this.cellSize + this.cellGap) + this.cellSize / 2;
+    const cellCenterY =
+      target.y * (this.cellSize + this.cellGap) + this.cellSize / 2;
     const pointer = this.input.activePointer;
     pointer.x = cellCenterX + this.mapContainer.x;
     pointer.y = cellCenterY + this.mapContainer.y;
@@ -2305,7 +2346,7 @@ export class MapScene extends Phaser.Scene {
   private isWalkable(x: number, y: number): boolean {
     const gs = getGameState();
     if (x < 0 || y < 0 || x >= gs.mapWidth || y >= gs.mapHeight) return false;
-    return gs.mapCells[y][x].type !== 'obstacle';
+    return gs.mapCells[y][x].type !== "obstacle";
   }
 
   /**
@@ -2318,11 +2359,12 @@ export class MapScene extends Phaser.Scene {
   private findPathToTargetArea(
     current: { x: number; y: number },
     movable: Array<{ x: number; y: number }>,
-    targetPredicate: (x: number, y: number) => boolean
+    targetPredicate: (x: number, y: number) => boolean,
   ): { x: number; y: number; pathLen: number } | null {
     const visited = new Set<string>();
     const queue: Array<{
-      x: number; y: number;
+      x: number;
+      y: number;
       firstStep: { x: number; y: number } | null;
       depth: number;
     }> = [];
@@ -2336,15 +2378,21 @@ export class MapScene extends Phaser.Scene {
     }
 
     const dirs = [
-      { dx: 0, dy: -1 }, { dx: 0, dy: 1 },
-      { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+      { dx: 0, dy: -1 },
+      { dx: 0, dy: 1 },
+      { dx: -1, dy: 0 },
+      { dx: 1, dy: 0 },
     ];
 
     while (queue.length > 0) {
       const node = queue.shift()!;
 
       if (targetPredicate(node.x, node.y)) {
-        return { x: node.firstStep!.x, y: node.firstStep!.y, pathLen: node.depth };
+        return {
+          x: node.firstStep!.x,
+          y: node.firstStep!.y,
+          pathLen: node.depth,
+        };
       }
 
       for (const dir of dirs) {
@@ -2354,7 +2402,12 @@ export class MapScene extends Phaser.Scene {
         if (visited.has(key)) continue;
         if (!this.isWalkable(nx, ny)) continue;
         visited.add(key);
-        queue.push({ x: nx, y: ny, firstStep: node.firstStep, depth: node.depth + 1 });
+        queue.push({
+          x: nx,
+          y: ny,
+          firstStep: node.firstStep,
+          depth: node.depth + 1,
+        });
       }
     }
 
@@ -2367,19 +2420,182 @@ export class MapScene extends Phaser.Scene {
    */
   private pickDirectionalTarget(
     movable: Array<{ x: number; y: number }>,
-    current: { x: number; y: number }
+    current: { x: number; y: number },
   ): { x: number; y: number } | null {
     const firstStep = this.findPathToTargetArea(
-      current, movable,
-      (x, y) => x >= 17 && y <= 2
+      current,
+      movable,
+      (x, y) => x >= 17 && y <= 2,
     );
 
     if (firstStep) {
-      console.log(`[方向模拟BFS] 路径长度=${firstStep.pathLen}步，第一步: (${firstStep.x},${firstStep.y})`);
+      console.log(
+        `[方向模拟BFS] 路径长度=${firstStep.pathLen}步，第一步: (${firstStep.x},${firstStep.y})`,
+      );
       return { x: firstStep.x, y: firstStep.y };
     }
 
-    console.log('[方向模拟BFS] 未找到通往目标的路径，停止方向模拟');
+    console.log("[方向模拟BFS] 未找到通往目标的路径，停止方向模拟");
     return null;
+  }
+
+  // ==================== 牌组查看界面（阶段4.1） ====================
+
+  /** 显示牌组查看界面 */
+  private showDeckViewer(): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const gameState = getGameState();
+
+    console.log("[牌组查看] 打开牌组查看界面");
+
+    // 半透明遮罩
+    const overlay = this.add
+      .rectangle(w / 2, h / 2, w, h, 0x000000, 0.85)
+      .setDepth(200);
+
+    // 标题
+    const title = this.add
+      .text(w / 2, 40, "牌组查看", {
+        fontSize: "28px",
+        color: "#ffcc44",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+      })
+      .setOrigin(0.5)
+      .setDepth(201);
+
+    // 关闭提示
+    const closeHint = this.add
+      .text(w / 2, h - 30, "按 V 或 ESC 关闭", {
+        fontSize: "16px",
+        color: "#888888",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setDepth(201);
+
+    // 角色列表
+    const characters = gameState.selectedCharacters.map((id) => ({
+      id,
+      state: gameState.characterStates[id],
+      def: CHARACTER_DEFS[id],
+    }));
+
+    const startY = 80;
+    const charHeight = 180;
+    const colWidth = w / characters.length;
+
+    const charContainers: Phaser.GameObjects.Container[] = [];
+
+    characters.forEach((char, idx) => {
+      const centerX = colWidth * idx + colWidth / 2;
+      const container = this.add.container(centerX, startY).setDepth(201);
+      charContainers.push(container);
+
+      // 角色名
+      const nameColor = char.state?.isDead
+        ? "#666666"
+        : char.state?.isWounded
+          ? "#ff6666"
+          : "#ffffff";
+      const nameText = this.add
+        .text(0, 0, char.def.name, {
+          fontSize: "22px",
+          color: nameColor,
+          fontFamily: "monospace",
+          fontStyle: "bold",
+        })
+        .setOrigin(0.5);
+      container.add(nameText);
+
+      // HP 和状态
+      const hp = char.state?.currentHp ?? char.def.maxHp;
+      const maxHp = char.def.maxHp;
+      let statusText = `HP: ${hp}/${maxHp}`;
+      if (char.state?.isDead) statusText += " [死亡]";
+      else if (char.state?.isWounded) statusText += " [重伤]";
+
+      const hpText = this.add
+        .text(0, 28, statusText, {
+          fontSize: "14px",
+          color: char.state?.isDead
+            ? "#666666"
+            : char.state?.isWounded
+              ? "#ff6666"
+              : "#88ff88",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5);
+      container.add(hpText);
+
+      // 牌组数量
+      const deck = char.state?.deck ?? [];
+      const deckCountText = this.add
+        .text(0, 50, `牌组: ${deck.length}张`, {
+          fontSize: "16px",
+          color: "#ffcc44",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5);
+      container.add(deckCountText);
+
+      // 卡牌列表（最多显示10张）
+      const maxShow = 10;
+      const cardsToShow = deck.slice(0, maxShow);
+      const cardStartY = 75;
+
+      cardsToShow.forEach((card, cardIdx) => {
+        const cardText = this.add
+          .text(0, cardStartY + cardIdx * 18, `⚡${card.cost} ${card.name}`, {
+            fontSize: "12px",
+            color: "#cccccc",
+            fontFamily: "monospace",
+          })
+          .setOrigin(0.5);
+        container.add(cardText);
+      });
+
+      // 如果卡牌超过 maxShow，显示省略
+      if (deck.length > maxShow) {
+        const moreText = this.add
+          .text(
+            0,
+            cardStartY + maxShow * 18,
+            `... 还有 ${deck.length - maxShow} 张`,
+            {
+              fontSize: "12px",
+              color: "#888888",
+              fontFamily: "monospace",
+            },
+          )
+          .setOrigin(0.5);
+        container.add(moreText);
+      }
+
+      // 打印到控制台
+      console.log(
+        `[牌组] ${char.def.name} deck=${deck.length}: ${deck.map((c) => c.name).join(", ")}`,
+      );
+    });
+
+    // 关闭函数
+    const closeViewer = () => {
+      overlay.destroy();
+      title.destroy();
+      closeHint.destroy();
+      charContainers.forEach((c) => c.destroy());
+      keyHandler?.destroy();
+    };
+
+    // 按键关闭
+    const keyHandler = this.input.keyboard?.once(
+      "keydown",
+      (event: KeyboardEvent) => {
+        if (event.key === "v" || event.key === "V" || event.key === "Escape") {
+          closeViewer();
+        }
+      },
+    );
   }
 }

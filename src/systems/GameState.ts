@@ -1,9 +1,23 @@
-import { CharacterId, createCharacterState } from '../data/characters';
-import { CharacterState } from '../data/types';
+import { CharacterId, createCharacterState } from "../data/characters";
+import { CharacterState } from "../data/types";
 
 // 地图格子类型
-export type CellType = 'obstacle' | 'boss' | 'elite' | 'camp' | 'supply' | 'reward' | 'question' | 'empty';
-export type ResolvedType = 'combat' | 'event' | 'opportunity' | 'danger' | 'reward' | 'empty';
+export type CellType =
+  | "obstacle"
+  | "boss"
+  | "elite"
+  | "camp"
+  | "supply"
+  | "reward"
+  | "question"
+  | "empty";
+export type ResolvedType =
+  | "combat"
+  | "event"
+  | "opportunity"
+  | "danger"
+  | "reward"
+  | "empty";
 
 // 地图格子
 export interface MapCell {
@@ -13,11 +27,11 @@ export interface MapCell {
   resolvedType: ResolvedType | null;
   visited: boolean;
   isCurrent: boolean;
-  isReachable: boolean;       // 仅用于显示高亮，不用于核心移动判断
+  isReachable: boolean; // 仅用于显示高亮，不用于核心移动判断
   isRevealed: boolean;
   isCleared: boolean;
   isGoal: boolean;
-  rewardType: 'small' | 'medium' | 'large' | null;
+  rewardType: "small" | "medium" | "large" | null;
 }
 
 // 游戏全局状态
@@ -47,11 +61,11 @@ export interface GameState {
   bossPosition: { x: number; y: number };
 
   // 远征目标
-  expeditionGoal: 'boss' | 'sanctuary';
+  expeditionGoal: "boss" | "sanctuary";
 
   // 战斗相关
-  currentBattleType: 'normal' | 'elite' | 'boss' | null;
-  battleResult: 'victory' | 'defeat' | null;
+  currentBattleType: "normal" | "elite" | "boss" | null;
+  battleResult: "victory" | "defeat" | null;
 
   // 自动移动测试状态（调试用）
   _isAutoMoving: boolean;
@@ -94,7 +108,7 @@ export function createInitialGameState(): GameState {
     startPosition: { x: 0, y: 0 },
     bossPosition: { x: 0, y: 0 },
 
-    expeditionGoal: 'boss',
+    expeditionGoal: "boss",
 
     currentBattleType: null,
     battleResult: null,
@@ -127,16 +141,11 @@ export function createInitialGameState(): GameState {
  *
  * 不检查：visited, isCleared, isRevealed, resolvedType, question, camp, supply, reward, elite, boss
  */
-export function canMoveTo(
-  state: GameState,
-  x: number,
-  y: number
-): boolean {
+export function canMoveTo(state: GameState, x: number, y: number): boolean {
   const current = state.currentPosition;
 
   // 检查是否相邻
-  const isAdjacent =
-    Math.abs(x - current.x) + Math.abs(y - current.y) === 1;
+  const isAdjacent = Math.abs(x - current.x) + Math.abs(y - current.y) === 1;
   if (!isAdjacent) return false;
 
   // 检查边界
@@ -146,7 +155,7 @@ export function canMoveTo(
 
   // 检查障碍
   const cell = state.mapCells[y][x];
-  if (cell.type === 'obstacle') return false;
+  if (cell.type === "obstacle") return false;
 
   return true;
 }
@@ -155,7 +164,7 @@ export function canMoveTo(
  * 获取当前四邻格中所有可移动的格子列表。
  */
 export function getMovableNeighbors(
-  state: GameState
+  state: GameState,
 ): { x: number; y: number }[] {
   const { x, y } = state.currentPosition;
   const directions = [
@@ -182,18 +191,18 @@ export function getMovableNeighbors(
 // 创建半隐藏远征地图
 export function createExpeditionMap(
   width: number,
-  height: number
+  height: number,
 ): {
   cells: MapCell[][];
   startPos: { x: number; y: number };
   bossPos: { x: number; y: number };
-  expeditionGoal: 'boss' | 'sanctuary';
+  expeditionGoal: "boss" | "sanctuary";
 } {
   let cells: MapCell[][];
   let startPos: { x: number; y: number };
   let bossPos: { x: number; y: number };
   let hasPath = false;
-  let expeditionGoal: 'boss' | 'sanctuary';
+  let expeditionGoal: "boss" | "sanctuary";
 
   while (!hasPath) {
     cells = createEmptyMap(width, height);
@@ -212,25 +221,24 @@ export function createExpeditionMap(
 
     // 确保起点和目标距离足够远
     const distance =
-      Math.abs(startPos.x - bossPos.x) +
-      Math.abs(startPos.y - bossPos.y);
+      Math.abs(startPos.x - bossPos.x) + Math.abs(startPos.y - bossPos.y);
     if (distance < 18) continue;
 
     // 随机选择远征目标
-    expeditionGoal = Math.random() < 0.7 ? 'boss' : 'sanctuary';
+    expeditionGoal = Math.random() < 0.7 ? "boss" : "sanctuary";
 
     // 设置起点
-    cells[startPos.y][startPos.x].type = 'empty';
+    cells[startPos.y][startPos.x].type = "empty";
     cells[startPos.y][startPos.x].isCurrent = true;
     cells[startPos.y][startPos.x].visited = true;
     cells[startPos.y][startPos.x].isRevealed = true;
 
     // 设置目标点
-    if (expeditionGoal === 'boss') {
-      cells[bossPos.y][bossPos.x].type = 'boss';
+    if (expeditionGoal === "boss") {
+      cells[bossPos.y][bossPos.x].type = "boss";
       cells[bossPos.y][bossPos.x].isRevealed = true;
     } else {
-      cells[bossPos.y][bossPos.x].type = 'empty';
+      cells[bossPos.y][bossPos.x].type = "empty";
       cells[bossPos.y][bossPos.x].isRevealed = true;
       cells[bossPos.y][bossPos.x].isGoal = true;
     }
@@ -243,15 +251,11 @@ export function createExpeditionMap(
     placeKeyNodes(cells, width, height, startPos, bossPos);
 
     // 检查通路
-    const pathExists = checkPathExists(
-      cells, startPos, bossPos, width, height
-    );
+    const pathExists = checkPathExists(cells, startPos, bossPos, width, height);
     if (!pathExists) continue;
 
     // 检查所有关键节点可达
-    hasPath = checkAllKeyNodesReachable(
-      cells, startPos, width, height
-    );
+    hasPath = checkAllKeyNodesReachable(cells, startPos, width, height);
   }
 
   return {
@@ -263,10 +267,7 @@ export function createExpeditionMap(
 }
 
 // 创建空地图
-function createEmptyMap(
-  width: number,
-  height: number
-): MapCell[][] {
+function createEmptyMap(width: number, height: number): MapCell[][] {
   const cells: MapCell[][] = [];
   for (let y = 0; y < height; y++) {
     cells[y] = [];
@@ -274,7 +275,7 @@ function createEmptyMap(
       cells[y][x] = {
         x,
         y,
-        type: 'question',
+        type: "question",
         resolvedType: null,
         visited: false,
         isCurrent: false,
@@ -295,7 +296,7 @@ function generateObstacleClusters(
   width: number,
   height: number,
   startPos: { x: number; y: number },
-  bossPos: { x: number; y: number }
+  bossPos: { x: number; y: number },
 ): void {
   const numClusters = 4 + Math.floor(Math.random() * 4);
 
@@ -309,10 +310,8 @@ function generateObstacleClusters(
       attempts++;
     } while (
       attempts < 100 &&
-      ((Math.abs(cx - startPos.x) < 2 &&
-        Math.abs(cy - startPos.y) < 2) ||
-        (Math.abs(cx - bossPos.x) < 2 &&
-          Math.abs(cy - bossPos.y) < 2))
+      ((Math.abs(cx - startPos.x) < 2 && Math.abs(cy - startPos.y) < 2) ||
+        (Math.abs(cx - bossPos.x) < 2 && Math.abs(cy - bossPos.y) < 2))
     );
 
     const clusterSize = 6 + Math.floor(Math.random() * 10);
@@ -322,8 +321,8 @@ function generateObstacleClusters(
     while (added.size < clusterSize && queue.length > 0) {
       const { x, y } = queue.shift()!;
 
-      if (cells[y][x].type === 'question') {
-        cells[y][x].type = 'obstacle';
+      if (cells[y][x].type === "question") {
+        cells[y][x].type = "obstacle";
       }
 
       const directions = [
@@ -339,13 +338,14 @@ function generateObstacleClusters(
         const key = `${nx},${ny}`;
 
         if (
-          nx >= 0 && nx < width && ny >= 0 && ny < height &&
+          nx >= 0 &&
+          nx < width &&
+          ny >= 0 &&
+          ny < height &&
           !added.has(key) &&
-          cells[ny][nx].type === 'question' &&
-          !(Math.abs(nx - startPos.x) < 2 &&
-            Math.abs(ny - startPos.y) < 2) &&
-          !(Math.abs(nx - bossPos.x) < 2 &&
-            Math.abs(ny - bossPos.y) < 2)
+          cells[ny][nx].type === "question" &&
+          !(Math.abs(nx - startPos.x) < 2 && Math.abs(ny - startPos.y) < 2) &&
+          !(Math.abs(nx - bossPos.x) < 2 && Math.abs(ny - bossPos.y) < 2)
         ) {
           added.add(key);
           queue.push({ x: nx, y: ny });
@@ -361,14 +361,14 @@ function generateObstacleBands(
   width: number,
   height: number,
   startPos: { x: number; y: number },
-  bossPos: { x: number; y: number }
+  bossPos: { x: number; y: number },
 ): void {
   const numBands = 2 + Math.floor(Math.random() * 2);
 
   for (let b = 0; b < numBands; b++) {
-    const bandType = Math.random() < 0.5 ? 'horizontal' : 'vertical';
+    const bandType = Math.random() < 0.5 ? "horizontal" : "vertical";
 
-    if (bandType === 'horizontal') {
+    if (bandType === "horizontal") {
       const y = 2 + Math.floor(Math.random() * (height - 4));
       const numGaps = 2 + Math.floor(Math.random() * 2);
       const gaps: { start: number; end: number }[] = [];
@@ -379,18 +379,14 @@ function generateObstacleBands(
       }
 
       for (let x = 0; x < width; x++) {
-        const inGap = gaps.some(
-          (gap) => x >= gap.start && x <= gap.end
-        );
+        const inGap = gaps.some((gap) => x >= gap.start && x <= gap.end);
         if (inGap) continue;
         if (
-          cells[y][x].type === 'question' &&
-          !(Math.abs(x - startPos.x) < 2 &&
-            Math.abs(y - startPos.y) < 2) &&
-          !(Math.abs(x - bossPos.x) < 2 &&
-            Math.abs(y - bossPos.y) < 2)
+          cells[y][x].type === "question" &&
+          !(Math.abs(x - startPos.x) < 2 && Math.abs(y - startPos.y) < 2) &&
+          !(Math.abs(x - bossPos.x) < 2 && Math.abs(y - bossPos.y) < 2)
         ) {
-          cells[y][x].type = 'obstacle';
+          cells[y][x].type = "obstacle";
         }
       }
     } else {
@@ -404,18 +400,14 @@ function generateObstacleBands(
       }
 
       for (let y = 0; y < height; y++) {
-        const inGap = gaps.some(
-          (gap) => y >= gap.start && y <= gap.end
-        );
+        const inGap = gaps.some((gap) => y >= gap.start && y <= gap.end);
         if (inGap) continue;
         if (
-          cells[y][x].type === 'question' &&
-          !(Math.abs(x - startPos.x) < 2 &&
-            Math.abs(y - startPos.y) < 2) &&
-          !(Math.abs(x - bossPos.x) < 2 &&
-            Math.abs(y - bossPos.y) < 2)
+          cells[y][x].type === "question" &&
+          !(Math.abs(x - startPos.x) < 2 && Math.abs(y - startPos.y) < 2) &&
+          !(Math.abs(x - bossPos.x) < 2 && Math.abs(y - bossPos.y) < 2)
         ) {
-          cells[y][x].type = 'obstacle';
+          cells[y][x].type = "obstacle";
         }
       }
     }
@@ -428,12 +420,12 @@ function placeKeyNodes(
   width: number,
   height: number,
   startPos: { x: number; y: number },
-  bossPos: { x: number; y: number }
+  bossPos: { x: number; y: number },
 ): void {
-  placeNodesOfType(cells, width, height, startPos, bossPos, 'camp', 3, 4);
-  placeNodesOfType(cells, width, height, startPos, bossPos, 'supply', 2, 3);
-  placeNodesOfType(cells, width, height, startPos, bossPos, 'elite', 3, 5);
-  placeNodesOfType(cells, width, height, startPos, bossPos, 'reward', 4, 6);
+  placeNodesOfType(cells, width, height, startPos, bossPos, "camp", 3, 4);
+  placeNodesOfType(cells, width, height, startPos, bossPos, "supply", 2, 3);
+  placeNodesOfType(cells, width, height, startPos, bossPos, "elite", 3, 5);
+  placeNodesOfType(cells, width, height, startPos, bossPos, "reward", 4, 6);
 }
 
 // 放置特定类型的节点
@@ -445,7 +437,7 @@ function placeNodesOfType(
   bossPos: { x: number; y: number },
   type: CellType,
   minCount: number,
-  maxCount: number
+  maxCount: number,
 ): void {
   const count =
     minCount + Math.floor(Math.random() * (maxCount - minCount + 1));
@@ -457,30 +449,22 @@ function placeNodesOfType(
     const x = Math.floor(Math.random() * width);
     const y = Math.floor(Math.random() * height);
 
-    if (
-      Math.abs(x - startPos.x) < 3 &&
-      Math.abs(y - startPos.y) < 3
-    )
-      continue;
-    if (
-      Math.abs(x - bossPos.x) < 3 &&
-      Math.abs(y - bossPos.y) < 3
-    )
-      continue;
+    if (Math.abs(x - startPos.x) < 3 && Math.abs(y - startPos.y) < 3) continue;
+    if (Math.abs(x - bossPos.x) < 3 && Math.abs(y - bossPos.y) < 3) continue;
 
-    if (cells[y][x].type !== 'question') continue;
+    if (cells[y][x].type !== "question") continue;
 
     cells[y][x].type = type;
     cells[y][x].isRevealed = true;
 
-    if (type === 'reward') {
+    if (type === "reward") {
       const rand = Math.random();
       if (rand < 0.5) {
-        cells[y][x].rewardType = 'small';
+        cells[y][x].rewardType = "small";
       } else if (rand < 0.85) {
-        cells[y][x].rewardType = 'medium';
+        cells[y][x].rewardType = "medium";
       } else {
-        cells[y][x].rewardType = 'large';
+        cells[y][x].rewardType = "large";
       }
     }
 
@@ -494,7 +478,7 @@ function checkPathExists(
   start: { x: number; y: number },
   end: { x: number; y: number },
   width: number,
-  height: number
+  height: number,
 ): boolean {
   const visited = new Set<string>();
   const queue = [{ x: start.x, y: start.y }];
@@ -520,10 +504,7 @@ function checkPathExists(
 
       if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
         const key = `${nx},${ny}`;
-        if (
-          !visited.has(key) &&
-          cells[ny][nx].type !== 'obstacle'
-        ) {
+        if (!visited.has(key) && cells[ny][nx].type !== "obstacle") {
           visited.add(key);
           queue.push({ x: nx, y: ny });
         }
@@ -539,7 +520,7 @@ function checkAllKeyNodesReachable(
   cells: MapCell[][],
   startPos: { x: number; y: number },
   width: number,
-  height: number
+  height: number,
 ): boolean {
   const visited = new Set<string>();
   const queue = [{ x: startPos.x, y: startPos.y }];
@@ -561,10 +542,7 @@ function checkAllKeyNodesReachable(
 
       if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
         const key = `${nx},${ny}`;
-        if (
-          !visited.has(key) &&
-          cells[ny][nx].type !== 'obstacle'
-        ) {
+        if (!visited.has(key) && cells[ny][nx].type !== "obstacle") {
           visited.add(key);
           queue.push({ x: nx, y: ny });
         }
@@ -576,11 +554,11 @@ function checkAllKeyNodesReachable(
     for (let x = 0; x < width; x++) {
       const cell = cells[y][x];
       const isKeyNode =
-        cell.type === 'camp' ||
-        cell.type === 'supply' ||
-        cell.type === 'elite' ||
-        cell.type === 'reward' ||
-        cell.type === 'boss' ||
+        cell.type === "camp" ||
+        cell.type === "supply" ||
+        cell.type === "elite" ||
+        cell.type === "reward" ||
+        cell.type === "boss" ||
         cell.isGoal;
 
       if (isKeyNode && !visited.has(`${x},${y}`)) {
@@ -597,20 +575,17 @@ function checkAllKeyNodesReachable(
 export function resolveQuestionCell(
   cell: MapCell,
   startPos: { x: number; y: number },
-  goalPos: { x: number; y: number }
+  goalPos: { x: number; y: number },
 ): ResolvedType {
   const diagonalDist = Math.sqrt(
-    Math.pow(goalPos.x - startPos.x, 2) +
-      Math.pow(goalPos.y - startPos.y, 2)
+    Math.pow(goalPos.x - startPos.x, 2) + Math.pow(goalPos.y - startPos.y, 2),
   );
 
   const distFromStart = Math.sqrt(
-    Math.pow(cell.x - startPos.x, 2) +
-      Math.pow(cell.y - startPos.y, 2)
+    Math.pow(cell.x - startPos.x, 2) + Math.pow(cell.y - startPos.y, 2),
   );
   const distFromGoal = Math.sqrt(
-    Math.pow(cell.x - goalPos.x, 2) +
-      Math.pow(cell.y - goalPos.y, 2)
+    Math.pow(cell.x - goalPos.x, 2) + Math.pow(cell.y - goalPos.y, 2),
   );
 
   let combatWeight: number;
@@ -620,13 +595,13 @@ export function resolveQuestionCell(
   let rewardWeight: number;
 
   if (distFromStart < diagonalDist / 3) {
-    combatWeight = 0.20;
+    combatWeight = 0.2;
     eventWeight = 0.35;
-    opportunityWeight = 0.30;
-    dangerWeight = 0.10;
+    opportunityWeight = 0.3;
+    dangerWeight = 0.1;
     rewardWeight = 0.05;
   } else if (distFromGoal < diagonalDist / 3) {
-    combatWeight = 0.40;
+    combatWeight = 0.4;
     eventWeight = 0.15;
     opportunityWeight = 0.15;
     dangerWeight = 0.25;
@@ -634,28 +609,19 @@ export function resolveQuestionCell(
   } else {
     combatWeight = 0.35;
     eventWeight = 0.25;
-    opportunityWeight = 0.20;
+    opportunityWeight = 0.2;
     dangerWeight = 0.15;
     rewardWeight = 0.05;
   }
 
   const rand = Math.random();
-  if (rand < combatWeight) return 'combat';
-  if (rand < combatWeight + eventWeight) return 'event';
-  if (
-    rand <
-    combatWeight + eventWeight + opportunityWeight
-  )
-    return 'opportunity';
-  if (
-    rand <
-    combatWeight +
-      eventWeight +
-      opportunityWeight +
-      dangerWeight
-  )
-    return 'danger';
-  return 'reward';
+  if (rand < combatWeight) return "combat";
+  if (rand < combatWeight + eventWeight) return "event";
+  if (rand < combatWeight + eventWeight + opportunityWeight)
+    return "opportunity";
+  if (rand < combatWeight + eventWeight + opportunityWeight + dangerWeight)
+    return "danger";
+  return "reward";
 }
 
 // ==================== 可达格显示更新（仅用于显示） ====================
@@ -687,14 +653,9 @@ export function updateReachableCells(state: GameState): void {
     const nx = x + dir.dx;
     const ny = y + dir.dy;
 
-    if (
-      nx >= 0 &&
-      nx < state.mapWidth &&
-      ny >= 0 &&
-      ny < state.mapHeight
-    ) {
+    if (nx >= 0 && nx < state.mapWidth && ny >= 0 && ny < state.mapHeight) {
       const cell = mapCells[ny][nx];
-      if (cell.type !== 'obstacle') {
+      if (cell.type !== "obstacle") {
         cell.isReachable = true;
       }
     }
@@ -707,36 +668,27 @@ export function updateReachableCells(state: GameState): void {
  * 执行移动到目标格子。
  * 使用 canMoveTo() 动态判断，不依赖 isReachable 状态。
  */
-export function moveToCell(
-  state: GameState,
-  x: number,
-  y: number
-): boolean {
+export function moveToCell(state: GameState, x: number, y: number): boolean {
   // 使用动态判断
   if (!canMoveTo(state, x, y)) {
-    console.log(
-      '[地图] 移动失败: canMoveTo 返回 false',
-      { from: state.currentPosition, to: { x, y } }
-    );
+    console.log("[地图] 移动失败: canMoveTo 返回 false", {
+      from: state.currentPosition,
+      to: { x, y },
+    });
     return false;
   }
 
   const targetCell = state.mapCells[y][x];
-  console.log(
-    '[地图] 尝试移动:',
-    {
-      from: state.currentPosition,
-      to: { x, y },
-      type: targetCell.type,
-      isCleared: targetCell.isCleared,
-    }
-  );
+  console.log("[地图] 尝试移动:", {
+    from: state.currentPosition,
+    to: { x, y },
+    type: targetCell.type,
+    isCleared: targetCell.isCleared,
+  });
 
   // 更新旧位置
   const oldCell =
-    state.mapCells[state.currentPosition.y][
-      state.currentPosition.x
-    ];
+    state.mapCells[state.currentPosition.y][state.currentPosition.x];
   oldCell.isCurrent = false;
   oldCell.visited = true;
 
@@ -749,12 +701,7 @@ export function moveToCell(
   // 天数 +1
   state.day += 1;
 
-  console.log(
-    '[地图] 移动成功，新位置:',
-    { x, y },
-    'day:',
-    state.day
-  );
+  console.log("[地图] 移动成功，新位置:", { x, y }, "day:", state.day);
 
   // 更新可达格显示
   updateReachableCells(state);
@@ -764,31 +711,27 @@ export function moveToCell(
 
 // ==================== 游戏状态检查 ====================
 
-export function checkGameOver(
-  state: GameState
-): { isOver: boolean; reason?: string } {
+export function checkGameOver(state: GameState): {
+  isOver: boolean;
+  reason?: string;
+} {
   if (state.day > state.maxDay) {
-    return { isOver: true, reason: '远征失败：错过期限' };
+    return { isOver: true, reason: "远征失败：错过期限" };
   }
   if (state.morale <= 0) {
-    return { isOver: true, reason: '远征失败：士气崩溃' };
+    return { isOver: true, reason: "远征失败：士气崩溃" };
   }
   if (state.caravanHp <= 0) {
-    return { isOver: true, reason: '远征失败：商队被摧毁' };
+    return { isOver: true, reason: "远征失败：商队被摧毁" };
   }
   return { isOver: false };
 }
 
 export function checkVictory(state: GameState): boolean {
   const currentCell =
-    state.mapCells[state.currentPosition.y][
-      state.currentPosition.x
-    ];
-  if (state.expeditionGoal === 'boss') {
-    return (
-      currentCell.type === 'boss' &&
-      state.battleResult === 'victory'
-    );
+    state.mapCells[state.currentPosition.y][state.currentPosition.x];
+  if (state.expeditionGoal === "boss") {
+    return currentCell.type === "boss" && state.battleResult === "victory";
   } else {
     return (
       currentCell.isGoal &&
@@ -836,8 +779,8 @@ export function initializeCharacterStates(characterIds: CharacterId[]): void {
 export function getAvailableCharacters(): CharacterState[] {
   const gameState = getGameState();
   return gameState.selectedCharacters
-    .map(id => gameState.characterStates[id])
-    .filter(cs => cs && !cs.isWounded && !cs.isDead);
+    .map((id) => gameState.characterStates[id])
+    .filter((cs) => cs && !cs.isWounded && !cs.isDead);
 }
 
 /**
@@ -845,7 +788,7 @@ export function getAvailableCharacters(): CharacterState[] {
  */
 export function checkExpeditionFailed(): boolean {
   const gameState = getGameState();
-  return gameState.selectedCharacters.every(id => {
+  return gameState.selectedCharacters.every((id) => {
     const cs = gameState.characterStates[id];
     return cs && (cs.isWounded || cs.isDead);
   });
@@ -874,23 +817,27 @@ export function processInjuryRecovery(): void {
  * 将战斗后的角色状态同步回 gameState.characterStates。
  * 处理重伤逻辑：HP<=0 的角色进入重伤。
  */
-export function syncCharacterStatesFromBattle(battleCharacters: CharacterState[]): void {
+export function syncCharacterStatesFromBattle(
+  battleCharacters: CharacterState[],
+): void {
   const gameState = getGameState();
   for (const bc of battleCharacters) {
     const cs = gameState.characterStates[bc.def.id];
     if (!cs) continue;
-    
+
     // 同步 HP（不低于1，重伤时设为1）
     cs.currentHp = bc.currentHp;
-    
+
     // 处理重伤
     if (bc.currentHp <= 0) {
       cs.currentHp = 1;
       cs.isWounded = true;
       cs.graveWounds += 1;
       cs.restNodes = 3;
-      console.log(`[重伤] ${cs.def.name} HP归零，进入重伤 (重伤次数: ${cs.graveWounds}/3)`);
-      
+      console.log(
+        `[重伤] ${cs.def.name} HP归零，进入重伤 (重伤次数: ${cs.graveWounds}/3)`,
+      );
+
       // 重伤3次，本局死亡
       if (cs.graveWounds >= 3) {
         cs.isDead = true;
