@@ -1224,7 +1224,11 @@ export class BattleScene extends Phaser.Scene {
     const gameState = getGameState();
 
     // 生成3张奖励卡
-    const rewardCards = generateRewardCards(gameState.selectedCharacters);
+    // P0-9: 奖励池排除死亡角色
+    const aliveTeamIds = gameState.selectedCharacters.filter(
+      (id) => !gameState.characterStates[id]?.isDead,
+    );
+    const rewardCards = generateRewardCards(aliveTeamIds);
 
     // 遮罩
     const overlay = this.add.graphics();
