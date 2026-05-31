@@ -53,6 +53,7 @@ export interface CardDef {
   type: CardType;
   description: string;
   effects: CardEffect[];
+  upgraded?: boolean; // 阶段5：是否已升级
 }
 
 // 运行时角色状态

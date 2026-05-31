@@ -15,7 +15,7 @@ import {
   checkExpeditionFailed,
 } from "../systems/GameState";
 import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
-import { CharacterState } from "../data/types";
+import { CharacterState, CardDef } from "../data/types";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -660,6 +660,80 @@ export class MapScene extends Phaser.Scene {
     console.log(
       `[弹窗] 已打开: ${title} modalContainer=${this.modalContainer ? "ok" : "undefined"}`,
     );
+  }
+
+  /**
+   * 打开纯文本弹窗（无按钮，用数字键选择）
+   * 用于选项较多时（如卡牌列表），避免按钮溢出
+   * 选项通过数字键 1-9 选择，与 setupKeyboard 的 modalContainer 逻辑配合
+   */
+  private openTextModal(
+    title: string,
+    desc: string,
+    options: { text: string; action: () => void }[],
+  ): void {
+    this.closeModal();
+
+    const w = this.scale.width;
+    const h = this.scale.height;
+
+    this.modalContainer = this.add.container(0, 0);
+
+    // 遮罩
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.7);
+    overlay.fillRect(0, 0, w, h);
+    this.modalContainer.add(overlay);
+
+    // 弹窗背景（更宽更高以容纳更多文本）
+    const popupW = Math.min(600, w - 40);
+    const popupH = Math.min(500, h - 40);
+    const popupBg = this.add.graphics();
+    popupBg.fillStyle(0x2a2a3e, 1);
+    popupBg.fillRect(w / 2 - popupW / 2, h / 2 - popupH / 2, popupW, popupH);
+    popupBg.lineStyle(3, 0x555566, 1);
+    popupBg.strokeRect(w / 2 - popupW / 2, h / 2 - popupH / 2, popupW, popupH);
+    this.modalContainer.add(popupBg);
+
+    // 标题
+    const titleText = this.add
+      .text(w / 2, h / 2 - popupH / 2 + 25, title, {
+        fontSize: "22px",
+        color: "#ffcc44",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+        wordWrap: { width: popupW - 40 },
+      })
+      .setOrigin(0.5);
+    this.modalContainer.add(titleText);
+
+    // 描述（可换行）
+    const descText = this.add
+      .text(w / 2, h / 2 - popupH / 2 + 60, desc, {
+        fontSize: "14px",
+        color: "#cccccc",
+        fontFamily: "monospace",
+        align: "left",
+        wordWrap: { width: popupW - 40 },
+      })
+      .setOrigin(0.5, 0);
+    this.modalContainer.add(descText);
+
+    // 底部提示
+    const hintY = h / 2 + popupH / 2 - 25;
+    const hintText = this.add
+      .text(w / 2, hintY, "按数字键选择 | ESC 返回", {
+        fontSize: "14px",
+        color: "#888888",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5);
+    this.modalContainer.add(hintText);
+
+    // 注册 actions（供数字键使用）
+    this.modalActions = options.map((opt) => opt.action);
+
+    console.log(`[弹窗] 已打开文本弹窗: ${title} (${options.length}个选项)`);
   }
 
   /** 执行弹窗第一个按钮的 action */
@@ -1427,6 +1501,30 @@ export class MapScene extends Phaser.Scene {
         this.updatePartyDisplay();
       },
     });
+
+    // 选项4：升级卡牌（阶段5）
+    const aliveChars = gameState.selectedCharacters.filter((id) => {
+      const cs = gameState.characterStates[id];
+      return cs && !cs.isDead;
+    });
+    if (aliveChars.length > 0) {
+      options.push({
+        text: "升级卡牌",
+        action: () => {
+          this.showUpgradeCardSelectCharacter(cell);
+        },
+      });
+    }
+
+    // 选项5：删除卡牌（阶段5）
+    if (aliveChars.length > 0) {
+      options.push({
+        text: "删除卡牌",
+        action: () => {
+          this.showDeleteCardSelectCharacter(cell);
+        },
+      });
+    }
 
     // 离开选项
     options.push({
@@ -2596,6 +2694,309 @@ export class MapScene extends Phaser.Scene {
           closeViewer();
         }
       },
+    );
+  }
+
+  // ==================== 阶段5：补给点卡牌升级/删除 ====================
+
+  /**
+   * 升级一张卡牌：复制卡牌对象，增强数值，标记 upgraded
+   * 不修改 ALL_CARDS 原始定义，只修改角色 deck 中的副本
+   */
+  private upgradeCard(card: CardDef): CardDef {
+    const upgradedCard: CardDef = {
+      ...card,
+      id: `${card.id}_up`,
+      name: `${card.name}+`,
+      upgraded: true,
+      effects: card.effects.map((eff) => {
+        // 攻击/治疗/护甲/修理类 value +3
+        if (
+          eff.type === "damage" ||
+          eff.type === "heal" ||
+          eff.type === "armor" ||
+          eff.type === "repair_caravan"
+        ) {
+          return { ...eff, value: eff.value + 3 };
+        }
+        // 标记/抽牌/特殊类保持不变
+        return { ...eff };
+      }),
+    };
+
+    // 更新描述：把数值替换为升级后的值
+    const descMap: Record<string, string> = {};
+    for (const eff of upgradedCard.effects) {
+      if (
+        eff.type === "damage" ||
+        eff.type === "heal" ||
+        eff.type === "armor" ||
+        eff.type === "repair_caravan"
+      ) {
+        descMap[eff.type] = String(eff.value);
+      }
+    }
+    // 简单替换描述中的数字（第一版不追求完美）
+    let newDesc = card.description;
+    if (descMap["damage"]) {
+      newDesc = newDesc.replace(
+        /造成\d+点伤害/,
+        `造成${descMap["damage"]}点伤害`,
+      );
+    }
+    if (descMap["heal"]) {
+      newDesc = newDesc.replace(/恢复\d+点/, `恢复${descMap["heal"]}点`);
+      newDesc = newDesc.replace(
+        /恢复生命最低的可上场角色\d+点/,
+        `恢复生命最低的可上场角色${descMap["heal"]}点`,
+      );
+    }
+    if (descMap["armor"]) {
+      newDesc = newDesc.replace(
+        /获得\d+点护甲/,
+        `获得${descMap["armor"]}点护甲`,
+      );
+      newDesc = newDesc.replace(/获得6点护甲/, `获得${descMap["armor"]}点护甲`);
+    }
+    if (descMap["repair_caravan"]) {
+      newDesc = newDesc.replace(
+        /恢复\d+点/,
+        `恢复${descMap["repair_caravan"]}点`,
+      );
+    }
+    upgradedCard.description = newDesc;
+
+    return upgradedCard;
+  }
+
+  /** 升级卡牌 - 步骤1：选择角色 */
+  private showUpgradeCardSelectCharacter(supplyCell: MapCell): void {
+    const gameState = getGameState();
+    const aliveChars = gameState.selectedCharacters.filter((id) => {
+      const cs = gameState.characterStates[id];
+      return cs && !cs.isDead;
+    });
+
+    const options: { text: string; action: () => void }[] = aliveChars.map(
+      (id) => {
+        const cs = gameState.characterStates[id];
+        const upgradableCount = cs.deck.filter((c) => !c.upgraded).length;
+        return {
+          text: `${cs.def.name} (可升级: ${upgradableCount}张)`,
+          action: () => {
+            this.showUpgradeCardSelectCard(id, supplyCell);
+          },
+        };
+      },
+    );
+
+    options.push({
+      text: "取消",
+      action: () => {
+        this.closeModal();
+        this.showSupplyPopup(supplyCell);
+      },
+    });
+
+    this.openModal("升级卡牌 - 选择角色", "选择要升级卡牌的角色", options);
+  }
+
+  /** 升级卡牌 - 步骤2：选择卡牌 */
+  private showUpgradeCardSelectCard(charId: string, supplyCell: MapCell): void {
+    const gameState = getGameState();
+    const cs =
+      gameState.characterStates[
+        charId as keyof typeof gameState.characterStates
+      ];
+    if (!cs) return;
+
+    // 构建卡牌列表描述（带 deck 原始索引）
+    const upgradableWithIndex: { card: CardDef; deckIndex: number }[] = [];
+    cs.deck.forEach((c, idx) => {
+      if (!c.upgraded) {
+        upgradableWithIndex.push({ card: c, deckIndex: idx });
+      }
+    });
+
+    if (upgradableWithIndex.length === 0) {
+      this.openModal("升级卡牌", `${cs.def.name} 没有可升级的卡牌`, [
+        {
+          text: "返回",
+          action: () => {
+            this.closeModal();
+            this.showSupplyPopup(supplyCell);
+          },
+        },
+      ]);
+      return;
+    }
+
+    // 构建卡牌列表描述
+    const cardLines = upgradableWithIndex
+      .map(
+        ({ card }, i) =>
+          `${i + 1}. ⚡${card.cost} ${card.name} [${card.type}] ${card.description}`,
+      )
+      .join("\n");
+
+    const options: { text: string; action: () => void }[] =
+      upgradableWithIndex.map(({ card, deckIndex }, index) => ({
+        text: `${index + 1}. ${card.name}`,
+        action: () => {
+          // 执行升级：直接用 deckIndex 替换
+          const upgradedCard = this.upgradeCard(card);
+          cs.deck[deckIndex] = upgradedCard;
+          setGameState(gameState);
+          console.log(
+            `[补给] 升级卡牌: ${cs.def.name} ${card.name} → ${upgradedCard.name}`,
+          );
+          console.log(
+            `[牌组] ${cs.def.name} deck=${cs.deck.length}: ${cs.deck.map((c) => c.name).join(", ")}`,
+          );
+
+          // 显示升级结果
+          this.openModal(
+            "升级成功",
+            `${cs.def.name} 的 ${card.name} 已升级为 ${upgradedCard.name}\n\n${upgradedCard.description}`,
+            [
+              {
+                text: "完成",
+                action: () => {
+                  this.completeCell(supplyCell);
+                  this.closeModal();
+                  this.redrawMap();
+                  this.updateResourceDisplay();
+                  this.updatePartyDisplay();
+                },
+              },
+            ],
+          );
+        },
+      }));
+
+    options.push({
+      text: "取消",
+      action: () => {
+        this.closeModal();
+        this.showUpgradeCardSelectCharacter(supplyCell);
+      },
+    });
+
+    this.openTextModal(
+      `升级卡牌 - ${cs.def.name}`,
+      `选择要升级的卡牌：\n\n${cardLines}`,
+      options,
+    );
+  }
+
+  /** 删除卡牌 - 步骤1：选择角色 */
+  private showDeleteCardSelectCharacter(supplyCell: MapCell): void {
+    const gameState = getGameState();
+    const aliveChars = gameState.selectedCharacters.filter((id) => {
+      const cs = gameState.characterStates[id];
+      return cs && !cs.isDead;
+    });
+
+    const options: { text: string; action: () => void }[] = aliveChars.map(
+      (id) => {
+        const cs = gameState.characterStates[id];
+        return {
+          text: `${cs.def.name} (牌组: ${cs.deck.length}张)`,
+          action: () => {
+            this.showDeleteCardSelectCard(id, supplyCell);
+          },
+        };
+      },
+    );
+
+    options.push({
+      text: "取消",
+      action: () => {
+        this.closeModal();
+        this.showSupplyPopup(supplyCell);
+      },
+    });
+
+    this.openModal("删除卡牌 - 选择角色", "选择要删除卡牌的角色", options);
+  }
+
+  /** 删除卡牌 - 步骤2：选择卡牌 */
+  private showDeleteCardSelectCard(charId: string, supplyCell: MapCell): void {
+    const gameState = getGameState();
+    const cs =
+      gameState.characterStates[
+        charId as keyof typeof gameState.characterStates
+      ];
+    if (!cs) return;
+
+    if (cs.deck.length === 0) {
+      this.openModal("删除卡牌", `${cs.def.name} 的牌组为空`, [
+        {
+          text: "返回",
+          action: () => {
+            this.closeModal();
+            this.showSupplyPopup(supplyCell);
+          },
+        },
+      ]);
+      return;
+    }
+
+    // 构建卡牌列表描述
+    const cardLines = cs.deck
+      .map(
+        (c, i) =>
+          `${i + 1}. ⚡${c.cost} ${c.name}${c.upgraded ? "+" : ""} [${c.type}] ${c.description}`,
+      )
+      .join("\n");
+
+    const options: { text: string; action: () => void }[] = cs.deck.map(
+      (card, index) => ({
+        text: `${index + 1}. ${card.name}${card.upgraded ? "+" : ""}`,
+        action: () => {
+          // 执行删除
+          const removedCard = cs.deck.splice(index, 1)[0];
+          setGameState(gameState);
+          console.log(
+            `[牌组] ${cs.def.name} 删除卡牌：${removedCard.name}，当前 deck=${cs.deck.length}`,
+          );
+          console.log(
+            `[牌组] ${cs.def.name} deck=${cs.deck.length}: ${cs.deck.map((c) => c.name).join(", ")}`,
+          );
+
+          // 显示删除结果
+          this.openModal(
+            "删除成功",
+            `${cs.def.name} 的 ${removedCard.name} 已从牌组移除\n当前牌组: ${cs.deck.length} 张`,
+            [
+              {
+                text: "完成",
+                action: () => {
+                  this.completeCell(supplyCell);
+                  this.closeModal();
+                  this.redrawMap();
+                  this.updateResourceDisplay();
+                  this.updatePartyDisplay();
+                },
+              },
+            ],
+          );
+        },
+      }),
+    );
+
+    options.push({
+      text: "取消",
+      action: () => {
+        this.closeModal();
+        this.showDeleteCardSelectCharacter(supplyCell);
+      },
+    });
+
+    this.openTextModal(
+      `删除卡牌 - ${cs.def.name}`,
+      `选择要删除的卡牌：\n\n${cardLines}`,
+      options,
     );
   }
 }
