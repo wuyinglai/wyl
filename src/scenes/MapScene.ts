@@ -236,8 +236,21 @@ export class MapScene extends Phaser.Scene {
     this.input.keyboard?.on('keydown', (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
 
-      // 弹窗打开时，只允许 Escape 关闭弹窗，禁止移动和测试快捷键
-      if (this.modalContainer && key !== 'escape') return;
+      // 弹窗打开时，允许数字键选择选项，Escape 关闭弹窗，禁止移动和测试快捷键
+      if (this.modalContainer) {
+        if (key === 'escape') {
+          this.closeModal();
+          return;
+        }
+        // 数字键 1-9 选择弹窗选项
+        const num = parseInt(key);
+        if (num >= 1 && num <= 9 && this.modalActions.length >= num) {
+          console.log(`[弹窗] 数字键 ${num} 选择选项: ${this.modalActions[num - 1] ? '执行' : '无'}`);
+          this.modalActions[num - 1]();
+          return;
+        }
+        return; // 其他键忽略
+      }
 
       switch (key) {
         case 'w':
