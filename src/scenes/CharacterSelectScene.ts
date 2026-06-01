@@ -54,17 +54,22 @@ export class CharacterSelectScene extends Phaser.Scene {
       "scout",
       "inspirer",
     ];
-    const cardWidth = 200;
-    const cardHeight = 280;
+    const maxCardWidth = 200;
+    const maxCardHeight = 280;
+    const cardGap = 15;
+    // 自适应：卡片宽度和高度根据屏幕调整
+    const availableWidth = w - 40;
+    const cardWidth = Math.min(maxCardWidth, (availableWidth - (allChars.length - 1) * cardGap) / allChars.length);
+    const cardHeight = Math.min(maxCardHeight, h - 160); // 留出标题和按钮空间
     const startX =
-      (w - allChars.length * cardWidth - (allChars.length - 1) * 20) / 2 +
-      cardWidth / 2;
+      Math.max(cardWidth / 2 + 10,
+        (w - allChars.length * cardWidth - (allChars.length - 1) * cardGap) / 2 + cardWidth / 2);
 
     for (let i = 0; i < allChars.length; i++) {
       const charId = allChars[i];
       const charDef = CHARACTER_DEFS[charId];
-      const x = startX + i * (cardWidth + 20);
-      const y = h / 2;
+      const x = startX + i * (cardWidth + cardGap);
+      const y = Math.min(h / 2, h - cardHeight / 2 - 70); // 不低于按钮上方70px
 
       const card = this.createCharacterCard(
         x,
@@ -77,9 +82,9 @@ export class CharacterSelectScene extends Phaser.Scene {
       this.characterCards.push(card);
     }
 
-    // 确认按钮
+    // 确认按钮 - 固定在底部安全区域
     this.confirmBtn = this.add
-      .text(w / 2, h - 80, "开始远征", {
+      .text(w / 2, h - 50, "开始远征", {
         fontSize: "28px",
         color: "#666666",
         backgroundColor: "#2a2a3a",

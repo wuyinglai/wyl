@@ -1589,7 +1589,7 @@ export class MapScene extends Phaser.Scene {
 
     this.openModal(
       "🏕️ 营地",
-      `在营地休息恢复\n\n所有未死亡角色 HP +5\n重伤角色休息倒计时 -1\n士气 +1\n\n${statusLines}`,
+      `在营地休息恢复\n\n所有未死亡角色 HP +5\n重伤角色休息倒计时 -1\n士气 +1\n\n${statusLines}\n\n💡 升旗/路标功能尚未开放，敬请期待`,
       [
         {
           text: "继续",

@@ -16,9 +16,13 @@ dist-ssr
 /test-*.cjs
 /smoke-test-*.cjs
 /test-caravan-parts-*.cjs
+/screenshot-*.cjs
 
 # But keep tests/ directory tracked
 !tests/
+
+# Test artifacts (screenshots, temp data)
+test-artifacts/
 
 # Editor directories and files
 .vscode/*

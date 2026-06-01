@@ -49,13 +49,15 @@ export class RouteSelectScene extends Scene {
     if (routes.length === 0) {
       this.showNoRoutesFallback(w, h);
     } else {
-      // 显示商路卡片
-      const cardWidth = 360;
-      const cardHeight = 420;
-      const gap = 30;
+      // 显示商路卡片 - 自适应屏幕宽度
+      const maxCardWidth = 360;
+      const gap = 20;
+      const availableWidth = Math.min(w - 40, routes.length * maxCardWidth + (routes.length - 1) * gap);
+      const cardWidth = Math.min(maxCardWidth, (availableWidth - (routes.length - 1) * gap) / routes.length);
+      const cardHeight = Math.min(420, h - 100);
       const totalWidth = routes.length * cardWidth + (routes.length - 1) * gap;
-      const startX = (w - totalWidth) / 2 + cardWidth / 2;
-      const cardY = h / 2 + 20;
+      const startX = Math.max(cardWidth / 2 + 10, (w - totalWidth) / 2 + cardWidth / 2);
+      const cardY = h / 2 + 10;
 
       routes.forEach((route, index) => {
         const cx = startX + index * (cardWidth + gap);

@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { BattleManager } from "../systems/BattleManager";
+import { TooltipManager } from "../systems/tooltipSystem";
 import {
   createCharacterState,
   getStartingDeck,
@@ -91,6 +92,7 @@ export class BattleScene extends Phaser.Scene {
 
   create() {
     // 重置实例变量（Scene 可能被重用）
+    this.tooltipManager = new TooltipManager(this, 500);
     this.characterPanels = [];
     this.characterSkillTexts = [];
     this.enemyPanels = [];
@@ -534,6 +536,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   private skillTooltip: Phaser.GameObjects.Container | null = null;
+  private tooltipManager: TooltipManager | null = null;
 
   private showSkillTooltip(card: CardDef, x: number, y: number): void {
     this.hideSkillTooltip();
@@ -866,12 +869,33 @@ export class BattleScene extends Phaser.Scene {
         cardText.on("pointerover", () => {
           if (!isSelected && canPlay)
             cardText.setStyle({ backgroundColor: "#3a3a5a" });
+          // 显示手牌 Tooltip
+          if (this.tooltipManager) {
+            const pointer = this.input.activePointer;
+            this.tooltipManager.show(
+              {
+                title: card.name,
+                lines: [
+                  `费用：${card.cost}`,
+                  `类型：${card.type}`,
+                  `角色：${card.characterId || "通用"}`,
+                  "",
+                  card.description || "无描述",
+                  card.effects ? `效果：${card.effects}` : "",
+                ].filter((l) => l !== ""),
+              },
+              pointer.x,
+              pointer.y,
+            );
+          }
         });
         cardText.on("pointerout", () => {
           if (!isSelected)
             cardText.setStyle({
               backgroundColor: canPlay ? "#2a2a4a" : "#1a1a2a",
             });
+          // 隐藏手牌 Tooltip
+          if (this.tooltipManager) this.tooltipManager.hide();
         });
 
         this.cardTexts.push(cardText);
@@ -1519,13 +1543,32 @@ export class BattleScene extends Phaser.Scene {
       );
       hitArea.setInteractive({ useHandCursor: true }).setDepth(215);
 
-      // 悬停效果
+      // 悬停效果 + Tooltip
       hitArea.on("pointerover", () => {
         cardBg.clear();
         cardBg.fillStyle(0x3a3a6a, 1);
         cardBg.fillRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
         cardBg.lineStyle(3, 0xffcc44, 1);
         cardBg.strokeRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+        // 显示奖励卡 Tooltip
+        if (this.tooltipManager) {
+          const pointer = this.input.activePointer;
+          this.tooltipManager.show(
+            {
+              title: card.name,
+              lines: [
+                `费用：${card.cost}`,
+                `类型：${card.type}`,
+                `角色：${card.characterId || "通用"}`,
+                "",
+                card.description || "无描述",
+                card.effects ? `效果：${card.effects}` : "",
+              ].filter((l) => l !== ""),
+            },
+            pointer.x,
+            pointer.y,
+          );
+        }
       });
       hitArea.on("pointerout", () => {
         cardBg.clear();
@@ -1533,6 +1576,8 @@ export class BattleScene extends Phaser.Scene {
         cardBg.fillRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
         cardBg.lineStyle(2, charDef.color, 1);
         cardBg.strokeRoundedRect(cx, cardY, cardWidth, cardHeight, 8);
+        // 隐藏奖励卡 Tooltip
+        if (this.tooltipManager) this.tooltipManager.hide();
       });
 
       // 点击选择
