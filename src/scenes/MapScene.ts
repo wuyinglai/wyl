@@ -16,6 +16,7 @@ import {
 } from "../systems/GameState";
 import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
 import { CharacterState, CardDef } from "../data/types";
+import { getRouteById } from "../data/cityRoutes";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -128,6 +129,19 @@ export class MapScene extends Phaser.Scene {
     this.checkGameStatus(gameState);
 
     console.log("[地图V2] 地图场景已加载");
+
+    // 显示当前商路/目标城市（阶段7.1）
+    const routeInfo = this.getRouteInfoText();
+    if (routeInfo) {
+      console.log(`[地图V2] ${routeInfo}`);
+      this.add
+        .text(this.scale.width - 20, 20, routeInfo, {
+          fontSize: "12px",
+          color: "#ffcc44",
+          fontFamily: "monospace",
+        })
+        .setOrigin(1, 0);
+    }
 
     // 如果是从战斗返回的自动移动测试，继续执行
     const gs = getGameState();
@@ -1007,6 +1021,21 @@ export class MapScene extends Phaser.Scene {
     if (cell.type === "question") return "?";
     if (cell.visited) return "·";
     return "";
+  }
+
+  /**
+   * 获取当前商路信息文本（阶段7.1）
+   */
+  private getRouteInfoText(): string | null {
+    const gameState = getGameState();
+    if (!gameState.selectedRouteId || !gameState.selectedCityId) {
+      return null;
+    }
+    const route = getRouteById(gameState.selectedRouteId);
+    if (route) {
+      return `目标: ${route.cityName} | ${route.routeName}`;
+    }
+    return `目标: ${gameState.selectedCityId}`;
   }
 
   private redrawMap(): void {

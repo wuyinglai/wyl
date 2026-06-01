@@ -60,7 +60,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     startBtn.on("pointerdown", () => {
-      this.scene.start("CharacterSelectScene");
+      this.scene.start("RouteSelectScene");
     });
 
     // 版本信息
@@ -74,7 +74,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     // 键盘快捷键（备用触发方式）
     this.input.keyboard?.on("keydown-ENTER", () => {
-      this.scene.start("CharacterSelectScene");
+      this.scene.start("RouteSelectScene");
     });
 
     console.log("[主菜单] 主菜单场景已加载");

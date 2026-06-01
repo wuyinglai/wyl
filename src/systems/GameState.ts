@@ -64,6 +64,10 @@ export interface GameState {
   // 远征目标
   expeditionGoal: "boss" | "sanctuary";
 
+  // 商路与目标城市（阶段7.1）
+  selectedRouteId: string | null;
+  selectedCityId: string | null;
+
   // 战斗相关
   currentBattleType: "normal" | "elite" | "boss" | null;
   battleResult: "victory" | "defeat" | null;
@@ -115,6 +119,9 @@ export function createInitialGameState(): GameState {
     bossPosition: { x: 0, y: 0 },
 
     expeditionGoal: "boss",
+
+    selectedRouteId: null,
+    selectedCityId: null,
 
     currentBattleType: null,
     battleResult: null,
