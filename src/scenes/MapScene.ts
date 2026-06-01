@@ -545,6 +545,11 @@ export class MapScene extends Phaser.Scene {
           }
           break;
         }
+        case "n": {
+          // N 键：查看商队部件（阶段6）
+          this.showCaravanPartsViewer();
+          break;
+        }
         default:
           return;
       }
@@ -1517,15 +1522,21 @@ export class MapScene extends Phaser.Scene {
     }
 
     // 选项2：修复商队
+    // 修理工具箱效果：补给点修复商队额外 +10
+    const hasRepairToolkit = gameState.caravanParts.some(
+      (p) => p.id === "repair_toolkit",
+    );
+    const repairBonus = hasRepairToolkit ? 10 : 0;
+    const repairAmount = 20 + repairBonus;
     options.push({
-      text: "修复商队 (+20)",
+      text: `修复商队 (+${repairAmount}${hasRepairToolkit ? " 含工具箱)" : ")"}`,
       action: () => {
         gameState.caravanHp = Math.min(
           gameState.caravanMaxHp,
-          gameState.caravanHp + 20,
+          gameState.caravanHp + repairAmount,
         );
         console.log(
-          `[补给] 修复商队: ${gameState.caravanHp}/${gameState.caravanMaxHp}`,
+          `[补给] 修复商队: ${gameState.caravanHp}/${gameState.caravanMaxHp}${hasRepairToolkit ? " (修理工具箱 +10)" : ""}`,
         );
         setGameState(gameState);
         this.completeCell(cell);
@@ -2784,6 +2795,138 @@ export class MapScene extends Phaser.Scene {
       this._deckViewerClose = undefined;
       console.log("[牌组查看] 已关闭，UI 对象已销毁");
     };
+  }
+
+  /** 显示商队部件查看界面（阶段6） */
+  private showCaravanPartsViewer(): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const gameState = getGameState();
+    const parts = gameState.caravanParts;
+
+    // 遮罩
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.85);
+    overlay.fillRect(0, 0, w, h);
+    overlay.setDepth(200);
+
+    // 标题
+    const title = this.add
+      .text(w / 2, 30, `🔧 商队部件 (${parts.length})`, {
+        fontSize: "24px",
+        color: "#ffcc44",
+        fontStyle: "bold",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setDepth(210);
+
+    // 关闭提示
+    const closeHint = this.add
+      .text(w / 2, h - 20, "按 N 或 ESC 关闭", {
+        fontSize: "14px",
+        color: "#666666",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setDepth(210);
+
+    if (parts.length === 0) {
+      const emptyText = this.add
+        .text(w / 2, h / 2, "暂无商队部件\n\n精英战斗胜利可获得", {
+          fontSize: "18px",
+          color: "#888888",
+          fontFamily: "monospace",
+          align: "center",
+        })
+        .setOrigin(0.5)
+        .setDepth(210);
+
+      // 3秒后自动关闭
+      this.time.delayedCall(3000, () => {
+        overlay.destroy();
+        title.destroy();
+        closeHint.destroy();
+        emptyText.destroy();
+      });
+      return;
+    }
+
+    // 部件列表
+    const triggerNames: Record<string, string> = {
+      passive: "被动",
+      battle_start: "战斗开始",
+      battle_end: "战斗结束",
+      map_move: "地图移动",
+      card_play: "卡牌打出",
+      supply_repair: "补给修复",
+    };
+
+    const partContainers: Phaser.GameObjects.Container[] = [];
+    const startY = 80;
+    const lineHeight = 60;
+
+    parts.forEach((part, index) => {
+      const y = startY + index * lineHeight;
+      const container = this.add.container(50, y).setDepth(210);
+
+      // 背景框
+      const bg = this.add.graphics();
+      bg.fillStyle(0x2a2a4a, 1);
+      bg.fillRoundedRect(0, 0, w - 100, 50, 8);
+      bg.lineStyle(2, 0xffcc44, 0.5);
+      bg.strokeRoundedRect(0, 0, w - 100, 50, 8);
+      container.add(bg);
+
+      // 部件名称
+      const nameText = this.add
+        .text(15, 8, part.name, {
+          fontSize: "18px",
+          color: "#ffcc44",
+          fontStyle: "bold",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0, 0);
+      container.add(nameText);
+
+      // 触发类型标签
+      const triggerText = this.add
+        .text(w - 115, 8, `[${triggerNames[part.trigger] || part.trigger}]`, {
+          fontSize: "12px",
+          color: "#888888",
+          fontFamily: "monospace",
+        })
+        .setOrigin(1, 0);
+      container.add(triggerText);
+
+      // 描述
+      const descText = this.add
+        .text(15, 28, part.description, {
+          fontSize: "13px",
+          color: "#cccccc",
+          fontFamily: "monospace",
+          wordWrap: { width: w - 130 },
+        })
+        .setOrigin(0, 0);
+      container.add(descText);
+
+      partContainers.push(container);
+    });
+
+    // 打印到控制台
+    console.log(`[部件] 当前拥有 ${parts.length} 个部件:`);
+    parts.forEach((p) => {
+      console.log(`  - ${p.name} [${p.trigger}]: ${p.description}`);
+    });
+
+    // 3秒后自动关闭
+    this.time.delayedCall(5000, () => {
+      overlay.destroy();
+      title.destroy();
+      closeHint.destroy();
+      partContainers.forEach((c) => c.destroy());
+      console.log("[部件查看] 已关闭");
+    });
   }
 
   // ==================== 阶段5：补给点卡牌升级/删除 ====================

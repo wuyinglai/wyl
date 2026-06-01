@@ -23,6 +23,7 @@ import {
   syncCharacterStatesFromBattle,
   checkExpeditionFailed,
 } from "../systems/GameState";
+import { CaravanPart, getRandomUnownedPart } from "../data/caravanParts";
 
 export class BattleScene extends Phaser.Scene {
   private battleManager!: BattleManager;
@@ -165,7 +166,7 @@ export class BattleScene extends Phaser.Scene {
     const caravanDurability = gameState.caravanHp;
     const caravanMaxDurability = gameState.caravanMaxHp;
 
-    // 创建战斗管理器
+    // 创建战斗管理器（传递商队部件用于战术旗帜等效果）
     this.battleManager = new BattleManager(
       characters,
       enemies,
@@ -174,6 +175,7 @@ export class BattleScene extends Phaser.Scene {
       },
       caravanDurability,
       caravanMaxDurability,
+      gameState.caravanParts,
     );
 
     // 开始战斗
@@ -1160,6 +1162,9 @@ export class BattleScene extends Phaser.Scene {
       );
     }
 
+    // 保存战斗类型用于后续判断（精英战斗获得部件）
+    const battleType = gameState.currentBattleType;
+
     // 重置战斗状态
     gameState.battleResult = victory ? "victory" : "defeat";
     gameState.currentBattleType = null;
@@ -1167,9 +1172,14 @@ export class BattleScene extends Phaser.Scene {
     setGameState(gameState);
 
     if (victory) {
-      // 非Boss胜利：显示卡牌奖励界面
-      console.log("[战斗] 胜利，进入卡牌奖励选择");
-      this.showCardRewardScreen();
+      // 非Boss胜利：精英战斗先显示部件奖励，再显示卡牌奖励
+      if (battleType === "elite") {
+        console.log("[战斗] 精英战斗胜利，先显示部件奖励");
+        this.showCaravanPartRewardScreen();
+      } else {
+        console.log("[战斗] 胜利，进入卡牌奖励选择");
+        this.showCardRewardScreen();
+      }
     } else {
       // 失败：显示失败界面
       this.showBattleResultOverlay(false);
@@ -1589,6 +1599,9 @@ export class BattleScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
+    // 医疗箱效果：战斗胜利后随机一名未死亡角色恢复 3 HP
+    this.applyMedicalKitEffect();
+
     // 提示文本
     const toastText = this.add
       .text(
@@ -1612,6 +1625,37 @@ export class BattleScene extends Phaser.Scene {
       toastText.destroy();
       this.returnToMap();
     });
+  }
+
+  /** 医疗箱效果：战斗胜利后随机一名未死亡角色恢复 3 HP */
+  private applyMedicalKitEffect(): void {
+    const gameState = getGameState();
+    const hasMedicalKit = gameState.caravanParts.some(
+      (p) => p.id === "medical_kit",
+    );
+    if (!hasMedicalKit) return;
+
+    // 获取未死亡的角色
+    const aliveChars = gameState.selectedCharacters
+      .map((id) => gameState.characterStates[id])
+      .filter((cs) => cs && !cs.isDead && cs.currentHp > 0);
+
+    if (aliveChars.length === 0) return;
+
+    // 随机选择一名角色
+    const targetChar =
+      aliveChars[Math.floor(Math.random() * aliveChars.length)];
+    const healAmount = 3;
+    const oldHp = targetChar.currentHp;
+    targetChar.currentHp = Math.min(
+      targetChar.def.maxHp,
+      targetChar.currentHp + healAmount,
+    );
+    setGameState(gameState);
+
+    console.log(
+      `[部件] 医疗箱: ${targetChar.def.name} 恢复 ${healAmount} HP (${oldHp} → ${targetChar.currentHp})`,
+    );
   }
 
   /** 显示跳过奖励提示，延迟后返回地图（阶段4.1） */
@@ -1643,6 +1687,164 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
+  /** 显示商队部件奖励界面（精英战斗专属） */
+  private showCaravanPartRewardScreen(): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+    const gameState = getGameState();
+
+    // 获取随机未拥有的部件
+    const part = getRandomUnownedPart(gameState.caravanParts);
+
+    // 遮罩
+    const overlay = this.add.graphics();
+    overlay.fillStyle(0x000000, 0.85);
+    overlay.fillRect(0, 0, w, h);
+    overlay.setDepth(200);
+
+    // 标题
+    const title = this.add
+      .text(w / 2, 50, "🎉 精英战斗胜利！获得商队部件", {
+        fontSize: "28px",
+        color: "#ffcc44",
+        fontStyle: "bold",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setDepth(210);
+
+    if (!part) {
+      // 没有新部件可获得
+      const noPartText = this.add
+        .text(w / 2, h / 2, "没有新的商队部件可获得", {
+          fontSize: "20px",
+          color: "#aaaaaa",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5)
+        .setDepth(210);
+
+      const continueBtn = this.add
+        .text(w / 2, h / 2 + 80, "【继续】", {
+          fontSize: "20px",
+          color: "#ffffff",
+          backgroundColor: "#444466",
+          padding: { x: 30, y: 15 },
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5)
+        .setInteractive()
+        .setDepth(210);
+
+      continueBtn.on("pointerdown", () => {
+        overlay.destroy();
+        title.destroy();
+        noPartText.destroy();
+        continueBtn.destroy();
+        // 进入卡牌奖励
+        this.showCardRewardScreen();
+      });
+      return;
+    }
+
+    // 部件图标区域
+    const partBox = this.add.graphics();
+    partBox.fillStyle(0x2a2a4a, 1);
+    partBox.fillRoundedRect(w / 2 - 200, h / 2 - 100, 400, 200, 12);
+    partBox.lineStyle(3, 0xffcc44, 1);
+    partBox.strokeRoundedRect(w / 2 - 200, h / 2 - 100, 400, 200, 12);
+    partBox.setDepth(210);
+
+    // 部件名称
+    const partName = this.add
+      .text(w / 2, h / 2 - 60, `《${part.name}》`, {
+        fontSize: "24px",
+        color: "#ffcc44",
+        fontStyle: "bold",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setDepth(220);
+
+    // 部件描述
+    const partDesc = this.add
+      .text(w / 2, h / 2, part.description, {
+        fontSize: "16px",
+        color: "#cccccc",
+        fontFamily: "monospace",
+        wordWrap: { width: 360 },
+        align: "center",
+      })
+      .setOrigin(0.5)
+      .setDepth(220);
+
+    // 触发类型标签
+    const triggerNames: Record<string, string> = {
+      passive: "被动",
+      battle_start: "战斗开始",
+      battle_end: "战斗结束",
+      map_move: "地图移动",
+      card_play: "卡牌打出",
+      supply_repair: "补给修复",
+    };
+    const triggerText = this.add
+      .text(w / 2, h / 2 + 50, `触发: ${triggerNames[part.trigger] || part.trigger}`, {
+        fontSize: "14px",
+        color: "#888888",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setDepth(220);
+
+    // 继续按钮
+    const continueBtn = this.add
+      .text(w / 2, h / 2 + 140, "【继续】", {
+        fontSize: "20px",
+        color: "#ffffff",
+        backgroundColor: "#444466",
+        padding: { x: 30, y: 15 },
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setInteractive()
+      .setDepth(210);
+
+    continueBtn.on("pointerdown", () => {
+      // 添加部件到商队
+      gameState.caravanParts.push(part);
+      setGameState(gameState);
+      console.log(`[部件] 获得: ${part.name}`);
+
+      // 处理被动效果（加固车厢）
+      if (part.id === "reinforced_carriage") {
+        gameState.caravanMaxHp += part.value || 10;
+        gameState.caravanHp += part.value || 10;
+        setGameState(gameState);
+        console.log(`[部件] 加固车厢生效: 商队耐久 +${part.value || 10}`);
+      }
+
+      // 清理UI
+      overlay.destroy();
+      title.destroy();
+      partBox.destroy();
+      partName.destroy();
+      partDesc.destroy();
+      triggerText.destroy();
+      continueBtn.destroy();
+
+      // 进入卡牌奖励
+      this.showCardRewardScreen();
+    });
+
+    continueBtn.on("pointerover", () =>
+      continueBtn.setStyle({ backgroundColor: "#555577", color: "#ffffff" }),
+    );
+    continueBtn.on("pointerout", () =>
+      continueBtn.setStyle({ backgroundColor: "#444466", color: "#ffffff" }),
+    );
+  }
+
+  /** 显示远征胜利界面 */
   private showExpeditionVictory(): void {
     const w = this.scale.width;
     const h = this.scale.height;

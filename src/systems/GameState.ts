@@ -1,5 +1,6 @@
 import { CharacterId, createCharacterState } from "../data/characters";
 import { CharacterState } from "../data/types";
+import { CaravanPart } from "../data/caravanParts";
 
 // 地图格子类型
 export type CellType =
@@ -67,6 +68,9 @@ export interface GameState {
   currentBattleType: "normal" | "elite" | "boss" | null;
   battleResult: "victory" | "defeat" | null;
 
+  // 商队部件系统（阶段6）
+  caravanParts: CaravanPart[];
+
   // 自动移动测试状态（调试用）
   _isAutoMoving: boolean;
   _autoMoveResumeStep: number;
@@ -112,6 +116,9 @@ export function createInitialGameState(): GameState {
 
     currentBattleType: null,
     battleResult: null,
+
+    // 商队部件系统（阶段6）
+    caravanParts: [],
 
     _isAutoMoving: false,
     _autoMoveResumeStep: 0,
@@ -698,8 +705,14 @@ export function moveToCell(state: GameState, x: number, y: number): boolean {
   newCell.isCurrent = true;
   newCell.visited = true;
 
-  // 天数 +1
-  state.day += 1;
+  // 天数 +1（备用轮轴效果：20% 概率不增加天数）
+  const hasSpareAxle = state.caravanParts.some((p) => p.id === "spare_axle");
+  const skipDay = hasSpareAxle && Math.random() < 0.2;
+  if (!skipDay) {
+    state.day += 1;
+  } else {
+    console.log("[部件] 备用轮轴触发，本次移动不消耗天数");
+  }
 
   console.log("[地图] 移动成功，新位置:", { x, y }, "day:", state.day);
 

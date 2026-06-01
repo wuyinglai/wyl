@@ -7,6 +7,7 @@ import {
 } from "../data/types";
 import { DeckManager } from "./DeckManager";
 import { getEnemyNextAction } from "../data/enemies";
+import { CaravanPart } from "../data/caravanParts";
 
 export class BattleManager {
   state: BattleState;
@@ -21,12 +22,16 @@ export class BattleManager {
   // 调试日志
   logs: string[] = [];
 
+  // 商队部件（阶段6）
+  private caravanParts: CaravanPart[] = [];
+
   constructor(
     characters: CharacterState[],
     enemies: EnemyState[],
     onBattleEnd?: (victory: boolean) => void,
     caravanDurability?: number,
     caravanMaxDurability?: number,
+    caravanParts?: CaravanPart[],
   ) {
     this.state = {
       characters: characters,
@@ -41,6 +46,7 @@ export class BattleManager {
 
     this.guardianPassiveTriggered = false;
     this.repairmanPassiveTriggered = false;
+    this.caravanParts = caravanParts ?? [];
 
     if (onBattleEnd) {
       this.onBattleEnd = onBattleEnd;
@@ -55,6 +61,9 @@ export class BattleManager {
     this.log(
       `商队耐久: ${this.state.caravanDurability}/${this.state.caravanMaxDurability}`,
     );
+
+    // 战术旗帜效果：战斗开始时所有参战角色获得 2 护甲
+    this.applyTacticalBannerEffect();
 
     // 初始化每个角色的牌组
     for (const char of this.state.characters) {
@@ -74,6 +83,18 @@ export class BattleManager {
     this.log(
       `第 ${this.state.turn} 回合开始，行动力: ${this.state.actionPoints}/${this.state.maxActionPoints}`,
     );
+  }
+
+  /** 战术旗帜效果：战斗开始时所有参战角色获得 2 护甲 */
+  private applyTacticalBannerEffect(): void {
+    const hasBanner = this.caravanParts.some((p) => p.id === "tactical_banner");
+    if (!hasBanner) return;
+
+    const armorBonus = 2;
+    for (const char of this.state.characters) {
+      char.armor += armorBonus;
+    }
+    this.log(`[部件] 战术旗帜: 全队获得 ${armorBonus} 护甲`);
   }
 
   // 更新敌人意图
