@@ -2976,7 +2976,7 @@ export class MapScene extends Phaser.Scene {
                 action: () => {
                   // 返回该角色可升级列表
                   this.closeModal();
-                  this.showUpgradeCardSelectCharacter(supplyCell);
+                  this.showUpgradeCardSelectCard(charId, supplyCell);
                 },
               },
             ],
