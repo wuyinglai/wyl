@@ -263,6 +263,176 @@ export const ALL_CARDS: CardDef[] = [
   },
 ];
 
+// ==================== 奖励卡池（阶段5.2） ====================
+// 这些卡不进入初始牌组，只作为战斗胜利奖励
+export const REWARD_CARDS: CardDef[] = [
+  // === 护路人奖励卡 ===
+  {
+    id: "guardian_hold_firm",
+    name: "坚守",
+    cost: 1,
+    characterId: "guardian",
+    type: "skill",
+    description: "获得10点护甲",
+    effects: [{ type: "armor", value: 10, target: "self" }],
+  },
+  {
+    id: "guardian_counter_stance",
+    name: "反击姿态",
+    cost: 1,
+    characterId: "guardian",
+    type: "skill",
+    description: "获得6点护甲；造成4点伤害",
+    effects: [
+      { type: "armor", value: 6, target: "self" },
+      { type: "damage", value: 4, target: "enemy" },
+    ],
+  },
+  {
+    id: "guardian_guard_caravan",
+    name: "护卫",
+    cost: 2,
+    characterId: "guardian",
+    type: "skill",
+    description: "获得12点护甲；商队恢复4耐久",
+    effects: [
+      { type: "armor", value: 12, target: "self" },
+      { type: "repair_caravan", value: 4, target: "caravan" },
+    ],
+  },
+
+  // === 荒野射手奖励卡 ===
+  {
+    id: "sharpshooter_double_shot",
+    name: "连射",
+    cost: 1,
+    characterId: "sharpshooter",
+    type: "attack",
+    description: "两次射击，共造成8点伤害",
+    effects: [{ type: "damage", value: 8, target: "enemy" }],
+  },
+  {
+    id: "sharpshooter_armor_piercing",
+    name: "破甲箭",
+    cost: 1,
+    characterId: "sharpshooter",
+    type: "attack",
+    description: "造成6点伤害；若目标被标记，额外造成4点伤害",
+    effects: [
+      { type: "damage", value: 6, target: "enemy" },
+      { type: "special", value: 4, target: "enemy", condition: "has_mark" },
+    ],
+  },
+  {
+    id: "sharpshooter_long_range_suppress",
+    name: "远距压制",
+    cost: 2,
+    characterId: "sharpshooter",
+    type: "attack",
+    description: "造成11点伤害；施加1层标记",
+    effects: [
+      { type: "damage", value: 11, target: "enemy" },
+      { type: "mark", value: 1, target: "enemy" },
+    ],
+  },
+
+  // === 修补师奖励卡 ===
+  {
+    id: "repairman_quick_bandage",
+    name: "快速包扎",
+    cost: 1,
+    characterId: "repairman",
+    type: "heal",
+    description: "恢复8点生命",
+    effects: [{ type: "heal", value: 8, target: "ally" }],
+  },
+  {
+    id: "repairman_combat_repair",
+    name: "临战加固",
+    cost: 1,
+    characterId: "repairman",
+    type: "skill",
+    description: "商队恢复8耐久；获得4点护甲",
+    effects: [
+      { type: "repair_caravan", value: 8, target: "caravan" },
+      { type: "armor", value: 4, target: "self" },
+    ],
+  },
+  {
+    id: "repairman_spare_parts",
+    name: "备用零件",
+    cost: 0,
+    characterId: "repairman",
+    type: "skill",
+    description: "商队恢复5耐久",
+    effects: [{ type: "repair_caravan", value: 5, target: "caravan" }],
+  },
+
+  // === 斥候奖励卡 ===
+  {
+    id: "scout_pathfind",
+    name: "探路",
+    cost: 0,
+    characterId: "scout",
+    type: "skill",
+    description: "抽1张牌",
+    effects: [{ type: "draw", value: 1, target: "self" }],
+  },
+  {
+    id: "scout_quick_strike",
+    name: "刺击",
+    cost: 1,
+    characterId: "scout",
+    type: "attack",
+    description: "造成7点伤害",
+    effects: [{ type: "damage", value: 7, target: "enemy" }],
+  },
+  {
+    id: "scout_evasion",
+    name: "躲闪",
+    cost: 1,
+    characterId: "scout",
+    type: "skill",
+    description: "获得5点护甲；抽1张牌",
+    effects: [
+      { type: "armor", value: 5, target: "self" },
+      { type: "draw", value: 1, target: "self" },
+    ],
+  },
+
+  // === 鼓舞者奖励卡 ===
+  {
+    id: "inspirer_rally",
+    name: "鼓舞",
+    cost: 1,
+    characterId: "inspirer",
+    type: "skill",
+    description: "恢复5点生命；获得3点护甲",
+    effects: [
+      { type: "heal", value: 5, target: "ally" },
+      { type: "armor", value: 3, target: "self" },
+    ],
+  },
+  {
+    id: "inspirer_focus",
+    name: "集中",
+    cost: 0,
+    characterId: "inspirer",
+    type: "skill",
+    description: "抽1张牌",
+    effects: [{ type: "draw", value: 1, target: "self" }],
+  },
+  {
+    id: "inspirer_morale_surge",
+    name: "士气高涨",
+    cost: 2,
+    characterId: "inspirer",
+    type: "skill",
+    description: "所有参战角色恢复3点生命",
+    effects: [{ type: "heal", value: 3, target: "all_allies" }],
+  },
+];
+
 // 复制卡牌（创建新的卡牌实例）
 function copyCard(cardDef: CardDef): CardDef {
   return {
@@ -356,34 +526,35 @@ export function createCharacterState(characterId: CharacterId) {
 /**
  * 为当前队伍生成3张奖励卡牌。
  * 规则：
- * 1. 从队伍中未死亡角色的卡池里随机抽
- * 2. 尽量保证3张卡来自不同角色
- * 3. 不重复同一张卡
- * 4. 重伤角色也参与（牌组成长≠当前上场）
+ * 1. 优先从 REWARD_CARDS（奖励专属卡池）中抽
+ * 2. 如果奖励池不够，fallback 到 ALL_CARDS
+ * 3. 只抽当前队伍角色的卡
+ * 4. 尽量保证3张卡来自不同角色
+ * 5. 不重复同一张卡
+ * 6. 死亡角色不参与（由调用方过滤）
  */
 export function generateRewardCards(
   teamCharacterIds: CharacterId[],
 ): CardDef[] {
-  // 收集每个角色的可用卡池
-  const pools: Map<CharacterId, CardDef[]> = new Map();
+  const rewards: CardDef[] = [];
+  const usedCardIds = new Set<string>();
+
+  // 第一轮：优先从 REWARD_CARDS 中抽，尽量不同角色
+  const rewardPools: Map<CharacterId, CardDef[]> = new Map();
   for (const charId of teamCharacterIds) {
-    const cards = ALL_CARDS.filter((c) => c.characterId === charId);
+    const cards = REWARD_CARDS.filter((c) => c.characterId === charId);
     if (cards.length > 0) {
-      pools.set(charId, cards);
+      rewardPools.set(charId, cards);
     }
   }
 
-  const rewards: CardDef[] = [];
-  const usedCardIds = new Set<string>();
-  const charIds = [...pools.keys()];
+  const shuffledCharIds = [...rewardPools.keys()].sort(
+    () => Math.random() - 0.5,
+  );
 
-  // Fisher-Yates 洗牌角色顺序，尽量不同角色
-  const shuffled = charIds.sort(() => Math.random() - 0.5);
-
-  // 第一轮：尽量每个角色出一张
-  for (const charId of shuffled) {
+  for (const charId of shuffledCharIds) {
     if (rewards.length >= 3) break;
-    const pool = pools.get(charId)!;
+    const pool = rewardPools.get(charId)!;
     const available = pool.filter((c) => !usedCardIds.has(c.id));
     if (available.length > 0) {
       const card = available[Math.floor(Math.random() * available.length)];
@@ -392,16 +563,28 @@ export function generateRewardCards(
     }
   }
 
-  // 第二轮：如果不够3张，从所有角色池中补充
+  // 第二轮：如果不够3张，从 ALL_CARDS 中补充
   if (rewards.length < 3) {
-    const allAvailable = ALL_CARDS.filter(
-      (c) => teamCharacterIds.includes(c.characterId) && !usedCardIds.has(c.id),
+    const allPools: Map<CharacterId, CardDef[]> = new Map();
+    for (const charId of teamCharacterIds) {
+      const cards = ALL_CARDS.filter((c) => c.characterId === charId);
+      if (cards.length > 0) {
+        allPools.set(charId, cards);
+      }
+    }
+
+    const shuffledAll = [...allPools.keys()].sort(
+      () => Math.random() - 0.5,
     );
-    const remaining = allAvailable.sort(() => Math.random() - 0.5);
-    while (rewards.length < 3 && remaining.length > 0) {
-      const card = remaining.shift()!;
-      rewards.push(card);
-      usedCardIds.add(card.id);
+    for (const charId of shuffledAll) {
+      if (rewards.length >= 3) break;
+      const pool = allPools.get(charId)!;
+      const available = pool.filter((c) => !usedCardIds.has(c.id));
+      if (available.length > 0) {
+        const card = available[Math.floor(Math.random() * available.length)];
+        rewards.push(card);
+        usedCardIds.add(card.id);
+      }
     }
   }
 
