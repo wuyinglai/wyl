@@ -1,5 +1,5 @@
 import Phaser from "phaser";
-import { CHARACTER_DEFS, CharacterId } from "../data/characters";
+import { CHARACTER_DEFS, CharacterId, getStartingDeck } from "../data/characters";
 import {
   getGameState,
   setGameState,
@@ -7,12 +7,14 @@ import {
   updateReachableCells,
   initializeCharacterStates,
 } from "../systems/GameState";
+import { TooltipManager } from "../systems/tooltipSystem";
 
 export class CharacterSelectScene extends Phaser.Scene {
   private selectedChars: CharacterId[] = [];
   private characterCards: Phaser.GameObjects.Container[] = [];
   private confirmBtn!: Phaser.GameObjects.Text;
   private selectionText!: Phaser.GameObjects.Text;
+  private tooltipManager: TooltipManager | null = null;
 
   constructor() {
     super({ key: "CharacterSelectScene" });
@@ -21,6 +23,8 @@ export class CharacterSelectScene extends Phaser.Scene {
   create() {
     const w = this.scale.width;
     const h = this.scale.height;
+
+    this.tooltipManager = new TooltipManager(this, 500);
 
     // 背景
     const bg = this.add.graphics();
@@ -208,6 +212,29 @@ export class CharacterSelectScene extends Phaser.Scene {
       bg.fillRect(-width / 2, -height / 2, width, height);
       bg.lineStyle(2, color, 1);
       bg.strokeRect(-width / 2, -height / 2, width, height);
+
+      // 显示角色 Tooltip
+      if (this.tooltipManager) {
+        const pointer = this.input.activePointer;
+        const deck = getStartingDeck(charId);
+        const deckNames = deck.map((c) => c.name);
+        this.tooltipManager.show(
+          {
+            title: `${charDef.icon} ${charDef.name}`,
+            lines: [
+              `定位：${charDef.role}`,
+              `生命：${charDef.maxHp} HP`,
+              "",
+              `被动：${charDef.passiveDesc}`,
+              "",
+              `初始牌组(${deckNames.length}张)：`,
+              ...deckNames.slice(0, 6).map(n => `  · ${n}`),
+              deckNames.length > 6 ? `  ...共${deckNames.length}张` : "",
+            ].filter(l => l !== ""),
+          },
+          pointer.x, pointer.y, 260
+        );
+      }
     });
 
     hitArea.on("pointerout", () => {
@@ -217,6 +244,8 @@ export class CharacterSelectScene extends Phaser.Scene {
       bg.fillRect(-width / 2, -height / 2, width, height);
       bg.lineStyle(2, color, isSelected ? 1 : 0.8);
       bg.strokeRect(-width / 2, -height / 2, width, height);
+
+      if (this.tooltipManager) this.tooltipManager.hide();
     });
 
     hitArea.on("pointerdown", () => {

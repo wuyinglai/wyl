@@ -18,6 +18,7 @@ import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
 import { CharacterState, CardDef } from "../data/types";
 import { getRouteById } from "../data/cityRoutes";
 import { getOrderById, formatRequiredGoods } from "../data/cityOrders";
+import { TooltipManager } from "../systems/tooltipSystem";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -65,6 +66,9 @@ export class MapScene extends Phaser.Scene {
 
   // 终局界面状态（胜利/失败弹窗）
   private _victoryOverlayOpen = false;
+
+  // Tooltip 系统
+  private tooltipManager: TooltipManager | null = null;
 
   constructor() {
     super({ key: "MapScene" });
@@ -132,7 +136,9 @@ export class MapScene extends Phaser.Scene {
     console.log("[地图V2] 地图场景已加载");
 
     // 显示当前商路/目标城市（阶段7.1）+ 订单摘要（阶段7.2）
-    // 使用独立信息面板，避免与地图节点重叠
+    // 使用精简信息面板 + Tooltip 显示详情
+    this.tooltipManager = new TooltipManager(this, 500);
+
     const routeInfo = this.getRouteInfoText();
     const orderSummary = this.getOrderSummaryText();
     const infoLines: string[] = [];
@@ -148,7 +154,7 @@ export class MapScene extends Phaser.Scene {
     if (infoLines.length > 0) {
       const panelPadding = 8;
       const panelLineHeight = 16;
-      const panelWidth = 280;
+      const panelWidth = 260;
       const panelHeight = infoLines.length * panelLineHeight + panelPadding * 2;
       const panelX = this.scale.width - panelWidth - 10;
       const panelY = 10;
@@ -170,6 +176,47 @@ export class MapScene extends Phaser.Scene {
           })
           .setOrigin(0, 0)
           .setDepth(101);
+      });
+
+      // 信息面板可交互：悬浮显示完整订单详情 Tooltip
+      const panelHitArea = this.add.rectangle(
+        panelX + panelWidth / 2, panelY + panelHeight / 2,
+        panelWidth, panelHeight, 0x000000, 0
+      ).setInteractive({ useHandCursor: true }).setDepth(102);
+
+      panelHitArea.on("pointerover", () => {
+        if (!this.tooltipManager) return;
+        const gs = getGameState();
+        const pointer = this.input.activePointer;
+        const route = gs.selectedRouteId ? getRouteById(gs.selectedRouteId) : null;
+        const order = gs.selectedOrderId ? getOrderById(gs.selectedOrderId) : null;
+        const lines: string[] = [];
+        if (route) {
+          lines.push(`城市：${route.cityName}`);
+          lines.push(`商路：${route.routeName}`);
+          lines.push(`定位：${route.tagline}`);
+          lines.push(`风险：${route.riskLevel} | 收益：${route.profitLevel}`);
+          lines.push(`推荐货物：${route.recommendedGoods.join("、")}`);
+          lines.push(`推荐角色：${route.recommendedCharacters.join("、")}`);
+        }
+        if (order) {
+          lines.push("");
+          lines.push(`订单：${order.title}`);
+          lines.push(`描述：${order.description}`);
+          lines.push(`需求：${formatRequiredGoods(order.requiredGoods)}`);
+          lines.push(`奖励：银币 +${order.rewardSilver}，火种 +${order.rewardEmbers}`);
+          lines.push(`贡献：+${order.cityContribution}`);
+          lines.push(`难度：${order.difficulty}`);
+        }
+        if (lines.length > 0) {
+          this.tooltipManager!.show(
+            { title: "任务详情", lines },
+            pointer.x, pointer.y, 280
+          );
+        }
+      });
+      panelHitArea.on("pointerout", () => {
+        if (this.tooltipManager) this.tooltipManager.hide();
       });
     }
 

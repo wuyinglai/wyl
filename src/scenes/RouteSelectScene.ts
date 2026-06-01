@@ -2,15 +2,26 @@ import { Scene } from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
 import { CityRoute, getUnlockedRoutes } from "../data/cityRoutes";
 import { CityOrder, getDefaultOrderForRoute, getUnlockedOrdersForRoute, formatRequiredGoods } from "../data/cityOrders";
+import { TooltipManager } from "../systems/tooltipSystem";
 
 /**
  * 商路与目标城市选择场景（阶段7.1）
  * 玩家开始远征前选择要支援的城市与商路
+ *
+ * 布局策略：
+ * - 宽屏（>=1024px）：横排显示所有卡片
+ * - 窄屏（<1024px）：分页模式，一次显示一张卡片，左右切换
  */
 export class RouteSelectScene extends Scene {
   private selectedRouteId: string | null = null;
   private routeCards: Phaser.GameObjects.Container[] = [];
   private isSelecting = false; // 防重复点击
+  private tooltipManager: TooltipManager | null = null;
+  private currentPage = 0;
+  private routes: CityRoute[] = [];
+  private pageIndicatorText!: Phaser.GameObjects.Text;
+  private prevBtn!: Phaser.GameObjects.Text;
+  private nextBtn!: Phaser.GameObjects.Text;
 
   constructor() {
     super({ key: "RouteSelectScene" });
@@ -19,6 +30,8 @@ export class RouteSelectScene extends Scene {
   create(): void {
     const w = this.scale.width;
     const h = this.scale.height;
+
+    this.tooltipManager = new TooltipManager(this, 500);
 
     // 背景
     this.add.rectangle(w / 2, h / 2, w, h, 0x0a0a1a);
@@ -43,27 +56,19 @@ export class RouteSelectScene extends Scene {
       .setOrigin(0.5);
 
     // 使用 getUnlockedRoutes() 获取可用商路
-    const routes = getUnlockedRoutes();
+    this.routes = getUnlockedRoutes();
 
     // 无可用商路兜底
-    if (routes.length === 0) {
+    if (this.routes.length === 0) {
       this.showNoRoutesFallback(w, h);
     } else {
-      // 显示商路卡片 - 自适应屏幕宽度
-      const maxCardWidth = 360;
-      const gap = 20;
-      const availableWidth = Math.min(w - 40, routes.length * maxCardWidth + (routes.length - 1) * gap);
-      const cardWidth = Math.min(maxCardWidth, (availableWidth - (routes.length - 1) * gap) / routes.length);
-      const cardHeight = Math.min(420, h - 100);
-      const totalWidth = routes.length * cardWidth + (routes.length - 1) * gap;
-      const startX = Math.max(cardWidth / 2 + 10, (w - totalWidth) / 2 + cardWidth / 2);
-      const cardY = h / 2 + 10;
-
-      routes.forEach((route, index) => {
-        const cx = startX + index * (cardWidth + gap);
-        const card = this.createRouteCard(cx, cardY, cardWidth, cardHeight, route);
-        this.routeCards.push(card);
-      });
+      // 判断布局模式：宽屏横排，窄屏分页
+      const PAGINATE_THRESHOLD = 1024;
+      if (w < PAGINATE_THRESHOLD) {
+        this.createPaginatedLayout(w, h);
+      } else {
+        this.createGridLayout(w, h);
+      }
 
       // 底部提示
       this.add
@@ -80,14 +85,123 @@ export class RouteSelectScene extends Scene {
       this.scene.start("MainMenuScene");
     });
 
-    console.log("[商路选择] 场景初始化完成，显示", routes.length, "条商路");
+    console.log("[商路选择] 场景初始化完成，显示", this.routes.length, "条商路");
+  }
+
+  /**
+   * 宽屏布局：横排显示所有卡片
+   */
+  private createGridLayout(w: number, h: number): void {
+    const routes = this.routes;
+    const maxCardWidth = 340;
+    const gap = 20;
+    const availableWidth = Math.min(w - 40, routes.length * maxCardWidth + (routes.length - 1) * gap);
+    const cardWidth = Math.min(maxCardWidth, (availableWidth - (routes.length - 1) * gap) / routes.length);
+    const cardHeight = Math.min(400, h - 100);
+    const totalWidth = routes.length * cardWidth + (routes.length - 1) * gap;
+    const startX = Math.max(cardWidth / 2 + 10, (w - totalWidth) / 2 + cardWidth / 2);
+    const cardY = h / 2 + 10;
+
+    routes.forEach((route, index) => {
+      const cx = startX + index * (cardWidth + gap);
+      const card = this.createRouteCard(cx, cardY, cardWidth, cardHeight, route);
+      this.routeCards.push(card);
+    });
+  }
+
+  /**
+   * 窄屏布局：分页模式，一次显示一张卡片
+   */
+  private createPaginatedLayout(w: number, h: number): void {
+    this.currentPage = 0;
+
+    const cardWidth = Math.min(360, w - 80);
+    const cardHeight = Math.min(420, h - 180);
+    const cardX = w / 2;
+    const cardY = h / 2;
+
+    // 创建所有卡片（只显示当前页）
+    this.routes.forEach((route, index) => {
+      const card = this.createRouteCard(cardX, cardY, cardWidth, cardHeight, route);
+      card.setVisible(index === 0);
+      this.routeCards.push(card);
+    });
+
+    // 页码指示器
+    this.pageIndicatorText = this.add
+      .text(w / 2, h - 60, `1 / ${this.routes.length}`, {
+        fontSize: "16px",
+        color: "#aaaaaa",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5);
+
+    // 左右切换按钮
+    this.prevBtn = this.add
+      .text(40, h / 2, "◀", {
+        fontSize: "28px",
+        color: "#666666",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    this.nextBtn = this.add
+      .text(w - 40, h / 2, "▶", {
+        fontSize: "28px",
+        color: "#666666",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    this.updatePaginationUI();
+
+    this.prevBtn.on("pointerdown", () => {
+      if (this.currentPage > 0) {
+        this.currentPage--;
+        this.updatePaginationUI();
+      }
+    });
+
+    this.nextBtn.on("pointerdown", () => {
+      if (this.currentPage < this.routes.length - 1) {
+        this.currentPage++;
+        this.updatePaginationUI();
+      }
+    });
+
+    // 键盘左右切换
+    this.input.keyboard?.on("keydown-LEFT", () => {
+      if (this.currentPage > 0) {
+        this.currentPage--;
+        this.updatePaginationUI();
+      }
+    });
+    this.input.keyboard?.on("keydown-RIGHT", () => {
+      if (this.currentPage < this.routes.length - 1) {
+        this.currentPage++;
+        this.updatePaginationUI();
+      }
+    });
+  }
+
+  /**
+   * 更新分页 UI
+   */
+  private updatePaginationUI(): void {
+    this.routeCards.forEach((card, i) => {
+      card.setVisible(i === this.currentPage);
+    });
+    this.pageIndicatorText.setText(`${this.currentPage + 1} / ${this.routes.length}`);
+    this.prevBtn.setStyle({ color: this.currentPage > 0 ? "#ffcc44" : "#333333" });
+    this.nextBtn.setStyle({ color: this.currentPage < this.routes.length - 1 ? "#ffcc44" : "#333333" });
   }
 
   /**
    * 无可用商路时显示兜底UI
    */
   private showNoRoutesFallback(w: number, h: number): void {
-    // 提示文本
     this.add
       .text(w / 2, h / 2 - 30, "暂无可用商路", {
         fontSize: "24px",
@@ -97,7 +211,6 @@ export class RouteSelectScene extends Scene {
       })
       .setOrigin(0.5);
 
-    // 说明
     this.add
       .text(w / 2, h / 2 + 20, "当前没有解锁的商路，请稍后再试", {
         fontSize: "14px",
@@ -106,7 +219,6 @@ export class RouteSelectScene extends Scene {
       })
       .setOrigin(0.5);
 
-    // 返回提示
     this.add
       .text(w / 2, h - 50, "按 ESC 返回主菜单", {
         fontSize: "14px",
@@ -119,7 +231,7 @@ export class RouteSelectScene extends Scene {
   }
 
   /**
-   * 创建单条商路卡片
+   * 创建单条商路卡片（精简内容 + Tooltip 显示详情）
    */
   private createRouteCard(
     x: number,
@@ -161,7 +273,7 @@ export class RouteSelectScene extends Scene {
       })
       .setOrigin(0.5, 0);
     container.add(routeName);
-    currentY += 30;
+    currentY += 25;
 
     // 定位标签
     const tagline = this.add
@@ -173,93 +285,36 @@ export class RouteSelectScene extends Scene {
       })
       .setOrigin(0.5, 0);
     container.add(tagline);
-    currentY += 35;
+    currentY += 30;
 
     // 分隔线
     const line = this.add.graphics();
     line.lineStyle(1, 0x444466, 1);
     line.lineBetween(-width / 2 + 20, currentY, width / 2 - 20, currentY);
     container.add(line);
-    currentY += 15;
+    currentY += 12;
 
-    // 等级信息
-    const levels = [
-      { label: "风险", value: route.riskLevel, color: this.getRiskColor(route.riskLevel) },
-      { label: "收益", value: route.profitLevel, color: this.getProfitColor(route.profitLevel) },
-      { label: "补给", value: route.supplyLevel, color: "#ffffff" },
-      { label: "战斗", value: route.combatLevel, color: "#ffffff" },
-      { label: "贸易", value: route.tradeLevel, color: "#ffffff" },
-    ];
-
-    levels.forEach((level, idx) => {
-      const row = Math.floor(idx / 3);
-      const col = idx % 3;
-      const lx = -width / 2 + 50 + col * 110;
-      const ly = currentY + row * 25;
-
-      const labelText = this.add
-        .text(lx, ly, level.label + ":", {
-          fontSize: "12px",
-          color: "#888888",
-          fontFamily: "monospace",
-        })
-        .setOrigin(0, 0);
-      container.add(labelText);
-
-      const valueText = this.add
-        .text(lx + 35, ly, level.value, {
-          fontSize: "12px",
-          color: level.color,
-          fontFamily: "monospace",
-        })
-        .setOrigin(0, 0);
-      container.add(valueText);
-    });
-    currentY += 60;
-
-    // 推荐货物
-    const goodsLabel = this.add
-      .text(-width / 2 + 20, currentY, "推荐货物:", {
-        fontSize: "12px",
-        color: "#888888",
-        fontFamily: "monospace",
-      })
-      .setOrigin(0, 0);
-    container.add(goodsLabel);
-    currentY += 20;
-
-    const goodsText = this.add
-      .text(-width / 2 + 20, currentY, route.recommendedGoods.join("、"), {
+    // 等级信息（精简为两行）
+    const levelsRow1 = `风险:${route.riskLevel} 收益:${route.profitLevel} 补给:${route.supplyLevel}`;
+    const levelsRow2 = `战斗:${route.combatLevel} 贸易:${route.tradeLevel}`;
+    const lvl1 = this.add
+      .text(0, currentY, levelsRow1, {
         fontSize: "12px",
         color: "#cccccc",
         fontFamily: "monospace",
-        wordWrap: { width: width - 40 },
       })
-      .setOrigin(0, 0);
-    container.add(goodsText);
+      .setOrigin(0.5, 0);
+    container.add(lvl1);
+    currentY += 20;
+    const lvl2 = this.add
+      .text(0, currentY, levelsRow2, {
+        fontSize: "12px",
+        color: "#cccccc",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5, 0);
+    container.add(lvl2);
     currentY += 30;
-
-    // 推荐角色
-    const charsLabel = this.add
-      .text(-width / 2 + 20, currentY, "推荐角色:", {
-        fontSize: "12px",
-        color: "#888888",
-        fontFamily: "monospace",
-      })
-      .setOrigin(0, 0);
-    container.add(charsLabel);
-    currentY += 20;
-
-    const charsText = this.add
-      .text(-width / 2 + 20, currentY, route.recommendedCharacters.join("、"), {
-        fontSize: "12px",
-        color: "#cccccc",
-        fontFamily: "monospace",
-        wordWrap: { width: width - 40 },
-      })
-      .setOrigin(0, 0);
-    container.add(charsText);
-    currentY += 35;
 
     // 分隔线
     const line2 = this.add.graphics();
@@ -268,10 +323,9 @@ export class RouteSelectScene extends Scene {
     container.add(line2);
     currentY += 12;
 
-    // 订单信息（阶段7.2）
+    // 订单信息（精简）
     const order = getDefaultOrderForRoute(route.id);
     if (order) {
-      // 订单标题
       const orderTitle = this.add
         .text(0, currentY, `订单：${order.title}`, {
           fontSize: "13px",
@@ -284,7 +338,6 @@ export class RouteSelectScene extends Scene {
       container.add(orderTitle);
       currentY += 22;
 
-      // 需求物资
       const orderGoods = this.add
         .text(0, currentY, `需求：${formatRequiredGoods(order.requiredGoods)}`, {
           fontSize: "11px",
@@ -296,9 +349,8 @@ export class RouteSelectScene extends Scene {
       container.add(orderGoods);
       currentY += 18;
 
-      // 奖励
       const orderReward = this.add
-        .text(0, currentY, `奖励：银币 +${order.rewardSilver}，火种 +${order.rewardEmbers}，贡献 +${order.cityContribution}`, {
+        .text(0, currentY, `奖励：银币+${order.rewardSilver} 火种+${order.rewardEmbers}`, {
           fontSize: "11px",
           color: "#44cc88",
           fontFamily: "monospace",
@@ -306,20 +358,8 @@ export class RouteSelectScene extends Scene {
         })
         .setOrigin(0.5, 0);
       container.add(orderReward);
-      currentY += 20;
-
-      // 难度
-      const orderDifficulty = this.add
-        .text(0, currentY, `难度：${order.difficulty}`, {
-          fontSize: "11px",
-          color: "#888888",
-          fontFamily: "monospace",
-        })
-        .setOrigin(0.5, 0);
-      container.add(orderDifficulty);
-      currentY += 25;
+      currentY += 22;
     } else {
-      // 无可用订单提示
       const noOrderText = this.add
         .text(0, currentY, "暂无可用订单", {
           fontSize: "13px",
@@ -331,30 +371,53 @@ export class RouteSelectScene extends Scene {
       currentY += 25;
     }
 
-    // 说明
-    const descText = this.add
-      .text(0, currentY, route.description, {
-        fontSize: "11px",
-        color: "#999999",
+    // 底部提示：悬浮查看详情
+    const hint = this.add
+      .text(0, currentY, "💡 悬浮查看完整详情", {
+        fontSize: "10px",
+        color: "#666666",
         fontFamily: "monospace",
-        wordWrap: { width: width - 40 },
-        align: "center",
       })
       .setOrigin(0.5, 0);
-    container.add(descText);
+    container.add(hint);
 
     // 点击区域
     const hitArea = this.add.rectangle(0, 0, width, height, 0x000000, 0);
     hitArea.setInteractive({ useHandCursor: true });
     container.add(hitArea);
 
-    // 悬停效果
+    // 悬停效果 + Tooltip
     hitArea.on("pointerover", () => {
       bg.clear();
       bg.fillStyle(0x2a2a4a, 1);
       bg.fillRoundedRect(-width / 2, -height / 2, width, height, 12);
       bg.lineStyle(3, 0xffcc44, 1);
       bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 12);
+
+      // 显示 Tooltip
+      if (this.tooltipManager) {
+        const pointer = this.input.activePointer;
+        const lines: string[] = [];
+        lines.push(`城市：${route.cityName}`);
+        lines.push(`商路：${route.routeName}`);
+        lines.push(`定位：${route.tagline}`);
+        lines.push(`风险：${route.riskLevel} | 收益：${route.profitLevel}`);
+        lines.push(`补给：${route.supplyLevel} | 战斗：${route.combatLevel} | 贸易：${route.tradeLevel}`);
+        lines.push(`推荐货物：${route.recommendedGoods.join("、")}`);
+        lines.push(`推荐角色：${route.recommendedCharacters.join("、")}`);
+        if (order) {
+          lines.push("");
+          lines.push(`订单：${order.title}`);
+          lines.push(`描述：${order.description}`);
+          lines.push(`需求：${formatRequiredGoods(order.requiredGoods)}`);
+          lines.push(`奖励：银币 +${order.rewardSilver}，火种 +${order.rewardEmbers}`);
+          lines.push(`贡献：+${order.cityContribution} | 难度：${order.difficulty}`);
+        }
+        this.tooltipManager.show(
+          { title: route.cityName, lines },
+          pointer.x, pointer.y, 300
+        );
+      }
     });
 
     hitArea.on("pointerout", () => {
@@ -363,6 +426,8 @@ export class RouteSelectScene extends Scene {
       bg.fillRoundedRect(-width / 2, -height / 2, width, height, 12);
       bg.lineStyle(2, 0x333355, 1);
       bg.strokeRoundedRect(-width / 2, -height / 2, width, height, 12);
+
+      if (this.tooltipManager) this.tooltipManager.hide();
     });
 
     // 点击选择
