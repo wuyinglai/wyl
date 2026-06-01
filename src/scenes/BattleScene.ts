@@ -24,6 +24,10 @@ import {
   checkExpeditionFailed,
 } from "../systems/GameState";
 import { CaravanPart, getRandomUnownedPart } from "../data/caravanParts";
+import {
+  generateBattleRewardCards,
+  addRewardCardToDeck,
+} from "../systems/rewardSystem";
 
 export class BattleScene extends Phaser.Scene {
   private battleManager!: BattleManager;
@@ -1308,12 +1312,11 @@ export class BattleScene extends Phaser.Scene {
     // 重置 battleEnded 以允许奖励卡选择（onBattleEnd 会先设为 true）
     this.battleEnded = false;
 
-    // 生成3张奖励卡
-    // P0-9: 奖励池排除死亡角色
-    const aliveTeamIds = gameState.selectedCharacters.filter(
-      (id) => !gameState.characterStates[id]?.isDead,
+    // 生成3张奖励卡（通过 rewardSystem）
+    const rewardCards = generateBattleRewardCards(
+      gameState.selectedCharacters,
+      gameState.characterStates,
     );
-    const rewardCards = generateRewardCards(aliveTeamIds);
     this._rewardCards = rewardCards; // dev-only: 暴露给自动化测试
 
     // 遮罩
@@ -1569,35 +1572,19 @@ export class BattleScene extends Phaser.Scene {
     if (this.battleEnded) return;
     this.battleEnded = true;
 
-    const gameState = getGameState();
-    const charId = card.characterId;
-    const charState = gameState.characterStates[charId];
-
-    if (!charState) {
-      console.error(`[奖励] 角色状态不存在: ${charId}`);
+    // 通过 rewardSystem 加入牌组
+    const newCard = addRewardCardToDeck(card);
+    if (!newCard) {
       this.returnToMap();
       return;
     }
 
-    // 深拷贝卡牌并加入牌组（生成唯一 instanceId）
-    const newCard: CardDef = {
-      ...card,
-      effects: card.effects.map((e) => ({ ...e })),
-      instanceId: `${card.id}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
-    };
-    charState.deck.push(newCard);
-    setGameState(gameState);
-
-    const charName = CHARACTER_DEFS[charId].name;
-    console.log(
-      `[奖励] 加入卡牌: ${card.name} → ${charName}，当前牌组: ${charState.deck.length}张`,
-    );
-    console.log(
-      `[奖励] ${charName} 牌组: ${charState.deck.map((c) => c.name).join(", ")}`,
-    );
+    const charName = CHARACTER_DEFS[card.characterId].name;
+    const gameState = getGameState();
+    const deckCount = gameState.characterStates[card.characterId].deck.length;
 
     // 显示获得卡牌提示（阶段4.1）
-    this.showRewardAcquiredToast(charName, card.name, charState.deck.length);
+    this.showRewardAcquiredToast(charName, card.name, deckCount);
   }
 
   /** 显示获得卡牌提示，延迟后返回地图（阶段4.1） */
