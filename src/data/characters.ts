@@ -317,11 +317,8 @@ export const REWARD_CARDS: CardDef[] = [
     cost: 1,
     characterId: "sharpshooter",
     type: "attack",
-    description: "造成6点伤害；若目标被标记，额外造成4点伤害",
-    effects: [
-      { type: "damage", value: 6, target: "enemy" },
-      { type: "special", value: 4, target: "enemy", condition: "has_mark" },
-    ],
+    description: "造成6点伤害",
+    effects: [{ type: "damage", value: 6, target: "enemy" }],
   },
   {
     id: "sharpshooter_long_range_suppress",
@@ -375,8 +372,8 @@ export const REWARD_CARDS: CardDef[] = [
     cost: 0,
     characterId: "scout",
     type: "skill",
-    description: "抽1张牌",
-    effects: [{ type: "draw", value: 1, target: "self" }],
+    description: "获得4点护甲",
+    effects: [{ type: "armor", value: 4, target: "self" }],
   },
   {
     id: "scout_quick_strike",
@@ -393,11 +390,8 @@ export const REWARD_CARDS: CardDef[] = [
     cost: 1,
     characterId: "scout",
     type: "skill",
-    description: "获得5点护甲；抽1张牌",
-    effects: [
-      { type: "armor", value: 5, target: "self" },
-      { type: "draw", value: 1, target: "self" },
-    ],
+    description: "获得7点护甲",
+    effects: [{ type: "armor", value: 7, target: "self" }],
   },
 
   // === 鼓舞者奖励卡 ===
@@ -419,17 +413,17 @@ export const REWARD_CARDS: CardDef[] = [
     cost: 0,
     characterId: "inspirer",
     type: "skill",
-    description: "抽1张牌",
-    effects: [{ type: "draw", value: 1, target: "self" }],
+    description: "获得4点护甲",
+    effects: [{ type: "armor", value: 4, target: "self" }],
   },
   {
     id: "inspirer_morale_surge",
     name: "士气高涨",
     cost: 2,
     characterId: "inspirer",
-    type: "skill",
-    description: "所有参战角色恢复3点生命",
-    effects: [{ type: "heal", value: 3, target: "all_allies" }],
+    type: "heal",
+    description: "恢复9点生命",
+    effects: [{ type: "heal", value: 9, target: "ally" }],
   },
 ];
 
@@ -588,8 +582,14 @@ export function generateRewardCards(
     }
   }
 
+  // 标注来源：区分 REWARD_CARDS 和 ALL_CARDS
+  const rewardIds = new Set(REWARD_CARDS.map((c) => c.id));
+
   console.log(
-    `[奖励] 生成 ${rewards.length} 张奖励卡: ${rewards.map((c) => `${c.name}(${CHARACTER_DEFS[c.characterId].name})`).join(", ")}`,
+    `[奖励] 生成 ${rewards.length} 张奖励卡: ${rewards.map((c) => {
+      const source = rewardIds.has(c.id) ? "奖励池" : "基础池";
+      return `${c.name}(${CHARACTER_DEFS[c.characterId].name}/${source})`;
+    }).join(", ")}`,
   );
   return rewards;
 }
