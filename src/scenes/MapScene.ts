@@ -338,7 +338,7 @@ export class MapScene extends Phaser.Scene {
             }
           }
           break;
-        // ========== 调试键（阶段 3 验收用） ==========
+        // ========== dev-only 调试键：后续正式版本应移除 ==========
         case "i": {
           // I 键：让第一个角色进入重伤
           const gs = getGameState();
@@ -474,9 +474,9 @@ export class MapScene extends Phaser.Scene {
           this.showCampPopup(mockCampCell);
           break;
         }
-        // ========== 阶段 3.1-C 补充验收调试键 ==========
+        // ========== dev-only 调试键（B/E/X/H/U） ==========
         case "b": {
-          // B 键：直接进入普通战斗（阶段3.1-C验收用调试键）
+          // B 键：直接进入普通战斗（dev-only）
           // Item 33 (P0): 检查全队是否可用
           if (checkExpeditionFailed()) {
             console.log("[调试B] 全队重伤/死亡，无法进入战斗");
@@ -488,7 +488,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "e": {
-          // E 键：直接进入精英战斗（阶段4.2验收用调试键，测试精英胜利弹奖励）
+          // E 键：直接进入精英战斗（dev-only）
           const gsE = getGameState();
           gsE.currentBattleType = "elite";
           setGameState(gsE);
@@ -497,7 +497,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "x": {
-          // X 键：直接进入Boss战斗（阶段4验收用调试键，测试Boss胜利不弹奖励）
+          // X 键：直接进入Boss战斗（dev-only）
           const gsX = getGameState();
           gsX.currentBattleType = "boss";
           setGameState(gsX);
@@ -506,7 +506,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "h": {
-          // H 键：商队 HP -20（阶段3.1-C验收用调试键）
+          // H 键：商队 HP -20（dev-only）
           const gsH = getGameState();
           gsH.caravanHp = Math.max(0, gsH.caravanHp - 20);
           setGameState(gsH);
@@ -517,7 +517,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "u": {
-          // U 键：所有角色 HP -10（阶段3.1-C验收用调试键）
+          // U 键：所有角色 HP -10（dev-only）
           const gsU = getGameState();
           for (const id of gsU.selectedCharacters) {
             const cs = gsU.characterStates[id];
@@ -2717,11 +2717,22 @@ export class MapScene extends Phaser.Scene {
       const cardsToShow = deck.slice(0, maxShow);
       const cardStartY = 75;
 
+      // 统计同名卡数量，用于 instanceId 区分
+      const nameCount: Record<string, number> = {};
+      for (const c of deck) {
+        nameCount[c.name] = (nameCount[c.name] || 0) + 1;
+      }
+
       cardsToShow.forEach((card, cardIdx) => {
-        const cardName = card.name; // upgradeCard已将name改为"举盾+"，无需再拼
         const cardColor = card.upgraded ? "#44ff88" : "#cccccc";
+        // 同名卡多张时，附加 instanceId 后4位用于区分
+        let cardLabel = card.name;
+        if (nameCount[card.name] > 1 && card.instanceId) {
+          const suffix = card.instanceId.slice(-4);
+          cardLabel = `${card.name} #${suffix}`;
+        }
         const cardText = this.add
-          .text(0, cardStartY + cardIdx * 18, `⚡${card.cost} ${cardName}`, {
+          .text(0, cardStartY + cardIdx * 18, `⚡${card.cost} ${cardLabel}`, {
             fontSize: "12px",
             color: cardColor,
             fontFamily: "monospace",
@@ -2747,9 +2758,14 @@ export class MapScene extends Phaser.Scene {
         container.add(moreText);
       }
 
-      // 打印到控制台
+      // 打印到控制台（含 instanceId 便于测试验证）
       console.log(
-        `[牌组] ${char.def.name} deck=${deck.length}: ${deck.map((c) => c.name).join(", ")}`,
+        `[牌组] ${char.def.name} deck=${deck.length}: ${deck.map((c) => {
+          if (nameCount[c.name] > 1) {
+            return `${c.name}#${c.instanceId?.slice(-4) ?? "????"}`;
+          }
+          return c.name;
+        }).join(", ")}`,
       );
     });
 
@@ -2916,35 +2932,51 @@ export class MapScene extends Phaser.Scene {
       upgradableWithIndex.map(({ card }, index) => ({
         text: `${index + 1}. ${card.name}`,
         action: () => {
-          // 按 instanceId 精确定位
-          const targetIdx = cs.deck.findIndex((c) => c.instanceId === card.instanceId);
-          if (targetIdx === -1) {
-            console.warn(`[补给] 升级失败: instanceId=${card.instanceId} 在deck中未找到`);
-            return;
-          }
+          // 先弹出确认框，不直接升级
           const upgradedCard = this.upgradeCard(card);
-          cs.deck[targetIdx] = upgradedCard;
-          setGameState(gameState);
-          console.log(
-            `[补给] 升级卡牌: ${cs.def.name} ${card.name} → ${upgradedCard.name}`,
-          );
-          console.log(
-            `[牌组] ${cs.def.name} deck=${cs.deck.length}: ${cs.deck.map((c) => c.name).join(", ")}`,
-          );
-
-          // 显示升级结果
           this.openModal(
-            "升级成功",
-            `${cs.def.name} 的 ${card.name} 已升级为 ${upgradedCard.name}\n\n${upgradedCard.description}`,
+            "确认升级",
+            `确认升级 ${cs.def.name} 的【${card.name}】为【${upgradedCard.name}】吗？`,
             [
               {
-                text: "完成",
+                text: "确认升级",
                 action: () => {
-                  this.completeCell(supplyCell);
+                  // 按 instanceId 精确定位
+                  const targetIdx = cs.deck.findIndex((c) => c.instanceId === card.instanceId);
+                  if (targetIdx === -1) {
+                    console.warn(`[补给] 升级失败: instanceId=${card.instanceId} 在deck中未找到`);
+                    return;
+                  }
+                  cs.deck[targetIdx] = upgradedCard;
+                  setGameState(gameState);
+                  console.log(
+                    `[补给] 升级卡牌: ${cs.def.name} ${card.name} → ${upgradedCard.name}`,
+                  );
+                  console.log(
+                    `[牌组] ${cs.def.name} deck=${cs.deck.length}: ${cs.deck.map((c) => c.name).join(", ")}`,
+                  );
+                  // 显示升级结果后，返回补给点菜单
+                  this.openModal(
+                    "升级成功",
+                    `${cs.def.name} 的 ${card.name} 已升级为 ${upgradedCard.name}\n\n${upgradedCard.description}`,
+                    [
+                      {
+                        text: "返回补给点",
+                        action: () => {
+                          this.closeModal();
+                          this.showSupplyPopup(supplyCell);
+                        },
+                      },
+                    ],
+                  );
+                },
+              },
+              {
+                text: "取消",
+                action: () => {
+                  // 返回该角色可升级列表
                   this.closeModal();
-                  this.redrawMap();
-                  this.updateResourceDisplay();
-                  this.updatePartyDisplay();
+                  this.showUpgradeCardSelectCharacter(supplyCell);
                 },
               },
             ],
@@ -2956,7 +2988,7 @@ export class MapScene extends Phaser.Scene {
       text: "取消",
       action: () => {
         this.closeModal();
-        this.showUpgradeCardSelectCharacter(supplyCell);
+        this.showSupplyPopup(supplyCell);
       },
     });
 
@@ -3032,34 +3064,50 @@ export class MapScene extends Phaser.Scene {
       (card, index) => ({
         text: `${index + 1}. ${card.name}`,
         action: () => {
-          // 按 instanceId 精确定位删除
-          const targetIdx = cs.deck.findIndex((c) => c.instanceId === card.instanceId);
-          if (targetIdx === -1) {
-            console.warn(`[补给] 删除失败: instanceId=${card.instanceId} 在deck中未找到`);
-            return;
-          }
-          const removedCard = cs.deck.splice(targetIdx, 1)[0];
-          setGameState(gameState);
-          console.log(
-            `[牌组] ${cs.def.name} 删除卡牌：${removedCard.name}，当前 deck=${cs.deck.length}`,
-          );
-          console.log(
-            `[牌组] ${cs.def.name} deck=${cs.deck.length}: ${cs.deck.map((c) => c.name).join(", ")}`,
-          );
-
-          // 显示删除结果
+          // 先弹出确认框，不直接删除
           this.openModal(
-            "删除成功",
-            `${cs.def.name} 的 ${removedCard.name} 已从牌组移除\n当前牌组: ${cs.deck.length} 张`,
+            "确认删除",
+            `确认删除 ${cs.def.name} 的【${card.name}】吗？`,
             [
               {
-                text: "完成",
+                text: "确认删除",
                 action: () => {
-                  this.completeCell(supplyCell);
+                  // 按 instanceId 精确定位删除
+                  const targetIdx = cs.deck.findIndex((c) => c.instanceId === card.instanceId);
+                  if (targetIdx === -1) {
+                    console.warn(`[补给] 删除失败: instanceId=${card.instanceId} 在deck中未找到`);
+                    return;
+                  }
+                  const removedCard = cs.deck.splice(targetIdx, 1)[0];
+                  setGameState(gameState);
+                  console.log(
+                    `[牌组] ${cs.def.name} 删除卡牌：${removedCard.name}，当前 deck=${cs.deck.length}`,
+                  );
+                  console.log(
+                    `[牌组] ${cs.def.name} deck=${cs.deck.length}: ${cs.deck.map((c) => c.name).join(", ")}`,
+                  );
+                  // 显示删除结果后，返回补给点菜单
+                  this.openModal(
+                    "删除成功",
+                    `${cs.def.name} 的 ${removedCard.name} 已从牌组移除\n当前牌组: ${cs.deck.length} 张`,
+                    [
+                      {
+                        text: "返回补给点",
+                        action: () => {
+                          this.closeModal();
+                          this.showSupplyPopup(supplyCell);
+                        },
+                      },
+                    ],
+                  );
+                },
+              },
+              {
+                text: "取消",
+                action: () => {
+                  // 返回该角色牌组列表
                   this.closeModal();
-                  this.redrawMap();
-                  this.updateResourceDisplay();
-                  this.updatePartyDisplay();
+                  this.showDeleteCardSelectCard(charId, supplyCell);
                 },
               },
             ],
@@ -3072,7 +3120,7 @@ export class MapScene extends Phaser.Scene {
       text: "取消",
       action: () => {
         this.closeModal();
-        this.showDeleteCardSelectCharacter(supplyCell);
+        this.showSupplyPopup(supplyCell);
       },
     });
 

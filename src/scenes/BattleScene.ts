@@ -185,8 +185,8 @@ export class BattleScene extends Phaser.Scene {
     // 键盘快捷键
     this.input.keyboard?.on("keydown-E", () => this.endTurn());
     this.input.keyboard?.on("keydown-ENTER", () => this.endTurn());
-    // R 键已移至下方绑定卡牌奖励调试功能（阶段4）
-    // Q 键：强制胜利（dev-only 调试键，阶段3.1验收用）
+    // === dev-only 调试键：后续正式版本应移除 ===
+    // Q 键：强制胜利（dev-only）
     // 必须走 onBattleEnd(true) 统一流程，确保重伤同步逻辑执行
     this.input.keyboard?.on("keydown-Q", () => {
       if (!this.battleEnded) {
@@ -197,7 +197,7 @@ export class BattleScene extends Phaser.Scene {
         this.onBattleEnd(true);
       }
     });
-    // J 键：让第一个角色 HP=0（dev-only 调试键，阶段3.1验收用）
+    // J 键：让第一个角色 HP=0（dev-only）
     this.input.keyboard?.on("keydown-J", () => {
       if (this.battleEnded) return;
       const firstChar = this.battleManager.state.characters[0];
@@ -208,9 +208,9 @@ export class BattleScene extends Phaser.Scene {
         );
       }
     });
-    // R 键：直接打开卡牌奖励界面（dev-only 调试键，阶段4验收用）
+    // R 键：直接打开卡牌奖励界面（dev-only）
     // 不需要打战斗就能测试奖励UI
-    // Item 39 (P0): Boss 战中禁用 R 键，避免误判
+    // Boss 战中禁用 R 键，避免误判
     this.input.keyboard?.on("keydown-R", () => {
       if (!this.battleEnded) {
         const gs = getGameState();
@@ -234,8 +234,7 @@ export class BattleScene extends Phaser.Scene {
         this.showCardRewardScreen();
       }
     });
-
-    // T 键：dev-only，将一张升级卡注入第一个角色的手牌（用于测试升级卡实际出牌效果）
+    // T 键：将升级卡注入第一个角色手牌（dev-only，用于测试升级卡出牌效果）
     this.input.keyboard?.on("keydown-T", () => {
       if (this.battleEnded) return;
       const char = this.battleManager.state.characters[0];
