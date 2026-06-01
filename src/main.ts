@@ -11,6 +11,17 @@ import {
   resolveQuestionCell,
   resetGameState,
 } from "./systems/GameState";
+import { GOODS, getGoodById, getGoodName, formatGoodsRequirement, validateGoods } from "./data/goods";
+import {
+  createEmptyCargo,
+  createCargo,
+  getCargoQuantity,
+  addCargo,
+  removeCargo,
+  hasCargo,
+  calculateCargoWeight,
+  formatCargo,
+} from "./systems/cargoSystem";
 
 // 全局错误处理
 window.onerror = (message, source, lineno, colno, error) => {
@@ -43,5 +54,19 @@ const game = new Phaser.Game(config);
 (window as any).getMovableNeighbors = getMovableNeighbors;
 (window as any).resolveQuestionCell = resolveQuestionCell;
 (window as any).resetGameState = resetGameState;
+// 商品与货物系统（阶段8.1）
+(window as any).GOODS = GOODS;
+(window as any).getGoodById = getGoodById;
+(window as any).getGoodName = getGoodName;
+(window as any).formatGoodsRequirement = formatGoodsRequirement;
+(window as any).validateGoods = validateGoods;
+(window as any).createEmptyCargo = createEmptyCargo;
+(window as any).createCargo = createCargo;
+(window as any).getCargoQuantity = getCargoQuantity;
+(window as any).addCargo = addCargo;
+(window as any).removeCargo = removeCargo;
+(window as any).hasCargo = hasCargo;
+(window as any).calculateCargoWeight = calculateCargoWeight;
+(window as any).formatCargo = formatCargo;
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

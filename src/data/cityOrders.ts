@@ -1,6 +1,8 @@
 // 城市订单数据（阶段7.2）
 // 定义可选择的远征订单，关联到特定城市和商路
 
+import { formatGoodsRequirement } from "./goods";
+
 export interface CityOrder {
   id: string;
   cityId: string;
@@ -106,13 +108,11 @@ export function getUnlockedOrdersForRoute(routeId: string): CityOrder[] {
 }
 
 /**
- * 格式化需求物资为可读文本
- * 空对象返回"无"，否则返回 "grain x5，medicine x2" 格式
+ * 格式化需求物资为可读文本（订单语义别名）
+ * 内部调用 goods.ts 的 formatGoodsRequirement，使用中文商品名
  */
 export function formatRequiredGoods(requiredGoods: Record<string, number>): string {
-  const entries = Object.entries(requiredGoods);
-  if (entries.length === 0) return "无";
-  return entries.map(([name, count]) => `${name} x${count}`).join("，");
+  return formatGoodsRequirement(requiredGoods);
 }
 
 /**
