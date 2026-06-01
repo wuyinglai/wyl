@@ -51,6 +51,10 @@ export class BattleScene extends Phaser.Scene {
   // dev-only: 暴露奖励卡列表，供自动化测试直接调用 selectRewardCard
   private _rewardCards: CardDef[] = [];
 
+  // 部件效果触发保护（阶段6.1）
+  private battleEndPartsApplied: boolean = false;
+  private partRewardClaimed: boolean = false;
+
   constructor() {
     super({ key: "BattleScene" });
   }
@@ -1172,6 +1176,9 @@ export class BattleScene extends Phaser.Scene {
     setGameState(gameState);
 
     if (victory) {
+      // 医疗箱效果：战斗胜利时触发一次（阶段6.1修复）
+      this.applyBattleEndPartEffects();
+
       // 非Boss胜利：精英战斗先显示部件奖励，再显示卡牌奖励
       if (battleType === "elite") {
         console.log("[战斗] 精英战斗胜利，先显示部件奖励");
@@ -1599,9 +1606,6 @@ export class BattleScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // 医疗箱效果：战斗胜利后随机一名未死亡角色恢复 3 HP
-    this.applyMedicalKitEffect();
-
     // 提示文本
     const toastText = this.add
       .text(
@@ -1627,8 +1631,11 @@ export class BattleScene extends Phaser.Scene {
     });
   }
 
-  /** 医疗箱效果：战斗胜利后随机一名未死亡角色恢复 3 HP */
-  private applyMedicalKitEffect(): void {
+  /** 战斗结束时触发的部件效果（医疗箱等），只触发一次 */
+  private applyBattleEndPartEffects(): void {
+    if (this.battleEndPartsApplied) return;
+    this.battleEndPartsApplied = true;
+
     const gameState = getGameState();
     const hasMedicalKit = gameState.caravanParts.some(
       (p) => p.id === "medical_kit",
@@ -1692,6 +1699,9 @@ export class BattleScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
     const gameState = getGameState();
+
+    // 防重复领取保护（阶段6.1）
+    this.partRewardClaimed = false;
 
     // 获取随机未拥有的部件
     const part = getRandomUnownedPart(gameState.caravanParts);
@@ -1809,9 +1819,27 @@ export class BattleScene extends Phaser.Scene {
       .setInteractive()
       .setDepth(210);
 
+    // 键盘继续：Enter / Space / 1（阶段6.1）
+    const partKeyHandler = (event: KeyboardEvent) => {
+      if (this.partRewardClaimed) return;
+      const key = event.key;
+      if (key === "Enter" || key === " " || key === "1") {
+        console.log(`[部件] 键盘继续: ${key}`);
+        continueBtn.emit("pointerdown");
+      }
+    };
+    this.input.keyboard?.on("keydown", partKeyHandler);
+
     continueBtn.on("pointerdown", () => {
-      // 添加部件到商队
-      gameState.caravanParts.push(part);
+      // 防重复领取（阶段6.1）
+      if (this.partRewardClaimed) {
+        console.log("[部件] 重复点击已忽略，部件已领取");
+        return;
+      }
+      this.partRewardClaimed = true;
+
+      // 添加部件到商队（复制对象，不引用 PART_POOL）
+      gameState.caravanParts.push({ ...part });
       setGameState(gameState);
       console.log(`[部件] 获得: ${part.name}`);
 
@@ -1831,6 +1859,7 @@ export class BattleScene extends Phaser.Scene {
       partDesc.destroy();
       triggerText.destroy();
       continueBtn.destroy();
+      this.input.keyboard?.off("keydown", partKeyHandler);
 
       // 进入卡牌奖励
       this.showCardRewardScreen();

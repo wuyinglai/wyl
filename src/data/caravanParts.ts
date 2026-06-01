@@ -16,6 +16,8 @@ export interface CaravanPart {
   trigger: CaravanPartTrigger;
   effectType: string;
   value?: number;
+  // 阶段6.1: 标记是否已实现效果，未实现的部件不进入随机奖励池
+  implemented?: boolean;
 }
 
 // 商队部件池（8个部件）
@@ -27,6 +29,7 @@ export const PART_POOL: CaravanPart[] = [
     trigger: "passive",
     effectType: "max_hp_bonus",
     value: 10,
+    implemented: true,
   },
   {
     id: "medical_kit",
@@ -35,6 +38,7 @@ export const PART_POOL: CaravanPart[] = [
     trigger: "battle_end",
     effectType: "heal_random_character",
     value: 3,
+    implemented: true,
   },
   {
     id: "tactical_banner",
@@ -43,6 +47,7 @@ export const PART_POOL: CaravanPart[] = [
     trigger: "battle_start",
     effectType: "armor_all_characters",
     value: 2,
+    implemented: true,
   },
   {
     id: "spare_axle",
@@ -51,29 +56,7 @@ export const PART_POOL: CaravanPart[] = [
     trigger: "map_move",
     effectType: "skip_day_chance",
     value: 0.2,
-  },
-  {
-    id: "ammo_box",
-    name: "弹药箱",
-    description: "每场战斗中，射手第一张攻击牌伤害 +2（暂未生效）",
-    trigger: "card_play",
-    effectType: "sharpshooter_first_attack_bonus",
-    value: 2,
-  },
-  {
-    id: "water_barrel",
-    name: "净水桶",
-    description: "营地恢复时，所有角色额外恢复 2 HP（暂未生效）",
-    trigger: "passive",
-    effectType: "camp_heal_bonus",
-    value: 2,
-  },
-  {
-    id: "scout_lens",
-    name: "侦察镜",
-    description: "地图上相邻问号格显示类型预告（暂未生效）",
-    trigger: "passive",
-    effectType: "reveal_adjacent_question",
+    implemented: true,
   },
   {
     id: "repair_toolkit",
@@ -82,15 +65,45 @@ export const PART_POOL: CaravanPart[] = [
     trigger: "supply_repair",
     effectType: "repair_bonus",
     value: 10,
+    implemented: true,
+  },
+  // === 以下部件暂未生效，不进入随机奖励池 ===
+  {
+    id: "ammo_box",
+    name: "弹药箱",
+    description: "每场战斗中，射手第一张攻击卡伤害 +2（暂未生效）",
+    trigger: "card_play",
+    effectType: "sharpshooter_first_attack_bonus",
+    value: 2,
+    implemented: false,
+  },
+  {
+    id: "water_barrel",
+    name: "净水桶",
+    description: "营地恢复时，所有角色额外恢复 2 HP（暂未生效）",
+    trigger: "passive",
+    effectType: "camp_heal_bonus",
+    value: 2,
+    implemented: false,
+  },
+  {
+    id: "scout_lens",
+    name: "侦察镜",
+    description: "地图上相邻问号格显示类型预告（暂未生效）",
+    trigger: "passive",
+    effectType: "reveal_adjacent_question",
+    implemented: false,
   },
 ];
 
-// 获取随机未拥有的部件
+// 获取随机未拥有的已实现部件（阶段6.1: 排除 implemented=false）
 export function getRandomUnownedPart(
   ownedParts: CaravanPart[],
 ): CaravanPart | null {
   const ownedIds = new Set(ownedParts.map((p) => p.id));
-  const available = PART_POOL.filter((p) => !ownedIds.has(p.id));
+  const available = PART_POOL.filter(
+    (p) => !ownedIds.has(p.id) && p.implemented !== false,
+  );
   if (available.length === 0) return null;
   return available[Math.floor(Math.random() * available.length)];
 }
