@@ -92,6 +92,9 @@ export class BattleScene extends Phaser.Scene {
     this.battleEnded = false;
     this._rewardCards = [];
     this.skillTooltip = null;
+    // 阶段6.1: 重置部件效果触发保护
+    this.battleEndPartsApplied = false;
+    this.partRewardClaimed = false;
 
     const w = this.scale.width;
     const h = this.scale.height;
@@ -1735,7 +1738,7 @@ export class BattleScene extends Phaser.Scene {
         .setDepth(210);
 
       const continueBtn = this.add
-        .text(w / 2, h / 2 + 80, "【继续】", {
+        .text(w / 2, h / 2 + 80, "【继续】(Enter/Space/1)", {
           fontSize: "20px",
           color: "#ffffff",
           backgroundColor: "#444466",
@@ -1746,11 +1749,31 @@ export class BattleScene extends Phaser.Scene {
         .setInteractive()
         .setDepth(210);
 
+      // 防重复进入卡牌奖励（阶段6.1）
+      let noPartClaimed = false;
+
+      // 键盘继续：Enter / Space / 1（阶段6.1）
+      const noPartKeyHandler = (event: KeyboardEvent) => {
+        if (noPartClaimed) return;
+        const key = event.key;
+        if (key === "Enter" || key === " " || key === "1") {
+          console.log("[部件] 无新部件，键盘继续");
+          continueBtn.emit("pointerdown");
+        }
+      };
+      this.input.keyboard?.on("keydown", noPartKeyHandler);
+
       continueBtn.on("pointerdown", () => {
+        if (noPartClaimed) {
+          console.log("[部件] 重复点击已忽略，已进入卡牌奖励");
+          return;
+        }
+        noPartClaimed = true;
         overlay.destroy();
         title.destroy();
         noPartText.destroy();
         continueBtn.destroy();
+        this.input.keyboard?.off("keydown", noPartKeyHandler);
         // 进入卡牌奖励
         this.showCardRewardScreen();
       });
