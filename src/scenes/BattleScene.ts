@@ -28,6 +28,7 @@ import {
   generateBattleRewardCards,
   addRewardCardToDeck,
 } from "../systems/rewardSystem";
+import { isDevCheatEnabled } from "../systems/devConfig";
 
 export class BattleScene extends Phaser.Scene {
   private battleManager!: BattleManager;
@@ -70,11 +71,14 @@ export class BattleScene extends Phaser.Scene {
   shutdown() {
     this.input.keyboard?.off("keydown-E");
     this.input.keyboard?.off("keydown-ENTER");
-    this.input.keyboard?.off("keydown-Q");
-    this.input.keyboard?.off("keydown-J");
-    this.input.keyboard?.off("keydown-R");
     this.input.keyboard?.off("keydown-F");
-    this.input.keyboard?.off("keydown-T");
+    // dev-only 键只在 dev 模式下移除
+    if (isDevCheatEnabled()) {
+      this.input.keyboard?.off("keydown-Q");
+      this.input.keyboard?.off("keydown-J");
+      this.input.keyboard?.off("keydown-R");
+      this.input.keyboard?.off("keydown-T");
+    }
     if (this.rewardKeyHandler) {
       this.input.keyboard?.off("keydown", this.rewardKeyHandler);
       this.rewardKeyHandler = undefined;
@@ -198,99 +202,99 @@ export class BattleScene extends Phaser.Scene {
     // 键盘快捷键
     this.input.keyboard?.on("keydown-E", () => this.endTurn());
     this.input.keyboard?.on("keydown-ENTER", () => this.endTurn());
-    // === dev-only 调试键：后续正式版本应移除 ===
-    // Q 键：强制胜利（dev-only）
-    // 必须走 onBattleEnd(true) 统一流程，确保重伤同步逻辑执行
-    this.input.keyboard?.on("keydown-Q", () => {
-      if (!this.battleEnded) {
-        console.log("[战斗调试Q] 强制胜利，走统一战斗结束流程");
-        // 直接杀死所有敌人
-        this.battleManager.state.enemies.forEach((e) => (e.currentHp = 0));
-        // 调用统一的战斗结束处理
-        this.onBattleEnd(true);
-      }
-    });
-    // J 键：让第一个角色 HP=0（dev-only）
-    this.input.keyboard?.on("keydown-J", () => {
-      if (this.battleEnded) return;
-      const firstChar = this.battleManager.state.characters[0];
-      if (firstChar) {
-        firstChar.currentHp = 0;
-        console.log(
-          `[战斗调试J] ${firstChar.def.name} HP设为0，将在战斗结束时进入重伤`,
-        );
-      }
-    });
-    // R 键：直接打开卡牌奖励界面（dev-only）
-    // 不需要打战斗就能测试奖励UI
-    // Boss 战中禁用 R 键，避免误判
-    this.input.keyboard?.on("keydown-R", () => {
-      if (!this.battleEnded) {
-        const gs = getGameState();
-        if (gs.currentBattleType === "boss") {
-          console.log("[战斗调试R] Boss战中禁用R键奖励调试");
+
+    // === dev-only 调试键：仅在开发/测试模式启用 ===
+    if (isDevCheatEnabled()) {
+      // Q 键：强制胜利（dev-only）
+      // 必须走 onBattleEnd(true) 统一流程，确保重伤同步逻辑执行
+      this.input.keyboard?.on("keydown-Q", () => {
+        if (!this.battleEnded) {
+          console.log("[战斗调试Q] 强制胜利，走统一战斗结束流程");
+          // 直接杀死所有敌人
+          this.battleManager.state.enemies.forEach((e) => (e.currentHp = 0));
+          // 调用统一的战斗结束处理
+          this.onBattleEnd(true);
+        }
+      });
+      // J 键：让第一个角色 HP=0（dev-only）
+      this.input.keyboard?.on("keydown-J", () => {
+        if (this.battleEnded) return;
+        const firstChar = this.battleManager.state.characters[0];
+        if (firstChar) {
+          firstChar.currentHp = 0;
+          console.log(
+            `[战斗调试J] ${firstChar.def.name} HP设为0，将在战斗结束时进入重伤`,
+          );
+        }
+      });
+      // R 键：直接打开卡牌奖励界面（dev-only）
+      // 不需要打战斗就能测试奖励UI
+      // Boss 战中禁用 R 键，避免误判
+      this.input.keyboard?.on("keydown-R", () => {
+        if (!this.battleEnded) {
+          const gs = getGameState();
+          if (gs.currentBattleType === "boss") {
+            console.log("[战斗调试R] Boss战中禁用R键奖励调试");
+            return;
+          }
+          this.battleEnded = true;
+          // 同步商队耐久
+          const gameState = getGameState();
+          gameState.caravanHp = this.battleManager.state.caravanDurability;
+          syncCharacterStatesFromBattle(this.battleManager.state.characters);
+          // 标记当前战斗节点为已清理（使用统一函数）
+          this.clearCurrentBattleNode(gameState);
+          gameState.currentBattleType = null;
+          setGameState(gameState);
+          console.log("[战斗调试R] 直接打开卡牌奖励界面");
+          this.showCardRewardScreen();
+        }
+      });
+      // T 键：将升级卡注入第一个角色手牌（dev-only，用于测试升级卡出牌效果）
+      this.input.keyboard?.on("keydown-T", () => {
+        if (this.battleEnded) return;
+        const char = this.battleManager.state.characters[0];
+        if (!char || char.currentHp <= 0) {
+          console.log("[战斗调试T] 第一个角色不可用");
           return;
         }
-        this.battleEnded = true;
-        // 同步商队耐久
-        const gameState = getGameState();
-        gameState.caravanHp = this.battleManager.state.caravanDurability;
-        syncCharacterStatesFromBattle(this.battleManager.state.characters);
-        // 标记当前格子为已清理
-        const { x, y } = gameState.currentPosition;
-        const cell = gameState.mapCells[y][x];
-        cell.isCleared = true;
-        cell.isRevealed = true;
-        gameState.currentBattleType = null;
-        setGameState(gameState);
-        console.log("[战斗调试R] 直接打开卡牌奖励界面");
-        this.showCardRewardScreen();
-      }
-    });
-    // T 键：将升级卡注入第一个角色手牌（dev-only，用于测试升级卡出牌效果）
-    this.input.keyboard?.on("keydown-T", () => {
-      if (this.battleEnded) return;
-      const char = this.battleManager.state.characters[0];
-      if (!char || char.currentHp <= 0) {
-        console.log("[战斗调试T] 第一个角色不可用");
-        return;
-      }
-      // 优先查找举盾（guardian_shield_up），用于测试升级卡护甲效果
-      const upgradable = char.deck.find(
-        (c) =>
-          c.id === "guardian_shield_up" ||
-          c.id === "guardian_heavy_strike" ||
-          c.id === "guardian_intercept" ||
-          c.id === "guardian_shield_bash",
-      );
-      if (!upgradable) {
-        console.log("[战斗调试T] 未找到可升级的护路人卡牌");
-        return;
-      }
-      // 构造升级卡（模拟 upgradeCard 逻辑）
-      const upgradedCard: CardDef = {
-        ...upgradable,
-        name: `${upgradable.name}+`,
-        upgraded: true,
-        effects: upgradable.effects.map((eff) => {
-          if (
-            eff.type === "damage" ||
-            eff.type === "heal" ||
-            eff.type === "armor" ||
-            eff.type === "repair_caravan"
-          ) {
-            return { ...eff, value: eff.value + 3 };
-          }
-          return { ...eff };
-        }),
-      };
-      char.hand.push(upgradedCard);
-      console.log(
-        `[战斗调试T] 注入升级卡【${upgradedCard.name}】到手牌，effects=${JSON.stringify(upgradedCard.effects)}`,
-      );
-      console.log(`[战斗调试T] 当前手牌: ${char.hand.map((c) => c.name).join(", ")}`);
-      this.updateUI();
-    });
+        // 优先查找举盾（guardian_shield_up），用于测试升级卡护甲效果
+        const upgradable = char.deck.find(
+          (c) =>
+            c.id === "guardian_shield_up" ||
+            c.id === "guardian_heavy_strike" ||
+            c.id === "guardian_intercept" ||
+            c.id === "guardian_shield_bash",
+        );
+        if (!upgradable) {
+          console.log("[战斗调试T] 未找到可升级的护路人卡牌");
+          return;
+        }
+        // 构造升级卡（模拟 upgradeCard 逻辑）
+        const upgradedCard: CardDef = {
+          ...upgradable,
+          name: `${upgradable.name}+`,
+          upgraded: true,
+          effects: upgradable.effects.map((eff) => {
+            if (
+              eff.type === "damage" ||
+              eff.type === "heal" ||
+              eff.type === "armor" ||
+              eff.type === "repair_caravan"
+            ) {
+              return { ...eff, value: eff.value + 3 };
+            }
+            return { ...eff };
+          }),
+        };
+        char.hand.push(upgradedCard);
+        console.log(
+          `[战斗调试T] 注入升级卡【${upgradedCard.name}】到手牌，effects=${JSON.stringify(upgradedCard.effects)}`,
+        );
+        console.log(`[战斗调试T] 当前手牌: ${char.hand.map((c) => c.name).join(", ")}`);
+        this.updateUI();
+      });
+    }
 
     console.log("[余烬商队] 战斗场景初始化完成");
     console.log("队伍:", characters.map((c) => c.def.name).join(", "));
@@ -1162,15 +1166,9 @@ export class BattleScene extends Phaser.Scene {
       return;
     }
 
-    // 如果胜利，标记当前格子为已清理（普通战斗、精英战斗、danger战斗）
+    // 如果胜利，标记当前战斗节点为已清理（使用 currentBattleNodePosition）
     if (victory) {
-      const { x, y } = gameState.currentPosition;
-      const cell = gameState.mapCells[y][x];
-      cell.isCleared = true;
-      cell.isRevealed = true;
-      console.log(
-        `[战斗] 战斗格 (${x}, ${y}) 已清理，battleType=${gameState.currentBattleType}`,
-      );
+      this.clearCurrentBattleNode(gameState);
     }
 
     // 保存战斗类型用于后续判断（精英战斗获得部件）
@@ -1198,6 +1196,40 @@ export class BattleScene extends Phaser.Scene {
       // 失败：显示失败界面
       this.showBattleResultOverlay(false);
     }
+  }
+
+  /** 清理当前战斗节点（阶段6.6）：使用 currentBattleNodePosition 而非 currentPosition */
+  private clearCurrentBattleNode(gameState: ReturnType<typeof getGameState>): void {
+    // 优先使用 currentBattleNodePosition
+    const battleNodePos = gameState.currentBattleNodePosition;
+    let x: number, y: number;
+
+    if (battleNodePos) {
+      x = battleNodePos.x;
+      y = battleNodePos.y;
+      console.log(`[战斗] 使用 currentBattleNodePosition (${x}, ${y}) 清理节点`);
+    } else {
+      // Fallback 到 currentPosition（兼容旧逻辑）
+      x = gameState.currentPosition.x;
+      y = gameState.currentPosition.y;
+      console.warn(
+        `[战斗] currentBattleNodePosition 未设置，fallback 到 currentPosition (${x}, ${y})`,
+      );
+    }
+
+    const cell = gameState.mapCells[y]?.[x];
+    if (cell) {
+      cell.isCleared = true;
+      cell.isRevealed = true;
+      console.log(
+        `[战斗] 战斗节点 (${x}, ${y}) 已清理，battleType=${gameState.currentBattleType}`,
+      );
+    } else {
+      console.error(`[战斗] 无法找到战斗节点 (${x}, ${y})`);
+    }
+
+    // 清空 currentBattleNodePosition
+    gameState.currentBattleNodePosition = null;
   }
 
   /** 返回地图的统一入口 */

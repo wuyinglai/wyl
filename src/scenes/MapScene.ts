@@ -1080,6 +1080,7 @@ export class MapScene extends Phaser.Scene {
         return;
       }
       gameState.currentBattleType = "boss";
+      gameState.currentBattleNodePosition = { x: cell.x, y: cell.y };
       setGameState(gameState);
       this.scene.start("BattleScene");
       return;
@@ -1098,6 +1099,7 @@ export class MapScene extends Phaser.Scene {
         return;
       }
       gameState.currentBattleType = "elite";
+      gameState.currentBattleNodePosition = { x: cell.x, y: cell.y };
       setGameState(gameState);
       this.scene.start("BattleScene");
       return;
@@ -1229,6 +1231,7 @@ export class MapScene extends Phaser.Scene {
   private enterCombat(cell: MapCell): void {
     const gameState = getGameState();
     gameState.currentBattleType = "normal";
+    gameState.currentBattleNodePosition = { x: cell.x, y: cell.y };
     setGameState(gameState);
     this.scene.start("BattleScene");
   }

@@ -67,6 +67,8 @@ export interface GameState {
   // 战斗相关
   currentBattleType: "normal" | "elite" | "boss" | null;
   battleResult: "victory" | "defeat" | null;
+  /** 战斗节点坐标（阶段6.6）：记录实际进入战斗的地图节点，用于战斗结束时清理 */
+  currentBattleNodePosition: { x: number; y: number } | null;
 
   // 商队部件系统（阶段6）
   caravanParts: CaravanPart[];
@@ -116,6 +118,7 @@ export function createInitialGameState(): GameState {
 
     currentBattleType: null,
     battleResult: null,
+    currentBattleNodePosition: null,
 
     // 商队部件系统（阶段6）
     caravanParts: [],
