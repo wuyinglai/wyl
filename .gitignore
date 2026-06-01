@@ -12,8 +12,13 @@ dist
 dist-ssr
 *.local
 
-# Test scripts (dev-only)
-test-*.cjs
+# Test scripts (dev-only, root directory only)
+/test-*.cjs
+/smoke-test-*.cjs
+/test-caravan-parts-*.cjs
+
+# But keep tests/ directory tracked
+!tests/
 
 # Editor directories and files
 .vscode/*
