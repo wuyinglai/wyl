@@ -231,6 +231,7 @@ export class RouteSelectScene extends Scene {
         fontSize: "12px",
         color: "#cccccc",
         fontFamily: "monospace",
+        wordWrap: { width: width - 40 },
       })
       .setOrigin(0, 0);
     container.add(goodsText);
@@ -252,6 +253,7 @@ export class RouteSelectScene extends Scene {
         fontSize: "12px",
         color: "#cccccc",
         fontFamily: "monospace",
+        wordWrap: { width: width - 40 },
       })
       .setOrigin(0, 0);
     container.add(charsText);
@@ -274,6 +276,7 @@ export class RouteSelectScene extends Scene {
           color: "#ffaa44",
           fontStyle: "bold",
           fontFamily: "monospace",
+          wordWrap: { width: width - 40 },
         })
         .setOrigin(0.5, 0);
       container.add(orderTitle);
@@ -285,6 +288,7 @@ export class RouteSelectScene extends Scene {
           fontSize: "11px",
           color: "#cccccc",
           fontFamily: "monospace",
+          wordWrap: { width: width - 40 },
         })
         .setOrigin(0.5, 0);
       container.add(orderGoods);
@@ -296,6 +300,7 @@ export class RouteSelectScene extends Scene {
           fontSize: "11px",
           color: "#44cc88",
           fontFamily: "monospace",
+          wordWrap: { width: width - 40 },
         })
         .setOrigin(0.5, 0);
       container.add(orderReward);

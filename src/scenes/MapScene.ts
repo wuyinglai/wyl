@@ -131,31 +131,46 @@ export class MapScene extends Phaser.Scene {
 
     console.log("[地图V2] 地图场景已加载");
 
-    // 显示当前商路/目标城市（阶段7.1）
+    // 显示当前商路/目标城市（阶段7.1）+ 订单摘要（阶段7.2）
+    // 使用独立信息面板，避免与地图节点重叠
     const routeInfo = this.getRouteInfoText();
+    const orderSummary = this.getOrderSummaryText();
+    const infoLines: string[] = [];
     if (routeInfo) {
+      infoLines.push(routeInfo);
       console.log(`[地图V2] ${routeInfo}`);
-      this.add
-        .text(this.scale.width - 20, 20, routeInfo, {
-          fontSize: "12px",
-          color: "#ffcc44",
-          fontFamily: "monospace",
-        })
-        .setOrigin(1, 0);
+    }
+    if (orderSummary) {
+      infoLines.push(orderSummary.text);
+      console.log(`[地图V2] ${orderSummary.title}`);
     }
 
-    // 显示当前订单摘要（阶段7.2）
-    const orderSummary = this.getOrderSummaryText();
-    if (orderSummary) {
-      console.log(`[地图V2] ${orderSummary.title}`);
-      const orderY = routeInfo ? 38 : 20;
-      this.add
-        .text(this.scale.width - 20, orderY, orderSummary.text, {
-          fontSize: "11px",
-          color: "#ffaa44",
-          fontFamily: "monospace",
-        })
-        .setOrigin(1, 0);
+    if (infoLines.length > 0) {
+      const panelPadding = 8;
+      const panelLineHeight = 16;
+      const panelWidth = 280;
+      const panelHeight = infoLines.length * panelLineHeight + panelPadding * 2;
+      const panelX = this.scale.width - panelWidth - 10;
+      const panelY = 10;
+
+      // 半透明背景框
+      const panelBg = this.add.graphics();
+      panelBg.fillStyle(0x000000, 0.6);
+      panelBg.fillRect(panelX, panelY, panelWidth, panelHeight);
+      panelBg.setDepth(100);
+
+      // 信息文本
+      infoLines.forEach((line, i) => {
+        this.add
+          .text(panelX + panelPadding, panelY + panelPadding + i * panelLineHeight, line, {
+            fontSize: "11px",
+            color: i === 0 ? "#ffcc44" : "#ffaa44",
+            fontFamily: "monospace",
+            wordWrap: { width: panelWidth - panelPadding * 2 },
+          })
+          .setOrigin(0, 0)
+          .setDepth(101);
+      });
     }
 
     // 如果是从战斗返回的自动移动测试，继续执行

@@ -1377,13 +1377,15 @@ export class BattleScene extends Phaser.Scene {
       repair: "#cc88ff",
     };
 
-    // 卡牌容器
-    const cardWidth = 320;
+    // 卡牌容器 - 自适应屏幕宽度
+    const maxCardWidth = 320;
     const cardHeight = 200;
-    const gap = 30;
+    const gap = 20;
+    const availableWidth = Math.min(w - 40, rewardCards.length * maxCardWidth + (rewardCards.length - 1) * gap);
+    const cardWidth = Math.min(maxCardWidth, (availableWidth - (rewardCards.length - 1) * gap) / rewardCards.length);
     const totalWidth =
       rewardCards.length * cardWidth + (rewardCards.length - 1) * gap;
-    const startX = (w - totalWidth) / 2;
+    const startX = Math.max(10, (w - totalWidth) / 2);
     const cardY = 80;
 
     for (let i = 0; i < rewardCards.length; i++) {
