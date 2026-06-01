@@ -104,3 +104,54 @@ export function getDefaultOrderForRoute(routeId: string): CityOrder | undefined 
 export function getUnlockedOrdersForRoute(routeId: string): CityOrder[] {
   return CITY_ORDERS.filter((order) => order.routeId === routeId && order.isUnlocked);
 }
+
+/**
+ * 格式化需求物资为可读文本
+ * 空对象返回"无"，否则返回 "grain x5，medicine x2" 格式
+ */
+export function formatRequiredGoods(requiredGoods: Record<string, number>): string {
+  const entries = Object.entries(requiredGoods);
+  if (entries.length === 0) return "无";
+  return entries.map(([name, count]) => `${name} x${count}`).join("，");
+}
+
+/**
+ * 校验城市订单数据完整性
+ * 返回错误列表，空数组表示全部通过
+ */
+export interface OrderValidationError {
+  orderId: string;
+  field: string;
+  message: string;
+}
+
+export function validateCityOrders(): OrderValidationError[] {
+  const errors: OrderValidationError[] = [];
+  const seenIds = new Set<string>();
+
+  for (const order of CITY_ORDERS) {
+    if (seenIds.has(order.id)) {
+      errors.push({ orderId: order.id, field: "id", message: `订单 ID 重复: ${order.id}` });
+    }
+    seenIds.add(order.id);
+
+    const goodsCount = Object.keys(order.requiredGoods).length;
+    if (goodsCount === 0) {
+      errors.push({ orderId: order.id, field: "requiredGoods", message: `订单 ${order.id} 的 requiredGoods 为空` });
+    }
+
+    if (order.rewardSilver < 0) {
+      errors.push({ orderId: order.id, field: "rewardSilver", message: `订单 ${order.id} 的 rewardSilver 为负数: ${order.rewardSilver}` });
+    }
+
+    if (order.rewardEmbers < 0) {
+      errors.push({ orderId: order.id, field: "rewardEmbers", message: `订单 ${order.id} 的 rewardEmbers 为负数: ${order.rewardEmbers}` });
+    }
+
+    if (order.cityContribution < 0) {
+      errors.push({ orderId: order.id, field: "cityContribution", message: `订单 ${order.id} 的 cityContribution 为负数: ${order.cityContribution}` });
+    }
+  }
+
+  return errors;
+}

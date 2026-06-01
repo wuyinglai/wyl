@@ -1,7 +1,7 @@
 import { Scene } from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
 import { CityRoute, getUnlockedRoutes } from "../data/cityRoutes";
-import { CityOrder, getDefaultOrderForRoute, getUnlockedOrdersForRoute } from "../data/cityOrders";
+import { CityOrder, getDefaultOrderForRoute, getUnlockedOrdersForRoute, formatRequiredGoods } from "../data/cityOrders";
 
 /**
  * 商路与目标城市选择场景（阶段7.1）
@@ -280,11 +280,8 @@ export class RouteSelectScene extends Scene {
       currentY += 22;
 
       // 需求物资
-      const goodsReq = Object.entries(order.requiredGoods)
-        .map(([name, count]) => `${name} x${count}`)
-        .join("，");
       const orderGoods = this.add
-        .text(0, currentY, `需求：${goodsReq}`, {
+        .text(0, currentY, `需求：${formatRequiredGoods(order.requiredGoods)}`, {
           fontSize: "11px",
           color: "#cccccc",
           fontFamily: "monospace",

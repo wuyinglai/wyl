@@ -17,7 +17,7 @@ import {
 import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
 import { CharacterState, CardDef } from "../data/types";
 import { getRouteById } from "../data/cityRoutes";
-import { getOrderById } from "../data/cityOrders";
+import { getOrderById, formatRequiredGoods } from "../data/cityOrders";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -1090,7 +1090,7 @@ export class MapScene extends Phaser.Scene {
     // order 不存在
     if (!order) {
       console.warn(`[地图] 未找到订单: ${selectedOrderId}`);
-      return { title: "订单：未选择", text: "订单：未选择" };
+      return { title: "订单：未知订单", text: "订单：未知订单" };
     }
 
     // 一致性检查：order.routeId 与 selectedRouteId 不匹配
@@ -1108,10 +1108,7 @@ export class MapScene extends Phaser.Scene {
     }
 
     // 构建摘要文本
-    const goodsReq = Object.entries(order.requiredGoods)
-      .map(([name, count]) => `${name} x${count}`)
-      .join("，");
-    const summaryText = `订单：${order.title} | 需求：${goodsReq} | 火种 +${order.rewardEmbers}`;
+    const summaryText = `订单：${order.title} | 需求：${formatRequiredGoods(order.requiredGoods)} | 火种 +${order.rewardEmbers}`;
 
     return { title: order.title, text: summaryText };
   }
