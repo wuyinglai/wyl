@@ -1025,17 +1025,36 @@ export class MapScene extends Phaser.Scene {
 
   /**
    * 获取当前商路信息文本（阶段7.1）
+   * 包含 route/city 一致性检查
    */
   private getRouteInfoText(): string | null {
     const gameState = getGameState();
-    if (!gameState.selectedRouteId || !gameState.selectedCityId) {
+    const { selectedRouteId, selectedCityId } = gameState;
+
+    // 安全：检查字段存在性
+    if (!selectedRouteId || !selectedCityId) {
       return null;
     }
-    const route = getRouteById(gameState.selectedRouteId);
+
+    const route = getRouteById(selectedRouteId);
+
+    // 一致性检查：route 存在但 cityId 不匹配
+    if (route && route.cityId !== selectedCityId) {
+      console.warn(
+        `[地图] route/city 不一致: selectedRouteId=${selectedRouteId} 对应 cityId=${route.cityId}, 但 selectedCityId=${selectedCityId}`
+      );
+      // 以 route 数据为准显示
+      return `目标: ${route.cityName} | ${route.routeName}`;
+    }
+
+    // route 存在且一致
     if (route) {
       return `目标: ${route.cityName} | ${route.routeName}`;
     }
-    return `目标: ${gameState.selectedCityId}`;
+
+    // route 不存在，fallback 到 cityId
+    console.warn(`[地图] 未找到商路: ${selectedRouteId}，使用 cityId fallback`);
+    return `目标: ${selectedCityId}`;
   }
 
   private redrawMap(): void {

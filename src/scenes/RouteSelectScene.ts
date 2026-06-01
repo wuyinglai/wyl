@@ -1,6 +1,6 @@
 import { Scene } from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
-import { CITY_ROUTES, CityRoute } from "../data/cityRoutes";
+import { CityRoute, getUnlockedRoutes } from "../data/cityRoutes";
 
 /**
  * 商路与目标城市选择场景（阶段7.1）
@@ -9,6 +9,7 @@ import { CITY_ROUTES, CityRoute } from "../data/cityRoutes";
 export class RouteSelectScene extends Scene {
   private selectedRouteId: string | null = null;
   private routeCards: Phaser.GameObjects.Container[] = [];
+  private isSelecting = false; // 防重复点击
 
   constructor() {
     super({ key: "RouteSelectScene" });
@@ -40,29 +41,36 @@ export class RouteSelectScene extends Scene {
       })
       .setOrigin(0.5);
 
-    // 显示3条商路卡片
-    const routes = CITY_ROUTES.filter((r) => r.isUnlocked);
-    const cardWidth = 360;
-    const cardHeight = 420;
-    const gap = 30;
-    const totalWidth = routes.length * cardWidth + (routes.length - 1) * gap;
-    const startX = (w - totalWidth) / 2 + cardWidth / 2;
-    const cardY = h / 2 + 20;
+    // 使用 getUnlockedRoutes() 获取可用商路
+    const routes = getUnlockedRoutes();
 
-    routes.forEach((route, index) => {
-      const cx = startX + index * (cardWidth + gap);
-      const card = this.createRouteCard(cx, cardY, cardWidth, cardHeight, route);
-      this.routeCards.push(card);
-    });
+    // 无可用商路兜底
+    if (routes.length === 0) {
+      this.showNoRoutesFallback(w, h);
+    } else {
+      // 显示商路卡片
+      const cardWidth = 360;
+      const cardHeight = 420;
+      const gap = 30;
+      const totalWidth = routes.length * cardWidth + (routes.length - 1) * gap;
+      const startX = (w - totalWidth) / 2 + cardWidth / 2;
+      const cardY = h / 2 + 20;
 
-    // 底部提示
-    this.add
-      .text(w / 2, h - 30, "点击商路卡片选择 | 按 ESC 返回主菜单", {
-        fontSize: "14px",
-        color: "#666666",
-        fontFamily: "monospace",
-      })
-      .setOrigin(0.5);
+      routes.forEach((route, index) => {
+        const cx = startX + index * (cardWidth + gap);
+        const card = this.createRouteCard(cx, cardY, cardWidth, cardHeight, route);
+        this.routeCards.push(card);
+      });
+
+      // 底部提示
+      this.add
+        .text(w / 2, h - 30, "点击商路卡片选择 | 按 ESC 返回主菜单", {
+          fontSize: "14px",
+          color: "#666666",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5);
+    }
 
     // ESC 返回主菜单
     this.input.keyboard?.on("keydown-ESC", () => {
@@ -70,6 +78,41 @@ export class RouteSelectScene extends Scene {
     });
 
     console.log("[商路选择] 场景初始化完成，显示", routes.length, "条商路");
+  }
+
+  /**
+   * 无可用商路时显示兜底UI
+   */
+  private showNoRoutesFallback(w: number, h: number): void {
+    // 提示文本
+    this.add
+      .text(w / 2, h / 2 - 30, "暂无可用商路", {
+        fontSize: "24px",
+        color: "#ff4444",
+        fontStyle: "bold",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5);
+
+    // 说明
+    this.add
+      .text(w / 2, h / 2 + 20, "当前没有解锁的商路，请稍后再试", {
+        fontSize: "14px",
+        color: "#888888",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5);
+
+    // 返回提示
+    this.add
+      .text(w / 2, h - 50, "按 ESC 返回主菜单", {
+        fontSize: "14px",
+        color: "#666666",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5);
+
+    console.warn("[商路选择] 无可用商路，显示兜底UI");
   }
 
   /**
@@ -284,9 +327,23 @@ export class RouteSelectScene extends Scene {
   }
 
   /**
-   * 选择商路
+   * 选择商路（防重复点击）
    */
   private selectRoute(route: CityRoute): void {
+    // 防重复点击
+    if (this.isSelecting) {
+      console.log("[商路选择] 正在选择中，忽略重复点击");
+      return;
+    }
+
+    // 检查是否解锁
+    if (!route.isUnlocked) {
+      console.warn(`[商路选择] 商路 ${route.id} 未解锁，无法选择`);
+      return;
+    }
+
+    // 标记正在选择
+    this.isSelecting = true;
     this.selectedRouteId = route.id;
 
     // 保存到 GameState
