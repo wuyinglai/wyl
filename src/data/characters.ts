@@ -377,7 +377,7 @@ export const REWARD_CARDS: CardDef[] = [
   },
   {
     id: "scout_quick_strike",
-    name: "刺击",
+    name: "快刺",
     cost: 1,
     characterId: "scout",
     type: "attack",
@@ -397,7 +397,7 @@ export const REWARD_CARDS: CardDef[] = [
   // === 鼓舞者奖励卡 ===
   {
     id: "inspirer_rally",
-    name: "鼓舞",
+    name: "鼓舞士气",
     cost: 1,
     characterId: "inspirer",
     type: "skill",
@@ -526,6 +526,7 @@ export function createCharacterState(characterId: CharacterId) {
  * 4. 尽量保证3张卡来自不同角色
  * 5. 不重复同一张卡
  * 6. 死亡角色不参与（由调用方过滤）
+ * 7. 极端情况下（如只剩1个角色），允许同角色出多张，尽量补足3张
  */
 export function generateRewardCards(
   teamCharacterIds: CharacterId[],
@@ -533,7 +534,7 @@ export function generateRewardCards(
   const rewards: CardDef[] = [];
   const usedCardIds = new Set<string>();
 
-  // 第一轮：优先从 REWARD_CARDS 中抽，尽量不同角色
+  // 第一轮：优先从 REWARD_CARDS 中抽，尽量不同角色（每角色最多1张）
   const rewardPools: Map<CharacterId, CardDef[]> = new Map();
   for (const charId of teamCharacterIds) {
     const cards = REWARD_CARDS.filter((c) => c.characterId === charId);
@@ -557,7 +558,7 @@ export function generateRewardCards(
     }
   }
 
-  // 第二轮：如果不够3张，从 ALL_CARDS 中补充
+  // 第二轮：从 ALL_CARDS 中补充，尽量不同角色（每角色最多1张）
   if (rewards.length < 3) {
     const allPools: Map<CharacterId, CardDef[]> = new Map();
     for (const charId of teamCharacterIds) {
@@ -582,8 +583,34 @@ export function generateRewardCards(
     }
   }
 
+  // 第三轮：如果还不够3张，从总池（REWARD_CARDS + ALL_CARDS）中继续补足
+  // 允许同角色出多张，只要card id不重复
+  if (rewards.length < 3) {
+    const totalPool: CardDef[] = [];
+    for (const charId of teamCharacterIds) {
+      const rewardCards = REWARD_CARDS.filter((c) => c.characterId === charId);
+      const allCards = ALL_CARDS.filter((c) => c.characterId === charId);
+      totalPool.push(...rewardCards, ...allCards);
+    }
+
+    const available = totalPool.filter((c) => !usedCardIds.has(c.id));
+    const shuffled = available.sort(() => Math.random() - 0.5);
+
+    while (rewards.length < 3 && shuffled.length > 0) {
+      const card = shuffled.shift()!;
+      rewards.push(card);
+      usedCardIds.add(card.id);
+    }
+  }
+
   // 标注来源：区分 REWARD_CARDS 和 ALL_CARDS
   const rewardIds = new Set(REWARD_CARDS.map((c) => c.id));
+
+  if (rewards.length < 3) {
+    console.warn(
+      `[奖励] 警告: 只生成 ${rewards.length} 张奖励卡，总池不足3张不同卡`,
+    );
+  }
 
   console.log(
     `[奖励] 生成 ${rewards.length} 张奖励卡: ${rewards.map((c) => {
