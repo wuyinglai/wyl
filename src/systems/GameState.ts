@@ -68,6 +68,9 @@ export interface GameState {
   selectedRouteId: string | null;
   selectedCityId: string | null;
 
+  // 城市订单（阶段7.2）
+  selectedOrderId: string | null;
+
   // 战斗相关
   currentBattleType: "normal" | "elite" | "boss" | null;
   battleResult: "victory" | "defeat" | null;
@@ -122,6 +125,9 @@ export function createInitialGameState(): GameState {
 
     selectedRouteId: null,
     selectedCityId: null,
+
+    // 城市订单（阶段7.2）
+    selectedOrderId: null,
 
     currentBattleType: null,
     battleResult: null,

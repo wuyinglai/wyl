@@ -17,6 +17,7 @@ import {
 import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
 import { CharacterState, CardDef } from "../data/types";
 import { getRouteById } from "../data/cityRoutes";
+import { getOrderById } from "../data/cityOrders";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -138,6 +139,20 @@ export class MapScene extends Phaser.Scene {
         .text(this.scale.width - 20, 20, routeInfo, {
           fontSize: "12px",
           color: "#ffcc44",
+          fontFamily: "monospace",
+        })
+        .setOrigin(1, 0);
+    }
+
+    // 显示当前订单摘要（阶段7.2）
+    const orderSummary = this.getOrderSummaryText();
+    if (orderSummary) {
+      console.log(`[地图V2] ${orderSummary.title}`);
+      const orderY = routeInfo ? 38 : 20;
+      this.add
+        .text(this.scale.width - 20, orderY, orderSummary.text, {
+          fontSize: "11px",
+          color: "#ffaa44",
           fontFamily: "monospace",
         })
         .setOrigin(1, 0);
@@ -1055,6 +1070,50 @@ export class MapScene extends Phaser.Scene {
     // route 不存在，fallback 到 cityId
     console.warn(`[地图] 未找到商路: ${selectedRouteId}，使用 cityId fallback`);
     return `目标: ${selectedCityId}`;
+  }
+
+  /**
+   * 获取当前订单摘要文本（阶段7.2）
+   * 包含 order/route/city 一致性检查
+   */
+  private getOrderSummaryText(): { title: string; text: string } | null {
+    const gameState = getGameState();
+    const { selectedOrderId, selectedRouteId, selectedCityId } = gameState;
+
+    // 安全：检查字段存在性
+    if (!selectedOrderId) {
+      return null;
+    }
+
+    const order = getOrderById(selectedOrderId);
+
+    // order 不存在
+    if (!order) {
+      console.warn(`[地图] 未找到订单: ${selectedOrderId}`);
+      return { title: "订单：未选择", text: "订单：未选择" };
+    }
+
+    // 一致性检查：order.routeId 与 selectedRouteId 不匹配
+    if (selectedRouteId && order.routeId !== selectedRouteId) {
+      console.warn(
+        `[地图] order/route 不一致: orderId=${selectedOrderId} 对应 routeId=${order.routeId}, 但 selectedRouteId=${selectedRouteId}`
+      );
+    }
+
+    // 一致性检查：order.cityId 与 selectedCityId 不匹配
+    if (selectedCityId && order.cityId !== selectedCityId) {
+      console.warn(
+        `[地图] order/city 不一致: orderId=${selectedOrderId} 对应 cityId=${order.cityId}, 但 selectedCityId=${selectedCityId}`
+      );
+    }
+
+    // 构建摘要文本
+    const goodsReq = Object.entries(order.requiredGoods)
+      .map(([name, count]) => `${name} x${count}`)
+      .join("，");
+    const summaryText = `订单：${order.title} | 需求：${goodsReq} | 火种 +${order.rewardEmbers}`;
+
+    return { title: order.title, text: summaryText };
   }
 
   private redrawMap(): void {

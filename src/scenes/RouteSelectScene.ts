@@ -1,6 +1,7 @@
 import { Scene } from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
 import { CityRoute, getUnlockedRoutes } from "../data/cityRoutes";
+import { CityOrder, getDefaultOrderForRoute, getUnlockedOrdersForRoute } from "../data/cityOrders";
 
 /**
  * 商路与目标城市选择场景（阶段7.1）
@@ -254,7 +255,77 @@ export class RouteSelectScene extends Scene {
       })
       .setOrigin(0, 0);
     container.add(charsText);
-    currentY += 40;
+    currentY += 35;
+
+    // 分隔线
+    const line2 = this.add.graphics();
+    line2.lineStyle(1, 0x444466, 1);
+    line2.lineBetween(-width / 2 + 20, currentY, width / 2 - 20, currentY);
+    container.add(line2);
+    currentY += 12;
+
+    // 订单信息（阶段7.2）
+    const order = getDefaultOrderForRoute(route.id);
+    if (order) {
+      // 订单标题
+      const orderTitle = this.add
+        .text(0, currentY, `订单：${order.title}`, {
+          fontSize: "13px",
+          color: "#ffaa44",
+          fontStyle: "bold",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5, 0);
+      container.add(orderTitle);
+      currentY += 22;
+
+      // 需求物资
+      const goodsReq = Object.entries(order.requiredGoods)
+        .map(([name, count]) => `${name} x${count}`)
+        .join("，");
+      const orderGoods = this.add
+        .text(0, currentY, `需求：${goodsReq}`, {
+          fontSize: "11px",
+          color: "#cccccc",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5, 0);
+      container.add(orderGoods);
+      currentY += 18;
+
+      // 奖励
+      const orderReward = this.add
+        .text(0, currentY, `奖励：银币 +${order.rewardSilver}，火种 +${order.rewardEmbers}，贡献 +${order.cityContribution}`, {
+          fontSize: "11px",
+          color: "#44cc88",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5, 0);
+      container.add(orderReward);
+      currentY += 20;
+
+      // 难度
+      const orderDifficulty = this.add
+        .text(0, currentY, `难度：${order.difficulty}`, {
+          fontSize: "11px",
+          color: "#888888",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5, 0);
+      container.add(orderDifficulty);
+      currentY += 25;
+    } else {
+      // 无可用订单提示
+      const noOrderText = this.add
+        .text(0, currentY, "暂无可用订单", {
+          fontSize: "13px",
+          color: "#ff4444",
+          fontFamily: "monospace",
+        })
+        .setOrigin(0.5, 0);
+      container.add(noOrderText);
+      currentY += 25;
+    }
 
     // 说明
     const descText = this.add
@@ -327,7 +398,7 @@ export class RouteSelectScene extends Scene {
   }
 
   /**
-   * 选择商路（防重复点击）
+   * 选择商路（防重复点击，包含订单选择）
    */
   private selectRoute(route: CityRoute): void {
     // 防重复点击
@@ -342,6 +413,13 @@ export class RouteSelectScene extends Scene {
       return;
     }
 
+    // 检查是否有可用订单（阶段7.2）
+    const order = getDefaultOrderForRoute(route.id);
+    if (!order) {
+      console.warn(`[商路选择] 商路 ${route.id} 没有可用订单，无法选择`);
+      return;
+    }
+
     // 标记正在选择
     this.isSelecting = true;
     this.selectedRouteId = route.id;
@@ -350,10 +428,12 @@ export class RouteSelectScene extends Scene {
     const gameState = getGameState();
     gameState.selectedRouteId = route.id;
     gameState.selectedCityId = route.cityId;
+    gameState.selectedOrderId = order.id;
     setGameState(gameState);
 
     console.log(`[商路选择] 选择商路: ${route.title}`);
     console.log(`[商路选择] routeId: ${route.id}, cityId: ${route.cityId}`);
+    console.log(`[商路选择] 选择订单: ${order.title}, orderId: ${order.id}`);
 
     // 进入角色选择场景
     this.scene.start("CharacterSelectScene");
