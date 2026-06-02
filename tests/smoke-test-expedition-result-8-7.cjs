@@ -162,8 +162,19 @@ function sleep(ms) {
   const mapReady = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
   assert(mapReady, "MapScene 就绪");
 
-  // ========== 7. 记录初始状态 ==========
-  console.log("7. 记录初始状态");
+  // ========== 7. 交付前 lastExpeditionResult 应为空 ==========
+  console.log("7. 交付前 lastExpeditionResult 应为空");
+  const beforeDelivery = await page.evaluate(() => {
+    const gs = window.getGameState();
+    return {
+      hasResult: !!gs.lastExpeditionResult,
+      result: gs.lastExpeditionResult,
+    };
+  });
+  assert(!beforeDelivery.hasResult, "交付前 lastExpeditionResult 为空/undefined");
+
+  // ========== 8. 记录初始状态 ==========
+  console.log("8. 记录初始状态");
   const initialState = await page.evaluate(() => {
     const gs = window.getGameState();
     const order = gs.selectedOrderId ? window.getOrderById(gs.selectedOrderId) : null;
@@ -179,8 +190,8 @@ function sleep(ms) {
   });
   console.log(`    订单: ${initialState.orderId}, 银币: ${initialState.silver}, 火种: ${initialState.embers}`);
 
-  // ========== 8. BFS 寻路到目标节点 ==========
-  console.log("8. BFS 寻路到目标节点");
+  // ========== 9. BFS 寻路到目标节点 ==========
+  console.log("9. BFS 寻路到目标节点");
   const goalCheck = await page.evaluate(() => {
     const gs = window.getGameState();
     const cells = gs.mapCells;
@@ -227,8 +238,8 @@ function sleep(ms) {
   assert(pathResult.pathFound, `BFS 找到路径 (长度: ${pathResult.pathLength})`);
   console.log(`    路径长度: ${pathResult.pathLength} 步`);
 
-  // ========== 9. 逐步移动到目标节点 ==========
-  console.log("9. 逐步移动到目标节点");
+  // ========== 10. 逐步移动到目标节点 ==========
+  console.log("10. 逐步移动到目标节点");
   await page.evaluate(() => {
     const gs = window.getGameState();
     gs._isAutoMoving = true;
@@ -262,8 +273,8 @@ function sleep(ms) {
   });
   await sleep(2000);
 
-  // ========== 10. 验证 lastExpeditionResult 写入 ==========
-  console.log("10. 验证 lastExpeditionResult 写入");
+  // ========== 11. 验证 lastExpeditionResult 写入 ==========
+  console.log("11. 验证 lastExpeditionResult 写入");
   const resultCheck = await page.evaluate(() => {
     const gs = window.getGameState();
     return {
@@ -285,11 +296,11 @@ function sleep(ms) {
   assert(resultCheck.finalCityStatus === "已联络", `finalCityStatus = 已联络 (实际: ${resultCheck.finalCityStatus})`);
   console.log(`    订单: ${resultCheck.orderTitle}, 状态: ${resultCheck.finalCityStatus}`);
 
-  // ========== 11. 截图交付弹窗 ==========
+  // ========== 12. 截图交付弹窗 ==========
   await page.screenshot({ path: path.join(ARTIFACT_DIR, "delivery-popup.png") });
 
-  // ========== 12. 点击进入 ExpeditionResultScene ==========
-  console.log("12. 点击进入 ExpeditionResultScene");
+  // ========== 13. 点击进入 ExpeditionResultScene ==========
+  console.log("13. 点击进入 ExpeditionResultScene");
   await page.evaluate(() => {
     const ms = window.game.scene.getScene("MapScene");
     if (!ms) return;
@@ -306,8 +317,8 @@ function sleep(ms) {
   const resultSceneReady = await page.evaluate(() => !!window.game.scene.getScene("ExpeditionResultScene"));
   assert(resultSceneReady, "ExpeditionResultScene 就绪");
 
-  // ========== 13. 验证 ExpeditionResultScene 显示内容 ==========
-  console.log("13. 验证 ExpeditionResultScene 显示内容");
+  // ========== 14. 验证 ExpeditionResultScene 显示内容 ==========
+  console.log("14. 验证 ExpeditionResultScene 显示内容");
   const sceneCheck = await page.evaluate(() => {
     const ers = window.game.scene.getScene("ExpeditionResultScene");
     if (!ers) return { ok: false, texts: [] };
@@ -335,8 +346,34 @@ function sleep(ms) {
   // 截图
   await page.screenshot({ path: path.join(ARTIFACT_DIR, "expedition-result-scene.png") });
 
-  // ========== 14. 点击"再来一局"回到 RouteSelectScene ==========
-  console.log("14. 点击再来一局回到 RouteSelectScene");
+  // ========== 15. 点击"返回主菜单"回到 MainMenuScene ==========
+  console.log("15. 点击返回主菜单回到 MainMenuScene");
+  // 先回到 ExpeditionResultScene（从 RouteSelectScene 重新走一遍流程太耗时，直接 scene.start）
+  await page.evaluate(() => { window.game.scene.start("ExpeditionResultScene"); });
+  await sleep(1000);
+
+  await page.evaluate(() => {
+    const ers = window.game.scene.getScene("ExpeditionResultScene");
+    if (!ers) return;
+    // 找到"返回主菜单"按钮（第一个按钮）
+    const buttons = ers.children.list.filter(c => c.type === "Rectangle" && c.input && c.input.enabled);
+    if (buttons.length >= 1) {
+      buttons[0].emit("pointerdown");
+    }
+  });
+  await sleep(2000);
+
+  const mainMenuReady = await page.evaluate(() => !!window.game.scene.getScene("MainMenuScene"));
+  assert(mainMenuReady, "点击返回主菜单后回到 MainMenuScene");
+
+  // 截图
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, "back-to-main-menu.png") });
+
+  // ========== 16. 点击"再来一局"回到 RouteSelectScene ==========
+  console.log("16. 点击再来一局回到 RouteSelectScene");
+  await page.evaluate(() => { window.game.scene.start("ExpeditionResultScene"); });
+  await sleep(1000);
+
   await page.evaluate(() => {
     const ers = window.game.scene.getScene("ExpeditionResultScene");
     if (!ers) return;
