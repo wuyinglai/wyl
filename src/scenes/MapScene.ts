@@ -19,6 +19,13 @@ import { CharacterState, CardDef } from "../data/types";
 import { getRouteById } from "../data/cityRoutes";
 import { getOrderById, formatRequiredGoods } from "../data/cityOrders";
 import { formatCargo, calculateCargoWeight, hasCargo } from "../systems/cargoSystem";
+import {
+  checkOrderCargo,
+  checkCargoWeight,
+  getOrderCargoStatusText,
+  getCargoWeightStatusText,
+  getOrderCargoDetailLines,
+} from "../systems/orderCargoSystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 
 /**
@@ -142,7 +149,15 @@ export class MapScene extends Phaser.Scene {
 
     const routeInfo = this.getRouteInfoText();
     const orderSummary = this.getOrderSummaryText();
-    const cargoSummary = this.getCargoSummaryText();
+    // 阶段8.3：使用 orderCargoSystem 生成订单/货物状态摘要
+    const orderStatusText = getOrderCargoStatusText(
+      gameState.selectedOrderId ? getOrderById(gameState.selectedOrderId) : undefined,
+      gameState.cargo
+    );
+    const weightStatusText = getCargoWeightStatusText(
+      gameState.cargo,
+      gameState.maxCargoWeight
+    );
     const infoLines: string[] = [];
     if (routeInfo) {
       infoLines.push(routeInfo);
@@ -152,9 +167,9 @@ export class MapScene extends Phaser.Scene {
       infoLines.push(orderSummary.text);
       console.log(`[地图V2] ${orderSummary.title}`);
     }
-    if (cargoSummary) {
-      infoLines.push(cargoSummary);
-    }
+    // 订单状态和载重状态（常驻面板显示）
+    infoLines.push(orderStatusText);
+    infoLines.push(weightStatusText);
 
     if (infoLines.length > 0) {
       const panelPadding = 8;
@@ -213,23 +228,14 @@ export class MapScene extends Phaser.Scene {
           lines.push(`贡献：+${order.cityContribution}`);
           lines.push(`难度：${order.difficulty}`);
         }
-        // 商队货物详情（阶段8.2）
-        if (gs.cargo && Object.keys(gs.cargo).length > 0) {
-          const weight = calculateCargoWeight(gs.cargo);
-          lines.push("");
-          lines.push(`货物：${formatCargo(gs.cargo)}`);
-          lines.push(`载重：${weight} / ${gs.maxCargoWeight}`);
-          lines.push(`银币：${gs.silver}`);
-          const order2 = gs.selectedOrderId ? getOrderById(gs.selectedOrderId) : null;
-          if (order2 && order2.requiredGoods) {
-            const ready = hasCargo(gs.cargo, order2.requiredGoods);
-            lines.push(`订单状态：${ready ? "物资已备齐 ✓" : "物资不足 ✗"}`);
-          }
-        } else {
-          lines.push("");
-          lines.push(`货物：无`);
-          lines.push(`银币：${gs.silver}`);
-        }
+        // 阶段8.3：使用 orderCargoSystem 显示订单货物详情
+        const detailLines = getOrderCargoDetailLines(
+          gs.selectedOrderId ? getOrderById(gs.selectedOrderId) : undefined,
+          gs.cargo,
+          gs.maxCargoWeight
+        );
+        lines.push("");
+        lines.push(...detailLines);
         if (lines.length > 0) {
           this.tooltipManager!.show(
             { title: "任务详情", lines },

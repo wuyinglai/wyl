@@ -12,6 +12,7 @@ import {
   resetGameState,
 } from "./systems/GameState";
 import { GOODS, getGoodById, getGoodName, formatGoodsRequirement, validateGoods } from "./data/goods";
+import { getOrderById } from "./data/cityOrders";
 import {
   createEmptyCargo,
   createCargo,
@@ -68,5 +69,20 @@ const game = new Phaser.Game(config);
 (window as any).hasCargo = hasCargo;
 (window as any).calculateCargoWeight = calculateCargoWeight;
 (window as any).formatCargo = formatCargo;
+// 订单货物检查工具（阶段8.3）
+import {
+  checkOrderCargo,
+  formatMissingGoods,
+  getOrderCargoStatusText,
+  checkCargoWeight,
+  getCargoWeightStatusText,
+} from "./systems/orderCargoSystem";
+(window as any).checkOrderCargo = checkOrderCargo;
+(window as any).formatMissingGoods = formatMissingGoods;
+(window as any).getOrderCargoStatusText = getOrderCargoStatusText;
+(window as any).checkCargoWeight = checkCargoWeight;
+(window as any).getCargoWeightStatusText = getCargoWeightStatusText;
+// 订单数据查询（测试需要）
+(window as any).getOrderById = getOrderById;
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");
