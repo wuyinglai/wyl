@@ -30,6 +30,7 @@ import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
 import { createSuccessExpeditionResult } from "../systems/expeditionResultSystem";
+import { getLegacyRelicById } from "../data/legacyRelics";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -189,6 +190,13 @@ export class MapScene extends Phaser.Scene {
     // 城市状态（阶段8.6）
     if (gameState.selectedCityId) {
       infoLines.push(formatCityProgress(gameState.selectedCityId, gameState.cityContributions));
+    }
+    // 遗产摘要（阶段8.8）
+    if (gameState.activeLegacyRelicId) {
+      const relic = getLegacyRelicById(gameState.activeLegacyRelicId);
+      if (relic) {
+        infoLines.push(`遗产：${relic.name}`);
+      }
     }
 
     if (infoLines.length > 0) {

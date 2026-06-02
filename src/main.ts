@@ -5,6 +5,7 @@ import { CharacterSelectScene } from "./scenes/CharacterSelectScene";
 import { CargoPrepScene } from "./scenes/CargoPrepScene";
 import { MapScene } from "./scenes/MapScene";
 import { ExpeditionResultScene } from "./scenes/ExpeditionResultScene";
+import { LegacySelectScene } from "./scenes/LegacySelectScene";
 import { BattleScene } from "./scenes/BattleScene";
 import {
   getGameState,
@@ -42,7 +43,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   parent: "app",
   backgroundColor: "#0a0a1a",
-  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, BattleScene],
+  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, LegacySelectScene, BattleScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -108,5 +109,16 @@ import {
 } from "./systems/expeditionResultSystem";
 (window as any).createSuccessExpeditionResult = createSuccessExpeditionResult;
 (window as any).formatExpeditionResult = formatExpeditionResult;
+
+// 失败遗产系统（阶段8.8）
+import {
+  generateFailureLegacyChoices,
+  applyLegacyRelicToGameState,
+} from "./systems/legacySystem";
+import { getLegacyRelicById, LEGACY_RELICS } from "./data/legacyRelics";
+(window as any).generateFailureLegacyChoices = generateFailureLegacyChoices;
+(window as any).applyLegacyRelicToGameState = applyLegacyRelicToGameState;
+(window as any).getLegacyRelicById = getLegacyRelicById;
+(window as any).LEGACY_RELICS = LEGACY_RELICS;
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

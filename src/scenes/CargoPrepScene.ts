@@ -19,6 +19,8 @@ import { GOODS, getGoodById, formatGoodsRequirement } from "../data/goods";
 import { calculateCargoWeight } from "../systems/cargoSystem";
 import { getOrderCargoStatusText } from "../systems/orderCargoSystem";
 import { TooltipManager } from "../systems/tooltipSystem";
+import { applyLegacyRelicToGameState } from "../systems/legacySystem";
+import { getLegacyRelicById } from "../data/legacyRelics";
 
 export class CargoPrepScene extends Scene {
   private tooltipManager: TooltipManager | null = null;
@@ -53,6 +55,13 @@ export class CargoPrepScene extends Scene {
         gameState.cargo = {};
       }
       setGameState(gameState);
+    }
+
+    // 应用遗产效果（阶段8.8）
+    const updatedState = applyLegacyRelicToGameState(gameState);
+    if (updatedState !== gameState) {
+      setGameState(updatedState);
+      console.log(`[CargoPrepScene] 遗产效果已应用: ${updatedState.activeLegacyRelicId}`);
     }
 
     this.createUI();
@@ -133,6 +142,21 @@ export class CargoPrepScene extends Scene {
         fontFamily: "sans-serif",
       })
       .setOrigin(0, 0);
+
+    // 遗产提示（阶段8.8）
+    if (gameState.activeLegacyRelicId) {
+      const relic = getLegacyRelicById(gameState.activeLegacyRelicId);
+      if (relic) {
+        this.add
+          .text(30, 235, `遗产：${relic.name}（${relic.effectText}）`, {
+            fontSize: "13px",
+            color: "#d4a574",
+            fontFamily: "sans-serif",
+            wordWrap: { width: w - 60 },
+          })
+          .setOrigin(0, 0);
+      }
+    }
 
     // 商品列表
     this.createGoodsList();

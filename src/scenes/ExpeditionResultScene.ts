@@ -1,6 +1,7 @@
 import Phaser from "phaser";
-import { getGameState } from "../systems/GameState";
+import { getGameState, setGameState } from "../systems/GameState";
 import { formatExpeditionResult } from "../systems/expeditionResultSystem";
+import { generateFailureLegacyChoices } from "../systems/legacySystem";
 
 /**
  * ExpeditionResultScene.ts
@@ -79,6 +80,17 @@ export class ExpeditionResultScene extends Phaser.Scene {
     this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
       this.scene.start("RouteSelectScene");
     });
+  }
+
+  /**
+   * 测试入口：生成失败遗产候选并进入 LegacySelectScene
+   * 仅用于测试/开发
+   */
+  startLegacySelectionForTest(): void {
+    const gs = getGameState();
+    gs.legacyChoices = generateFailureLegacyChoices();
+    setGameState(gs);
+    this.scene.start("LegacySelectScene");
   }
 
   private createButton(
