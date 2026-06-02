@@ -427,8 +427,9 @@ async function runTest() {
         if (n.y >= 0 && n.y < cells.length && n.x >= 0 && n.x < cells[n.y].length) {
           const cell = cells[n.y][n.x];
           if (cell && cell.type === "question") {
-            // 强制设置 resolvedType 为 combat
+            // 强制设置 resolvedType 为 combat，并标记为已揭示（避免 tryMoveTo 重新 resolve）
             cell.resolvedType = "combat";
+            cell.isRevealed = true;
             ms.tryMoveTo(n.x, n.y);
             return { ok: true, type: cell.type, x: n.x, y: n.y, resolvedType: "combat" };
           }
@@ -444,25 +445,27 @@ async function runTest() {
     }
     await sleep(4000);
 
-    const bsExists = await page.evaluate(() => !!window.game.scene.getScene("BattleScene"));
-    assert(bsExists, "进入 BattleScene");
+    // 注意：不要在这里调用 getScene("BattleScene")，因为 Phaser 会预创建场景实例
+    // 导致后续 scene.start("BattleScene") 不会重新调用 create()
+    // 直接等待并检查手牌数量
 
     // ========== 16. 验证手牌数量 > 0（必须非零，否则直接失败） ==========
     console.log("16. 验证手牌数量 > 0");
     await sleep(2000); // 等待手牌渲染
-    const handCardCount = await page.evaluate(() => {
+    const handResult = await page.evaluate(() => {
       const bs = window.game.scene.getScene("BattleScene");
-      if (!bs || !bs.cardTexts) return 0;
-      return bs.cardTexts.length;
+      if (!bs) return { exists: false, count: 0 };
+      if (!bs.cardTexts) return { exists: true, count: 0, hasBM: !!bs.battleManager };
+      return { exists: true, count: bs.cardTexts.length, hasBM: !!bs.battleManager };
     });
-    console.log(`    手牌数量: ${handCardCount}`);
+    console.log(`    BattleScene: exists=${handResult.exists}, hasBM=${handResult.hasBM}, 手牌数量: ${handResult.count}`);
 
-    if (handCardCount === 0) {
+    if (handResult.count === 0) {
       // 手牌为0，直接失败
       failed++;
       throw new Error("手牌数量为 0，测试必须失败");
     }
-    assert(handCardCount > 0, `手牌数量为 ${handCardCount}（大于 0）`);
+    assert(handResult.count > 0, `手牌数量为 ${handResult.count}（大于 0）`);
 
     // ========== 17. pointerover 第一张手牌，验证 Tooltip 出现且包含卡牌名称 ==========
     console.log("17. pointerover 第一张手牌，验证 Tooltip 出现且包含卡牌名称");
@@ -521,10 +524,9 @@ async function runTest() {
     console.log("19. 触发战斗结束，进入奖励界面");
     await page.evaluate(() => {
       const bs = window.game.scene.getScene("BattleScene");
-      if (bs) {
-        const gs = window.getGameState();
-        gs._battleTurnCount = 100;
-        if (bs.checkBattleEnd) bs.checkBattleEnd();
+      if (bs && !bs.battleEnded) {
+        // 直接调用 onBattleEnd(true) 触发胜利
+        bs.onBattleEnd(true);
       }
     });
     await sleep(2000);
@@ -535,16 +537,16 @@ async function runTest() {
       const bs = window.game.scene.getScene("BattleScene");
       if (!bs) return { ok: false, reason: "no BattleScene" };
 
-      // 找到奖励卡的 hitArea：Rectangle with depth 215 and input enabled
+      // 找到奖励卡的 hitArea：Rectangle with depth >= 200 and input enabled
       let hitArea = null;
       const children = bs.children.list || [];
       for (const child of children) {
-        if (child.type === "Rectangle" && child.depth === 215 && child.input && child.input.enabled) {
+        if (child.type === "Rectangle" && child.depth >= 200 && child.input && child.input.enabled) {
           hitArea = child;
           break;
         }
       }
-      if (!hitArea) return { ok: false, reason: "no reward card hitArea (depth 215 Rectangle)" };
+      if (!hitArea) return { ok: false, reason: "no reward card hitArea (depth >= 200 Rectangle)" };
 
       hitArea.emit("pointerover");
 
@@ -564,57 +566,19 @@ async function runTest() {
         }
       }
 
-      return { ok: true, tooltipVisible, tooltipText };
+      return { ok: true, tooltipVisible, tooltipText, hitAreaDepth: hitArea.depth };
     });
 
     if (rewardTooltipResult.ok && rewardTooltipResult.tooltipVisible) {
       assert(rewardTooltipResult.tooltipText.length > 0,
         `奖励卡 Tooltip 文本: "${rewardTooltipResult.tooltipText.substring(0, 40)}"`);
+      console.log(`    hitArea depth: ${rewardTooltipResult.hitAreaDepth}`);
     } else {
-      // 奖励卡可能没有正确渲染，尝试查找其他 depth 的 hitArea
-      console.log("    未找到 depth 215 的奖励卡 hitArea，尝试其他方式查找...");
-      const fallbackRewardResult = await page.evaluate(() => {
-        const bs = window.game.scene.getScene("BattleScene");
-        if (!bs) return { ok: false, reason: "no BattleScene" };
-
-        // 尝试查找任何 input enabled 的 Rectangle
-        let hitArea = null;
-        const children = bs.children.list || [];
-        for (const child of children) {
-          if (child.type === "Rectangle" && child.input && child.input.enabled && child.depth > 200) {
-            hitArea = child;
-            break;
-          }
-        }
-        if (!hitArea) return { ok: false, reason: "no fallback hitArea" };
-
-        hitArea.emit("pointerover");
-
-        let tooltipVisible = false;
-        let tooltipText = "";
-        for (const child of bs.children.list) {
-          if (child.type === "Container" && child.depth >= 500) {
-            tooltipVisible = true;
-            for (const c of child.list) {
-              if (c.type === "Text") {
-                tooltipText = c.text || "";
-                break;
-              }
-            }
-            break;
-          }
-        }
-
-        return { ok: true, tooltipVisible, tooltipText };
-      });
-
-      if (fallbackRewardResult.ok && fallbackRewardResult.tooltipVisible) {
-        assert(fallbackRewardResult.tooltipText.length > 0,
-          `奖励卡 Tooltip 文本（fallback）: "${fallbackRewardResult.tooltipText.substring(0, 40)}"`);
-      } else {
-        passed++;
-        console.log("  [PASS] 跳过奖励卡 Tooltip 测试（未找到 hitArea）");
-      }
+      // 不允许跳过，必须失败
+      const reason = rewardTooltipResult.ok
+        ? `Tooltip 未出现 (hitArea found but tooltip missing)`
+        : `找不到奖励卡 hitArea: ${rewardTooltipResult.reason}`;
+      assert(false, `奖励卡 Tooltip 验证失败: ${reason}`);
     }
 
     // ========== 21. 验证 Tooltip 不超出屏幕边界 ==========
@@ -640,8 +604,8 @@ async function runTest() {
       assert(tooltipBoundsResult.inBounds,
         `Tooltip 在屏幕边界内 (${Math.round(tooltipBoundsResult.bounds.x)}, ${Math.round(tooltipBoundsResult.bounds.y)}, ${Math.round(tooltipBoundsResult.bounds.w)}x${Math.round(tooltipBoundsResult.bounds.h)}) 屏幕 ${tooltipBoundsResult.screenW}x${tooltipBoundsResult.screenH})`);
     } else {
-      passed++;
-      console.log("  [PASS] 跳过 Tooltip 边界检查（无可见 Tooltip）");
+      // 不允许跳过，如果 Tooltip 不可见说明步骤 20 后被意外隐藏
+      assert(false, `Tooltip 边界检查失败: ${tooltipBoundsResult.reason}`);
     }
 
     // ========== 22. pointerout，验证 Tooltip 隐藏 ==========
@@ -736,8 +700,135 @@ async function runTest() {
       passed++;
       console.log("  [PASS] MapScene 800x600 截图已保存");
     } else {
+      assert(false, "MapScene 800x600 未就绪");
+    }
+
+    // ========== 25. 1024x768 下进入 MapScene 并截图 ==========
+    console.log("25. 1024x768 下进入 MapScene 并截图");
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await sleep(300);
+
+    // 重新进入 MapScene 流程
+    await page.evaluate(() => {
+      window.resetGameState();
+      window.game.scene.start("RouteSelectScene");
+    });
+    await sleep(1500);
+
+    // 选择第一条商路
+    await page.evaluate(() => {
+      const rs = window.game.scene.getScene("RouteSelectScene");
+      if (rs && rs.routes && rs.routes.length > 0) {
+        rs.selectRoute(rs.routes[0]);
+      }
+    });
+    await sleep(2000);
+
+    // 开始远征
+    await page.evaluate(() => {
+      const cs = window.game.scene.getScene("CharacterSelectScene");
+      if (cs && cs.characterCards && cs.characterCards.length >= 3) {
+        for (let i = 0; i < 3; i++) {
+          const card = cs.characterCards[i];
+          for (const child of card.list) {
+            if ((child.type === "Rectangle" || child.type === "Zone") && child.input && child.input.enabled) {
+              child.emit("pointerdown");
+              break;
+            }
+          }
+        }
+      }
+    });
+    await sleep(500);
+    await page.evaluate(() => {
+      const cs = window.game.scene.getScene("CharacterSelectScene");
+      if (cs && cs.startExpedition) cs.startExpedition();
+    });
+    await sleep(3000);
+
+    const mapScene1024 = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
+    if (mapScene1024) {
+      await page.screenshot({
+        path: path.join(ARTIFACT_DIR, "mapscene-1024x768.png"),
+      });
       passed++;
-      console.log("  [PASS] 跳过 800x600 截图（MapScene 未就绪）");
+      console.log("  [PASS] MapScene 1024x768 截图已保存");
+    } else {
+      assert(false, "MapScene 1024x768 未就绪");
+    }
+
+    // ========== 26. RouteSelectScene 翻页后 Tooltip 隐藏验证 ==========
+    console.log("26. RouteSelectScene 翻页后 Tooltip 隐藏验证");
+    await page.setViewportSize({ width: 800, height: 600 });
+    await sleep(300);
+    await page.evaluate(() => {
+      window.resetGameState();
+      // 先 stop 再 start，确保 create() 被重新调用
+      window.game.scene.stop("RouteSelectScene");
+      window.game.scene.start("RouteSelectScene");
+    });
+    await sleep(2000);
+
+    // 在分页模式下，先触发 Tooltip，然后翻页，验证 Tooltip 消失
+    const paginationTooltipResult = await page.evaluate(() => {
+      const rs = window.game.scene.getScene("RouteSelectScene");
+      if (!rs) return { ok: false, reason: "no RouteSelectScene" };
+      if (!rs.tooltipManager) return { ok: false, reason: "no tooltipManager" };
+      if (!rs.routeCards || rs.routeCards.length < 2) return { ok: false, reason: "not enough cards for pagination" };
+
+      // 找到第一张卡片的 hitArea
+      const card = rs.routeCards[0];
+      let hitArea = null;
+      for (const child of card.list) {
+        if (child.type === "Rectangle" && child.input && child.input.enabled) {
+          hitArea = child;
+          break;
+        }
+      }
+      if (!hitArea) return { ok: false, reason: "no hitArea on card" };
+
+      // 触发 pointerover 显示 Tooltip
+      hitArea.emit("pointerover");
+
+      // 检查 Tooltip 是否出现
+      let tooltipBefore = false;
+      const children = rs.children.list || [];
+      for (const child of children) {
+        if (child.type === "Container" && child.depth >= 500) {
+          tooltipBefore = true;
+          break;
+        }
+      }
+
+      // 模拟翻页（点击 nextBtn）
+      if (rs.nextBtn) {
+        rs.nextBtn.emit("pointerdown");
+      }
+
+      // 等一帧让 destroy 生效
+      return new Promise(resolve => {
+        setTimeout(() => {
+          // 检查翻页后 Tooltip 是否消失
+          let tooltipAfter = false;
+          for (const child of rs.children.list) {
+            if (child.type === "Container" && child.depth >= 500) {
+              tooltipAfter = true;
+              break;
+            }
+          }
+          resolve({ ok: true, tooltipBefore, tooltipAfter });
+        }, 100);
+      });
+    });
+
+    if (paginationTooltipResult.ok) {
+      assert(paginationTooltipResult.tooltipBefore,
+        `翻页前 Tooltip 应该可见 (before: ${paginationTooltipResult.tooltipBefore})`);
+      assert(!paginationTooltipResult.tooltipAfter,
+        `翻页后 Tooltip 应该隐藏 (after: ${paginationTooltipResult.tooltipAfter})`);
+      console.log("    翻页前 Tooltip 可见，翻页后 Tooltip 已隐藏");
+    } else {
+      assert(false, `RouteSelect 翻页 Tooltip 验证失败: ${paginationTooltipResult.reason}`);
     }
 
     // ========== 总结 ==========

@@ -30,6 +30,14 @@ export class RouteSelectScene extends Scene {
   create(): void {
     const w = this.scale.width;
     const h = this.scale.height;
+    // 实际显示宽度（用于判断是否需要分页）
+    const displayWidth = this.scale.displaySize.width;
+
+    // 重置状态（场景可能被 stop+start 重新创建）
+    this.routeCards = [];
+    this.currentPage = 0;
+    this.selectedRouteId = null;
+    this.isSelecting = false;
 
     this.tooltipManager = new TooltipManager(this, 500);
 
@@ -64,7 +72,7 @@ export class RouteSelectScene extends Scene {
     } else {
       // 判断布局模式：宽屏横排，窄屏分页
       const PAGINATE_THRESHOLD = 1024;
-      if (w < PAGINATE_THRESHOLD) {
+      if (displayWidth < PAGINATE_THRESHOLD) {
         this.createPaginatedLayout(w, h);
       } else {
         this.createGridLayout(w, h);
@@ -190,6 +198,9 @@ export class RouteSelectScene extends Scene {
    * 更新分页 UI
    */
   private updatePaginationUI(): void {
+    // 切换页面时隐藏 Tooltip，防止残留
+    if (this.tooltipManager) this.tooltipManager.hide();
+
     this.routeCards.forEach((card, i) => {
       card.setVisible(i === this.currentPage);
     });
@@ -470,6 +481,9 @@ export class RouteSelectScene extends Scene {
    * 选择商路（防重复点击，包含订单选择）
    */
   private selectRoute(route: CityRoute): void {
+    // 选择时隐藏 Tooltip
+    if (this.tooltipManager) this.tooltipManager.hide();
+
     // 防重复点击
     if (this.isSelecting) {
       console.log("[商路选择] 正在选择中，忽略重复点击");

@@ -61,7 +61,7 @@ async function runTest() {
     // 先设为 800x600 再启动场景，确保自适应布局生效
     await page.setViewportSize({ width: 800, height: 600 });
     await sleep(300);
-    await page.evaluate(() => { window.game.scene.start("RouteSelectScene"); });
+    await page.evaluate(() => { window.game.scene.stop("RouteSelectScene"); window.game.scene.start("RouteSelectScene"); });
     await sleep(1500);
     assert(await page.evaluate(() => !!window.game.scene.getScene("RouteSelectScene")), "RouteSelectScene 已启动");
 
@@ -71,20 +71,32 @@ async function runTest() {
       const rs = window.game.scene.getScene("RouteSelectScene");
       if (!rs || !rs.routeCards) return { ok: false, reason: "no cards" };
       const w = window.game.scale.width;
-      // 使用卡片容器的 x 坐标（中心点）和逻辑宽度来计算
-      // cardWidth 在 800px 下应为 (800-40-40)/3 = 240
-      const positions = rs.routeCards.map(card => ({
-        cx: card.x,
-        cy: card.y,
-      }));
-      // 计算逻辑宽度
+
+      // 在分页模式下（displaySize.width < 1024），只检查可见卡片
+      // 在横排模式下，检查所有卡片
+      const displayWidth = rs.scale.displaySize.width;
+      const isPaginated = displayWidth < 1024;
+
+      if (isPaginated) {
+        // 分页模式：只应有一张卡片可见
+        const visibleCards = rs.routeCards.filter(c => c.visible);
+        return {
+          positions: visibleCards.map(c => ({ cx: c.x })),
+          logicalCardWidth: 360,
+          hasOverlap: false, // 分页模式下不会重叠
+          allInScreen: true,
+          isPaginated: true,
+          visibleCount: visibleCards.length,
+        };
+      }
+
+      // 横排模式：检查卡片位置
+      const positions = rs.routeCards.map(c => ({ cx: c.x }));
       const maxCardWidth = 360;
       const gap = 20;
       const availableWidth = Math.min(w - 40, 3 * maxCardWidth + 2 * gap);
       const logicalCardWidth = Math.min(maxCardWidth, (availableWidth - 2 * gap) / 3);
-      const logicalGap = gap;
 
-      // 检查卡片之间不重叠（使用逻辑宽度）
       let hasOverlap = false;
       for (let i = 0; i < positions.length; i++) {
         for (let j = i + 1; j < positions.length; j++) {
@@ -98,17 +110,21 @@ async function runTest() {
         }
       }
 
-      // 检查所有卡片在屏幕内
       const allInScreen = positions.every(p =>
         p.cx - logicalCardWidth / 2 >= -5 && p.cx + logicalCardWidth / 2 <= w + 5
       );
 
-      return { positions, logicalCardWidth, hasOverlap, allInScreen };
+      return { positions, logicalCardWidth, hasOverlap, allInScreen, isPaginated: false };
     });
     console.log(`    逻辑卡片宽度: ${cardOverlap.logicalCardWidth}px`);
-    console.log(`    卡片中心x: ${cardOverlap.positions.map(p => Math.round(p.cx)).join(", ")}`);
-    assert(cardOverlap.allInScreen, "800x600 下所有卡片在屏幕内");
-    assert(!cardOverlap.hasOverlap, "800x600 下卡片不互相重叠");
+    if (cardOverlap.isPaginated) {
+      console.log(`    分页模式: 可见卡片 ${cardOverlap.visibleCount} 张`);
+      assert(cardOverlap.visibleCount === 1, "分页模式下只显示 1 张卡片");
+    } else {
+      console.log(`    卡片中心x: ${cardOverlap.positions.map(p => Math.round(p.cx)).join(", ")}`);
+      assert(cardOverlap.allInScreen, "800x600 下所有卡片在屏幕内");
+      assert(!cardOverlap.hasOverlap, "800x600 下卡片不互相重叠");
+    }
 
     // ========== 4. 关键文本 bounds 不明显重叠 ==========
     console.log("4. 关键文本 bounds 不明显重叠");
