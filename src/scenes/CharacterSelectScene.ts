@@ -1,13 +1,9 @@
 import Phaser from "phaser";
 import { CHARACTER_DEFS, CharacterId, getStartingDeck } from "../data/characters";
-import { getOrderById } from "../data/cityOrders";
 import { hasCargo } from "../systems/cargoSystem";
 import {
   getGameState,
   setGameState,
-  createExpeditionMap,
-  updateReachableCells,
-  initializeCharacterStates,
 } from "../systems/GameState";
 import { TooltipManager } from "../systems/tooltipSystem";
 
@@ -370,60 +366,14 @@ export class CharacterSelectScene extends Phaser.Scene {
       (c) => !this.selectedChars.includes(c),
     );
 
-    // 初始化半隐藏远征地图
-    const { cells, startPos, bossPos, expeditionGoal } = createExpeditionMap(
-      gameState.mapWidth,
-      gameState.mapHeight,
-    );
-    gameState.mapCells = cells;
-    gameState.currentPosition = { ...startPos };
-    gameState.startPosition = { ...startPos };
-    gameState.bossPosition = { ...bossPos };
-    gameState.expeditionGoal = expeditionGoal;
-    updateReachableCells(gameState);
-
-    // 阶段8.4.1：有订单时强制为 sanctuary 模式，确保地图有订单交付目标点
-    if (gameState.selectedOrderId && gameState.expeditionGoal === "boss") {
-      gameState.expeditionGoal = "sanctuary";
-      // 将 boss 节点改为 sanctuary 目标节点
-      const bp = gameState.bossPosition;
-      if (bp && gameState.mapCells[bp.y] && gameState.mapCells[bp.y][bp.x]) {
-        const goalCell = gameState.mapCells[bp.y][bp.x];
-        goalCell.type = "empty";
-        goalCell.isGoal = true;
-        goalCell.isRevealed = true;
-        console.log(`[角色选择] 订单远征：强制目标节点 (${bp.x}, ${bp.y}) 为 sanctuary`);
-      }
-    }
-
-    // 初始化角色运行时状态
-    initializeCharacterStates(gameState.selectedCharacters);
-
-    // 初始化商队货物栏（阶段8.2）
-    // 根据当前订单需求，预先装载刚好满足订单的货物
-    if (gameState.selectedOrderId) {
-      const order = getOrderById(gameState.selectedOrderId);
-      if (order && order.requiredGoods) {
-        // 深拷贝 requiredGoods 作为初始 cargo
-        gameState.cargo = { ...order.requiredGoods };
-        console.log(`[角色选择] 装载订单货物: ${JSON.stringify(gameState.cargo)}`);
-      } else {
-        gameState.cargo = {};
-        if (!order) {
-          console.warn(`[角色选择] 未找到订单 ${gameState.selectedOrderId}，cargo 为空`);
-        }
-      }
-    } else {
-      gameState.cargo = {};
-      console.warn("[角色选择] 无选定订单，cargo 为空");
-    }
-
+    // 阶段8.5：角色选择后进入货物准备场景
+    // 地图生成和货物初始化移到 CargoPrepScene
     setGameState(gameState);
 
     console.log("[角色选择] 队伍:", gameState.selectedCharacters);
     console.log("[角色选择] 候补:", gameState.reserveCharacters);
 
-    // 进入地图场景
-    this.scene.start("MapScene");
+    // 进入货物准备场景
+    this.scene.start("CargoPrepScene");
   }
 }

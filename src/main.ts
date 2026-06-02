@@ -2,6 +2,7 @@ import Phaser from "phaser";
 import { MainMenuScene } from "./scenes/MainMenuScene";
 import { RouteSelectScene } from "./scenes/RouteSelectScene";
 import { CharacterSelectScene } from "./scenes/CharacterSelectScene";
+import { CargoPrepScene } from "./scenes/CargoPrepScene";
 import { MapScene } from "./scenes/MapScene";
 import { BattleScene } from "./scenes/BattleScene";
 import {
@@ -40,7 +41,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   parent: "app",
   backgroundColor: "#0a0a1a",
-  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, MapScene, BattleScene],
+  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, BattleScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,

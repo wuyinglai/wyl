@@ -152,6 +152,17 @@ function sleep(ms) {
     const cs = window.game.scene.getScene("CharacterSelectScene");
     if (cs && cs.startExpedition) cs.startExpedition();
   });
+  await sleep(2000);
+
+  // 阶段8.5：经过 CargoPrepScene
+  const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+  assert(cargoPrepReady, "CargoPrepScene 就绪");
+
+  // 点击开始远征
+  await page.evaluate(() => {
+    const scene = window.game.scene.getScene("CargoPrepScene");
+    if (scene && scene.startExpedition) scene.startExpedition();
+  });
   await sleep(3000);
 
   // 确认 MapScene 就绪
