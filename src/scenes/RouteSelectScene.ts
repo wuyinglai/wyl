@@ -71,7 +71,7 @@ export class RouteSelectScene extends Scene {
       this.showNoRoutesFallback(w, h);
     } else {
       // 判断布局模式：宽屏横排，窄屏分页
-      const PAGINATE_THRESHOLD = 1024;
+      const PAGINATE_THRESHOLD = 1100;
       if (displayWidth < PAGINATE_THRESHOLD) {
         this.createPaginatedLayout(w, h);
       } else {

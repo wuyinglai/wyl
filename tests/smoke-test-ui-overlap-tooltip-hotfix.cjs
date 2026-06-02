@@ -72,10 +72,10 @@ async function runTest() {
       if (!rs || !rs.routeCards) return { ok: false, reason: "no cards" };
       const w = window.game.scale.width;
 
-      // 在分页模式下（displaySize.width < 1024），只检查可见卡片
+      // 在分页模式下（displaySize.width < 1100），只检查可见卡片
       // 在横排模式下，检查所有卡片
       const displayWidth = rs.scale.displaySize.width;
-      const isPaginated = displayWidth < 1024;
+      const isPaginated = displayWidth < 1100;
 
       if (isPaginated) {
         // 分页模式：只应有一张卡片可见

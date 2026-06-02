@@ -692,6 +692,26 @@ async function runTest() {
     });
     await sleep(3000);
 
+    // 800x600 RouteSelect 截图（分页模式）
+    await page.evaluate(() => {
+      window.resetGameState();
+      window.game.scene.stop("RouteSelectScene");
+      window.game.scene.start("RouteSelectScene");
+    });
+    await sleep(2000);
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "route-select-800x600.png"),
+    });
+    passed++;
+    console.log("  [PASS] RouteSelect 800x600 截图已保存");
+
+    // 重新进入 MapScene 流程
+    await page.evaluate(() => {
+      const rs = window.game.scene.getScene("RouteSelectScene");
+      if (rs && rs.routes && rs.routes.length > 0) rs.selectRoute(rs.routes[0]);
+    });
+    await sleep(2000);
+
     const mapSceneReady = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
     if (mapSceneReady) {
       await page.screenshot({
@@ -703,8 +723,70 @@ async function runTest() {
       assert(false, "MapScene 800x600 未就绪");
     }
 
-    // ========== 25. 1024x768 下进入 MapScene 并截图 ==========
-    console.log("25. 1024x768 下进入 MapScene 并截图");
+    // ========== 25. 1024x768 下 RouteSelect 分页验证 + 截图 ==========
+    console.log("25. 1024x768 下 RouteSelect 分页验证 + 截图");
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await sleep(300);
+    await page.evaluate(() => {
+      window.resetGameState();
+      window.game.scene.stop("RouteSelectScene");
+      window.game.scene.start("RouteSelectScene");
+    });
+    await sleep(2000);
+
+    // 验证 1024x768 下为分页模式
+    const rs1024Result = await page.evaluate(() => {
+      const rs = window.game.scene.getScene("RouteSelectScene");
+      if (!rs) return { ok: false, reason: "no RouteSelectScene" };
+      const displayWidth = rs.scale.displaySize.width;
+      const isPaginated = displayWidth < 1100;
+      const visibleCards = rs.routeCards ? rs.routeCards.filter(c => c.visible).length : 0;
+      const hasNextBtn = !!rs.nextBtn;
+      const hasPrevBtn = !!rs.prevBtn;
+      return { ok: true, displayWidth, isPaginated, visibleCards, hasNextBtn, hasPrevBtn };
+    });
+    assert(rs1024Result.ok, "1024x768 RouteSelectScene 存在");
+    assert(rs1024Result.isPaginated,
+      `1024x768 下应为分页模式 (displayWidth=${Math.round(rs1024Result.displayWidth)}, < 1100)`);
+    assert(rs1024Result.visibleCards === 1,
+      `1024x768 分页模式下只显示 1 张卡片 (实际: ${rs1024Result.visibleCards})`);
+    assert(rs1024Result.hasNextBtn, "1024x768 分页模式下有下一页按钮");
+    console.log(`    displayWidth: ${Math.round(rs1024Result.displayWidth)}, 分页模式, 可见卡片: ${rs1024Result.visibleCards}, 有翻页按钮`);
+
+    // 截图 RouteSelect 1024x768
+    await page.screenshot({
+      path: path.join(ARTIFACT_DIR, "route-select-1024x768.png"),
+    });
+    passed++;
+    console.log("  [PASS] RouteSelect 1024x768 分页模式验证通过 + 截图已保存");
+
+    // 1280x720 下验证横排模式
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await sleep(300);
+    await page.evaluate(() => {
+      window.game.scene.stop("RouteSelectScene");
+      window.game.scene.start("RouteSelectScene");
+    });
+    await sleep(2000);
+
+    const rs1280Result = await page.evaluate(() => {
+      const rs = window.game.scene.getScene("RouteSelectScene");
+      if (!rs) return { ok: false, reason: "no RouteSelectScene" };
+      const displayWidth = rs.scale.displaySize.width;
+      const isPaginated = displayWidth < 1100;
+      const visibleCards = rs.routeCards ? rs.routeCards.filter(c => c.visible).length : 0;
+      return { ok: true, displayWidth, isPaginated, visibleCards };
+    });
+    assert(rs1280Result.ok, "1280x720 RouteSelectScene 存在");
+    assert(!rs1280Result.isPaginated,
+      `1280x720 下应为横排模式 (displayWidth=${Math.round(rs1280Result.displayWidth)}, >= 1100)`);
+    assert(rs1280Result.visibleCards === 3,
+      `1280x720 横排模式下 3 张卡片可见 (实际: ${rs1280Result.visibleCards})`);
+    passed++;
+    console.log(`  [PASS] 1280x720 横排模式验证通过 (displayWidth: ${Math.round(rs1280Result.displayWidth)}, 可见: ${rs1280Result.visibleCards})`);
+
+    // ========== 26. 1024x768 下进入 MapScene 并截图 ==========
+    console.log("26. 1024x768 下进入 MapScene 并截图");
     await page.setViewportSize({ width: 1024, height: 768 });
     await sleep(300);
 
