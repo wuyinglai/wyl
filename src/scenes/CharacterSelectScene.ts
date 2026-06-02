@@ -382,6 +382,20 @@ export class CharacterSelectScene extends Phaser.Scene {
     gameState.expeditionGoal = expeditionGoal;
     updateReachableCells(gameState);
 
+    // 阶段8.4.1：有订单时强制为 sanctuary 模式，确保地图有订单交付目标点
+    if (gameState.selectedOrderId && gameState.expeditionGoal === "boss") {
+      gameState.expeditionGoal = "sanctuary";
+      // 将 boss 节点改为 sanctuary 目标节点
+      const bp = gameState.bossPosition;
+      if (bp && gameState.mapCells[bp.y] && gameState.mapCells[bp.y][bp.x]) {
+        const goalCell = gameState.mapCells[bp.y][bp.x];
+        goalCell.type = "empty";
+        goalCell.isGoal = true;
+        goalCell.isRevealed = true;
+        console.log(`[角色选择] 订单远征：强制目标节点 (${bp.x}, ${bp.y}) 为 sanctuary`);
+      }
+    }
+
     // 初始化角色运行时状态
     initializeCharacterStates(gameState.selectedCharacters);
 

@@ -750,7 +750,10 @@ export class MapScene extends Phaser.Scene {
     // 6. 居中镜头
     this.centerCameraOnPlayer();
 
-    // 7. 检查游戏状态（胜利/失败）
+    // 7. 处理格子内容（阶段8.4.1：移到 checkGameStatus 之前，确保订单交付先执行）
+    this.handleCellContent(cell);
+
+    // 8. 检查游戏状态（胜利/失败）
     if (this.checkGameStatus(gameState)) return;
 
     // 8.5 处理重伤倒计时
@@ -759,9 +762,6 @@ export class MapScene extends Phaser.Scene {
       this.showExpeditionFailedModal();
       return;
     }
-
-    // 8. 处理格子内容
-    this.handleCellContent(cell);
   }
 
   // ==================== 弹窗系统（单一 modalContainer） ====================
@@ -1369,8 +1369,8 @@ export class MapScene extends Phaser.Scene {
       return;
     }
 
-    // 目标点（sanctuary 类型）→ 触发订单交付
-    if (cell.isGoal && gameState.expeditionGoal === "sanctuary") {
+    // 目标点 → 触发订单交付（阶段8.4.1：优先用 selectedOrderId 判断）
+    if (cell.isGoal && gameState.selectedOrderId) {
       this.handleOrderDelivery(cell);
       return;
     }
