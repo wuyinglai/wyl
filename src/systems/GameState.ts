@@ -71,6 +71,11 @@ export interface GameState {
   // 城市订单（阶段7.2）
   selectedOrderId: string | null;
 
+  // 商队货物栏（阶段8.2）
+  cargo: Record<string, number>;
+  silver: number;
+  maxCargoWeight: number;
+
   // 战斗相关
   currentBattleType: "normal" | "elite" | "boss" | null;
   battleResult: "victory" | "defeat" | null;
@@ -128,6 +133,11 @@ export function createInitialGameState(): GameState {
 
     // 城市订单（阶段7.2）
     selectedOrderId: null,
+
+    // 商队货物栏（阶段8.2）
+    cargo: {},
+    silver: 50,
+    maxCargoWeight: 20,
 
     currentBattleType: null,
     battleResult: null,

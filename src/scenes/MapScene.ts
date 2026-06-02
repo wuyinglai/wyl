@@ -18,6 +18,7 @@ import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
 import { CharacterState, CardDef } from "../data/types";
 import { getRouteById } from "../data/cityRoutes";
 import { getOrderById, formatRequiredGoods } from "../data/cityOrders";
+import { formatCargo, calculateCargoWeight, hasCargo } from "../systems/cargoSystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 
 /**
@@ -141,6 +142,7 @@ export class MapScene extends Phaser.Scene {
 
     const routeInfo = this.getRouteInfoText();
     const orderSummary = this.getOrderSummaryText();
+    const cargoSummary = this.getCargoSummaryText();
     const infoLines: string[] = [];
     if (routeInfo) {
       infoLines.push(routeInfo);
@@ -149,6 +151,9 @@ export class MapScene extends Phaser.Scene {
     if (orderSummary) {
       infoLines.push(orderSummary.text);
       console.log(`[地图V2] ${orderSummary.title}`);
+    }
+    if (cargoSummary) {
+      infoLines.push(cargoSummary);
     }
 
     if (infoLines.length > 0) {
@@ -207,6 +212,23 @@ export class MapScene extends Phaser.Scene {
           lines.push(`奖励：银币 +${order.rewardSilver}，火种 +${order.rewardEmbers}`);
           lines.push(`贡献：+${order.cityContribution}`);
           lines.push(`难度：${order.difficulty}`);
+        }
+        // 商队货物详情（阶段8.2）
+        if (gs.cargo && Object.keys(gs.cargo).length > 0) {
+          const weight = calculateCargoWeight(gs.cargo);
+          lines.push("");
+          lines.push(`货物：${formatCargo(gs.cargo)}`);
+          lines.push(`载重：${weight} / ${gs.maxCargoWeight}`);
+          lines.push(`银币：${gs.silver}`);
+          const order2 = gs.selectedOrderId ? getOrderById(gs.selectedOrderId) : null;
+          if (order2 && order2.requiredGoods) {
+            const ready = hasCargo(gs.cargo, order2.requiredGoods);
+            lines.push(`订单状态：${ready ? "物资已备齐 ✓" : "物资不足 ✗"}`);
+          }
+        } else {
+          lines.push("");
+          lines.push(`货物：无`);
+          lines.push(`银币：${gs.silver}`);
         }
         if (lines.length > 0) {
           this.tooltipManager!.show(
@@ -1173,6 +1195,18 @@ export class MapScene extends Phaser.Scene {
     const summaryText = `订单：${order.title} | 需求：${formatRequiredGoods(order.requiredGoods)} | 火种 +${order.rewardEmbers}`;
 
     return { title: order.title, text: summaryText };
+  }
+
+  /** 商队货物摘要（阶段8.2） */
+  private getCargoSummaryText(): string | null {
+    const gs = getGameState();
+    if (!gs.cargo || Object.keys(gs.cargo).length === 0) {
+      return null;
+    }
+    const weight = calculateCargoWeight(gs.cargo);
+    const formatted = formatCargo(gs.cargo);
+    // 简短摘要，如 "货物：粮食x5 | 载重：7/20"
+    return `货物：${formatted} | 载重：${weight}/${gs.maxCargoWeight}`;
   }
 
   private redrawMap(): void {

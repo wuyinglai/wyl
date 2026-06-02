@@ -1,5 +1,7 @@
 import Phaser from "phaser";
 import { CHARACTER_DEFS, CharacterId, getStartingDeck } from "../data/characters";
+import { getOrderById } from "../data/cityOrders";
+import { hasCargo } from "../systems/cargoSystem";
 import {
   getGameState,
   setGameState,
@@ -382,6 +384,25 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     // 初始化角色运行时状态
     initializeCharacterStates(gameState.selectedCharacters);
+
+    // 初始化商队货物栏（阶段8.2）
+    // 根据当前订单需求，预先装载刚好满足订单的货物
+    if (gameState.selectedOrderId) {
+      const order = getOrderById(gameState.selectedOrderId);
+      if (order && order.requiredGoods) {
+        // 深拷贝 requiredGoods 作为初始 cargo
+        gameState.cargo = { ...order.requiredGoods };
+        console.log(`[角色选择] 装载订单货物: ${JSON.stringify(gameState.cargo)}`);
+      } else {
+        gameState.cargo = {};
+        if (!order) {
+          console.warn(`[角色选择] 未找到订单 ${gameState.selectedOrderId}，cargo 为空`);
+        }
+      }
+    } else {
+      gameState.cargo = {};
+      console.warn("[角色选择] 无选定订单，cargo 为空");
+    }
 
     setGameState(gameState);
 
