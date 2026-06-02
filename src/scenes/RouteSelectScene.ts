@@ -3,6 +3,7 @@ import { getGameState, setGameState } from "../systems/GameState";
 import { CityRoute, getUnlockedRoutes } from "../data/cityRoutes";
 import { CityOrder, getDefaultOrderForRoute, getUnlockedOrdersForRoute, formatRequiredGoods } from "../data/cityOrders";
 import { TooltipManager } from "../systems/tooltipSystem";
+import { formatCityProgress, getCityProgressDetailLines } from "../systems/cityProgressSystem";
 
 /**
  * 商路与目标城市选择场景（阶段7.1）
@@ -382,6 +383,19 @@ export class RouteSelectScene extends Scene {
       currentY += 25;
     }
 
+    // 城市状态短文本（阶段8.6）
+    const gameState = getGameState();
+    const cityStatusText = formatCityProgress(route.cityId, gameState.cityContributions);
+    const cityStatusLabel = this.add
+      .text(0, currentY, cityStatusText, {
+        fontSize: "11px",
+        color: "#88aacc",
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5, 0);
+    container.add(cityStatusLabel);
+    currentY += 20;
+
     // 底部提示：悬浮查看详情
     const hint = this.add
       .text(0, currentY, "💡 悬浮查看完整详情", {
@@ -424,6 +438,11 @@ export class RouteSelectScene extends Scene {
           lines.push(`奖励：银币 +${order.rewardSilver}，火种 +${order.rewardEmbers}`);
           lines.push(`贡献：+${order.cityContribution} | 难度：${order.difficulty}`);
         }
+        // 城市状态详情（阶段8.6）
+        const gs = getGameState();
+        const cityDetailLines = getCityProgressDetailLines(route.cityId, gs.cityContributions);
+        lines.push("");
+        lines.push(...cityDetailLines);
         this.tooltipManager.show(
           { title: route.cityName, lines },
           pointer.x, pointer.y, 300

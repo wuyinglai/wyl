@@ -88,5 +88,16 @@ import { deliverOrder } from "./systems/orderDeliverySystem";
 (window as any).getOrderById = getOrderById;
 // 订单交付系统（阶段8.4）
 (window as any).deliverOrder = deliverOrder;
+// 城市贡献与城市状态（阶段8.6）
+import {
+  getCityProgress,
+  getCityStatusLabel,
+  formatCityProgress,
+  getCityProgressDetailLines,
+} from "./systems/cityProgressSystem";
+(window as any).getCityProgress = getCityProgress;
+(window as any).getCityStatusLabel = getCityStatusLabel;
+(window as any).formatCityProgress = formatCityProgress;
+(window as any).getCityProgressDetailLines = getCityProgressDetailLines;
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

@@ -28,6 +28,7 @@ import {
 } from "../systems/orderCargoSystem";
 import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
+import { formatCityProgress } from "../systems/cityProgressSystem";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -184,6 +185,10 @@ export class MapScene extends Phaser.Scene {
     // 订单状态和载重状态（常驻面板显示）
     infoLines.push(orderStatusText);
     infoLines.push(weightStatusText);
+    // 城市状态（阶段8.6）
+    if (gameState.selectedCityId) {
+      infoLines.push(formatCityProgress(gameState.selectedCityId, gameState.cityContributions));
+    }
 
     if (infoLines.length > 0) {
       const panelPadding = 8;
@@ -1515,6 +1520,20 @@ export class MapScene extends Phaser.Scene {
       })
         .setOrigin(0.5)
         .setDepth(902);
+
+      // 城市状态变化（阶段8.6）
+      const gs = getGameState();
+      if (order.cityId) {
+        const cityStatusLine = formatCityProgress(order.cityId, gs.cityContributions);
+        this.add.text(w / 2, h / 2 - panelH / 2 + 140, cityStatusLine, {
+          fontSize: "15px",
+          color: "#88aacc",
+          fontFamily: "sans-serif",
+          wordWrap: { width: panelW - 40 },
+        })
+          .setOrigin(0.5)
+          .setDepth(902);
+      }
     } else if (result.reason === "not_enough_cargo") {
       this.add.text(w / 2, h / 2 - panelH / 2 + 105, "当前货物不满足订单需求", {
         fontSize: "16px",
