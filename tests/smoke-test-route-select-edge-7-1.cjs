@@ -129,12 +129,19 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) {
         cs.startExpedition();
-      } else {
-        // 如果找不到 startExpedition，直接启动 MapScene
-        window.game.scene.start("MapScene");
       }
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady1 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady1, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
 
     const mapNotCrash = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
     assert(mapNotCrash, "route/city 不一致时 MapScene 不崩溃");
@@ -163,11 +170,19 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) {
         cs.startExpedition();
-      } else {
-        window.game.scene.start("MapScene");
       }
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady2 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady2, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
 
     const mapEmptyNotCrash = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
     assert(mapEmptyNotCrash, "空 selectedRouteId 时 MapScene 不崩溃");

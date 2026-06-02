@@ -302,7 +302,18 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) cs.startExpedition();
     });
-    await sleep(3000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady1 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady1, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
+
     assert(await page.evaluate(() => !!window.game.scene.getScene("MapScene")), "进入 MapScene");
 
     // ========== 10. 1280x720 下截图 ==========
@@ -690,7 +701,17 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) cs.startExpedition();
     });
-    await sleep(3000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady2 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady2, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
 
     // 800x600 RouteSelect 截图（分页模式）
     await page.evaluate(() => {
@@ -826,7 +847,17 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) cs.startExpedition();
     });
-    await sleep(3000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady3 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady3, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
 
     const mapScene1024 = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
     if (mapScene1024) {

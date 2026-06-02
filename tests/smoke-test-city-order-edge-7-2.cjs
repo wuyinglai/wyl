@@ -178,9 +178,19 @@ async function runTest() {
     await page.evaluate(() => {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) cs.startExpedition();
-      else window.game.scene.start("MapScene");
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady1 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady1, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
+
     assert(await page.evaluate(() => !!window.game.scene.getScene("MapScene")), "selectedOrderId 缺失时 MapScene 不崩溃");
 
     // ========== 10. selectedOrderId 错误时进入 MapScene 不崩溃 ==========
@@ -199,9 +209,18 @@ async function runTest() {
     await page.evaluate(() => {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) cs.startExpedition();
-      else window.game.scene.start("MapScene");
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady2 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady2, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
     assert(await page.evaluate(() => !!window.game.scene.getScene("MapScene")), "selectedOrderId 错误时 MapScene 不崩溃");
     const hasUnknownWarning = consoleLogs.some(log => log.includes("未知订单") || log.includes("未找到订单"));
     assert(hasUnknownWarning, "selectedOrderId 错误时显示 warning/未知订单");
@@ -222,9 +241,18 @@ async function runTest() {
     await page.evaluate(() => {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) cs.startExpedition();
-      else window.game.scene.start("MapScene");
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady3 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady3, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
     assert(await page.evaluate(() => !!window.game.scene.getScene("MapScene")), "selectedOrderId 与 route/city 不一致时 MapScene 不崩溃");
     const hasMismatchWarning = consoleLogs.some(log => log.includes("order/route 不一致") || log.includes("order/city 不一致"));
     assert(hasMismatchWarning, "selectedOrderId 不一致时显示 warning");

@@ -190,11 +190,20 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) {
         cs.startExpedition();
-      } else {
-        window.game.scene.start("MapScene");
       }
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
+
     assert(await page.evaluate(() => !!window.game.scene.getScene("MapScene")), "成功进入 MapScene");
 
     // ========== 11. MapScene 中 selectedOrderId 不丢失 ==========

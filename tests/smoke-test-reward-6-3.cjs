@@ -64,7 +64,17 @@ async function runTest() {
         cs.startExpedition();
       }
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
 
     const mapReady = await page.evaluate(() => {
       const ms = window.game.scene.getScene("MapScene");

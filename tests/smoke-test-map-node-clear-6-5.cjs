@@ -63,7 +63,18 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs) { cs.selectedChars = ["guardian", "sharpshooter", "repairman"]; cs.startExpedition(); }
     });
-    await sleep(2000);
+    await sleep(1500);
+
+    // 阶段8.5：经过 CargoPrepScene
+    const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+    assert(cargoPrepReady, "CargoPrepScene 就绪");
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2500);
+
     assert(await page.evaluate(() => !!window.game.scene.getScene("MapScene")), "MapScene 已启动");
 
     // ========== 3. 寻找真实战斗节点（优先普通战斗，避免精英战斗的部件奖励） ==========

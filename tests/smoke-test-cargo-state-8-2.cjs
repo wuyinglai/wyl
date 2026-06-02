@@ -113,7 +113,17 @@ function sleep(ms) {
     const cs = window.game.scene.getScene("CharacterSelectScene");
     if (cs && cs.startExpedition) cs.startExpedition();
   });
-  await sleep(3000);
+  await sleep(1500);
+
+  // 阶段8.5：经过 CargoPrepScene
+  const cargoPrepReady1 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+  assert(cargoPrepReady1, "CargoPrepScene 就绪");
+
+  await page.evaluate(() => {
+    const scene = window.game.scene.getScene("CargoPrepScene");
+    if (scene && scene.startExpedition) scene.startExpedition();
+  });
+  await sleep(2500);
 
   // ========== 6. 进入 MapScene ==========
   console.log("6. 进入 MapScene");
@@ -343,7 +353,17 @@ function sleep(ms) {
     const cs = window.game.scene.getScene("CharacterSelectScene");
     if (cs && cs.startExpedition) cs.startExpedition();
   });
-  await sleep(3000);
+  await sleep(1500);
+
+  // 阶段8.5：经过 CargoPrepScene
+  const cargoPrepReady2 = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
+  assert(cargoPrepReady2, "CargoPrepScene 就绪");
+
+  await page.evaluate(() => {
+    const scene = window.game.scene.getScene("CargoPrepScene");
+    if (scene && scene.startExpedition) scene.startExpedition();
+  });
+  await sleep(2500);
 
   const newCargo = await page.evaluate(() => {
     const gs = window.getGameState();
