@@ -29,6 +29,7 @@ import {
 import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
+import { createSuccessExpeditionResult } from "../systems/expeditionResultSystem";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -1408,13 +1409,26 @@ export class MapScene extends Phaser.Scene {
         gameState.cityContributions[order!.cityId] = 0;
       }
       gameState.cityContributions[order!.cityId] += result.cityContribution;
+
+      // 生成远征结算结果（阶段8.7）
+      const route = gameState.selectedRouteId ? getRouteById(gameState.selectedRouteId) : undefined;
+      gameState.lastExpeditionResult = createSuccessExpeditionResult({
+        order: order!,
+        cityName: route ? route.cityName : order!.cityId,
+        deliveryResult: result,
+        gameState: {
+          cityContributions: gameState.cityContributions,
+          completedOrderIds: gameState.completedOrderIds,
+        },
+      });
+
       setGameState(gameState);
 
       console.log(
         `[地图V2] 订单交付成功: ${result.message}，银币+${result.rewardSilver}，火种+${result.rewardEmbers}，贡献+${result.cityContribution}`
       );
 
-      // 显示交付成功弹窗
+      // 显示交付成功弹窗（带结算入口）
       this.showOrderDeliveryPopup(result, order!);
     } else {
       console.log(`[地图V2] 订单交付失败: ${result.message} (${result.reason})`);
@@ -1545,25 +1559,56 @@ export class MapScene extends Phaser.Scene {
         .setDepth(902);
     }
 
-    // 关闭提示
-    this.add.text(w / 2, h / 2 + panelH / 2 - 35, "点击任意位置关闭", {
-      fontSize: "14px",
-      color: "#888888",
-      fontFamily: "sans-serif",
-    })
-      .setOrigin(0.5)
-      .setDepth(902);
+    // 关闭提示或查看结算按钮
+    if (result.ok) {
+      // 成功时显示"查看结算"按钮
+      const btnY = h / 2 + panelH / 2 - 45;
+      const btnBg = this.add.rectangle(w / 2, btnY, 160, 36, 0x3a2a1a, 0.95)
+        .setStrokeStyle(2, 0xd4a574)
+        .setInteractive({ useHandCursor: true })
+        .setDepth(902);
+      const btnText = this.add.text(w / 2, btnY, "查看结算", {
+        fontSize: "16px",
+        color: "#e8c97a",
+        fontFamily: "sans-serif",
+      }).setOrigin(0.5).setDepth(903);
 
-    // 点击关闭
-    bg.on("pointerdown", () => {
-      bg.destroy();
-      panel.destroy();
-      // 销毁所有 depth >= 902 的文本
-      const toDestroy = this.children.list.filter(
-        (c) => (c as Phaser.GameObjects.Text).depth >= 902 && c.type === "Text"
-      );
-      toDestroy.forEach((c) => c.destroy());
-    });
+      btnBg.on("pointerover", () => btnBg.setFillStyle(0x5a4a3a));
+      btnBg.on("pointerout", () => btnBg.setFillStyle(0x3a2a1a));
+      btnBg.on("pointerdown", () => {
+        this.scene.start("ExpeditionResultScene");
+      });
+
+      // 点击背景也可关闭（不进入结算）
+      bg.on("pointerdown", () => {
+        bg.destroy();
+        panel.destroy();
+        btnBg.destroy();
+        btnText.destroy();
+        const toDestroy = this.children.list.filter(
+          (c) => (c as Phaser.GameObjects.Text).depth >= 902 && c.type === "Text"
+        );
+        toDestroy.forEach((c) => c.destroy());
+      });
+    } else {
+      // 失败时显示关闭提示
+      this.add.text(w / 2, h / 2 + panelH / 2 - 35, "点击任意位置关闭", {
+        fontSize: "14px",
+        color: "#888888",
+        fontFamily: "sans-serif",
+      })
+        .setOrigin(0.5)
+        .setDepth(902);
+
+      bg.on("pointerdown", () => {
+        bg.destroy();
+        panel.destroy();
+        const toDestroy = this.children.list.filter(
+          (c) => (c as Phaser.GameObjects.Text).depth >= 902 && c.type === "Text"
+        );
+        toDestroy.forEach((c) => c.destroy());
+      });
+    }
   }
 
   private triggerResolvedContent(cell: MapCell): void {

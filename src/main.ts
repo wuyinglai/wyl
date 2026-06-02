@@ -4,6 +4,7 @@ import { RouteSelectScene } from "./scenes/RouteSelectScene";
 import { CharacterSelectScene } from "./scenes/CharacterSelectScene";
 import { CargoPrepScene } from "./scenes/CargoPrepScene";
 import { MapScene } from "./scenes/MapScene";
+import { ExpeditionResultScene } from "./scenes/ExpeditionResultScene";
 import { BattleScene } from "./scenes/BattleScene";
 import {
   getGameState,
@@ -41,7 +42,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   parent: "app",
   backgroundColor: "#0a0a1a",
-  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, BattleScene],
+  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, BattleScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -99,5 +100,13 @@ import {
 (window as any).getCityStatusLabel = getCityStatusLabel;
 (window as any).formatCityProgress = formatCityProgress;
 (window as any).getCityProgressDetailLines = getCityProgressDetailLines;
+
+// 远征结算系统（阶段8.7）
+import {
+  createSuccessExpeditionResult,
+  formatExpeditionResult,
+} from "./systems/expeditionResultSystem";
+(window as any).createSuccessExpeditionResult = createSuccessExpeditionResult;
+(window as any).formatExpeditionResult = formatExpeditionResult;
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

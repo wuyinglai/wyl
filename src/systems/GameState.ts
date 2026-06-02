@@ -1,6 +1,7 @@
 import { CharacterId, createCharacterState } from "../data/characters";
 import { CharacterState } from "../data/types";
 import { CaravanPart } from "../data/caravanParts";
+import { ExpeditionResult } from "./expeditionResultSystem";
 
 // 地图格子类型
 export type CellType =
@@ -107,6 +108,9 @@ export interface GameState {
   _directionalTestStep: number;
   _directionalTestResumeStep: number;
   _directionalTestMaxSteps: number;
+
+  // 远征结算结果（阶段8.7）
+  lastExpeditionResult?: ExpeditionResult;
 }
 
 // 初始游戏状态
