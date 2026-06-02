@@ -24,6 +24,10 @@ dist-ssr
 # Test artifacts (screenshots, temp data)
 test-artifacts/
 
+# Backup files
+*.patch
+*.bak
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
