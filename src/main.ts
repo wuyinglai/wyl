@@ -77,6 +77,7 @@ import {
   checkCargoWeight,
   getCargoWeightStatusText,
 } from "./systems/orderCargoSystem";
+import { deliverOrder } from "./systems/orderDeliverySystem";
 (window as any).checkOrderCargo = checkOrderCargo;
 (window as any).formatMissingGoods = formatMissingGoods;
 (window as any).getOrderCargoStatusText = getOrderCargoStatusText;
@@ -84,5 +85,7 @@ import {
 (window as any).getCargoWeightStatusText = getCargoWeightStatusText;
 // 订单数据查询（测试需要）
 (window as any).getOrderById = getOrderById;
+// 订单交付系统（阶段8.4）
+(window as any).deliverOrder = deliverOrder;
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

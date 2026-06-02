@@ -26,6 +26,7 @@ import {
   getCargoWeightStatusText,
   getOrderCargoDetailLines,
 } from "../systems/orderCargoSystem";
+import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 
 /**
@@ -77,6 +78,8 @@ export class MapScene extends Phaser.Scene {
 
   // Tooltip 系统
   private tooltipManager: TooltipManager | null = null;
+  /** 信息面板文本对象引用（阶段8.4：交付后更新） */
+  private _infoPanelTexts: Phaser.GameObjects.Text[] = [];
 
   constructor() {
     super({ key: "MapScene" });
@@ -150,10 +153,21 @@ export class MapScene extends Phaser.Scene {
     const routeInfo = this.getRouteInfoText();
     const orderSummary = this.getOrderSummaryText();
     // 阶段8.3：使用 orderCargoSystem 生成订单/货物状态摘要
-    const orderStatusText = getOrderCargoStatusText(
-      gameState.selectedOrderId ? getOrderById(gameState.selectedOrderId) : undefined,
-      gameState.cargo
-    );
+    // 阶段8.4：已完成订单显示"已完成"
+    let orderStatusText: string;
+    if (
+      gameState.selectedOrderId &&
+      gameState.completedOrderIds &&
+      gameState.completedOrderIds.includes(gameState.selectedOrderId)
+    ) {
+      const order = getOrderById(gameState.selectedOrderId);
+      orderStatusText = `订单：${order ? order.title : "已完成"}（已完成）`;
+    } else {
+      orderStatusText = getOrderCargoStatusText(
+        gameState.selectedOrderId ? getOrderById(gameState.selectedOrderId) : undefined,
+        gameState.cargo
+      );
+    }
     const weightStatusText = getCargoWeightStatusText(
       gameState.cargo,
       gameState.maxCargoWeight
@@ -186,8 +200,9 @@ export class MapScene extends Phaser.Scene {
       panelBg.setDepth(100);
 
       // 信息文本
+      this._infoPanelTexts = [];
       infoLines.forEach((line, i) => {
-        this.add
+        const txt = this.add
           .text(panelX + panelPadding, panelY + panelPadding + i * panelLineHeight, line, {
             fontSize: "11px",
             color: i === 0 ? "#ffcc44" : "#ffaa44",
@@ -196,6 +211,7 @@ export class MapScene extends Phaser.Scene {
           })
           .setOrigin(0, 0)
           .setDepth(101);
+        this._infoPanelTexts.push(txt);
       });
 
       // 信息面板可交互：悬浮显示完整订单详情 Tooltip
@@ -1353,8 +1369,9 @@ export class MapScene extends Phaser.Scene {
       return;
     }
 
-    // 目标点（sanctuary 类型）
+    // 目标点（sanctuary 类型）→ 触发订单交付
     if (cell.isGoal && gameState.expeditionGoal === "sanctuary") {
+      this.handleOrderDelivery(cell);
       return;
     }
 
@@ -1362,6 +1379,172 @@ export class MapScene extends Phaser.Scene {
     if (cell.type === "question" && cell.resolvedType) {
       this.triggerResolvedContent(cell);
     }
+  }
+
+  /** 订单交付处理（阶段8.4） */
+  handleOrderDelivery(cell: MapCell): void {
+    const gameState = getGameState();
+    const orderId = gameState.selectedOrderId;
+    const order = orderId ? getOrderById(orderId) : undefined;
+
+    const result = deliverOrder({
+      order,
+      cargo: gameState.cargo,
+      completedOrderIds: gameState.completedOrderIds,
+    });
+
+    if (result.ok) {
+      // 交付成功：更新 GameState
+      gameState.cargo = result.updatedCargo;
+      gameState.silver += result.rewardSilver;
+      gameState.embers += result.rewardEmbers;
+      gameState.completedOrderIds.push(order!.id);
+      if (!gameState.cityContributions[order!.cityId]) {
+        gameState.cityContributions[order!.cityId] = 0;
+      }
+      gameState.cityContributions[order!.cityId] += result.cityContribution;
+      setGameState(gameState);
+
+      console.log(
+        `[地图V2] 订单交付成功: ${result.message}，银币+${result.rewardSilver}，火种+${result.rewardEmbers}，贡献+${result.cityContribution}`
+      );
+
+      // 显示交付成功弹窗
+      this.showOrderDeliveryPopup(result, order!);
+    } else {
+      console.log(`[地图V2] 订单交付失败: ${result.message} (${result.reason})`);
+
+      if (result.reason === "already_delivered") {
+        this.showOrderDeliveryPopup(result, order!);
+      } else if (result.reason === "not_enough_cargo") {
+        this.showOrderDeliveryPopup(result, order!);
+      } else {
+        // missing_order 等情况不弹窗
+      }
+    }
+
+    // 标记目标节点已清理
+    cell.isCleared = true;
+    setGameState(gameState);
+    this.redrawMap();
+    this.updateResourceDisplay();
+
+    // 更新信息面板显示订单状态
+    this.updateInfoPanelText();
+  }
+
+  /** 更新信息面板文本（阶段8.4：交付后刷新） */
+  private updateInfoPanelText(): void {
+    if (this._infoPanelTexts.length === 0) return;
+    const gameState = getGameState();
+
+    // 重新生成订单状态文本
+    let orderStatusText: string;
+    if (
+      gameState.selectedOrderId &&
+      gameState.completedOrderIds &&
+      gameState.completedOrderIds.includes(gameState.selectedOrderId)
+    ) {
+      const order = getOrderById(gameState.selectedOrderId);
+      orderStatusText = `订单：${order ? order.title : "已完成"}（已完成）`;
+    } else {
+      orderStatusText = getOrderCargoStatusText(
+        gameState.selectedOrderId ? getOrderById(gameState.selectedOrderId) : undefined,
+        gameState.cargo
+      );
+    }
+
+    // 更新第3个文本（订单状态行，索引2）
+    // 面板结构：[0]=routeInfo, [1]=orderSummary, [2]=orderStatus, [3]=weightStatus
+    if (this._infoPanelTexts.length >= 3) {
+      this._infoPanelTexts[2].setText(orderStatusText);
+    }
+  }
+
+  /** 订单交付弹窗 */
+  private showOrderDeliveryPopup(
+    result: import("../systems/orderDeliverySystem").OrderDeliveryResult,
+    order: import("../data/cityOrders").CityOrder
+  ): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+
+    // 半透明背景
+    const bg = this.add.rectangle(w / 2, h / 2, w, h, 0x000000, 0.6)
+      .setDepth(900)
+      .setInteractive({ useHandCursor: true });
+
+    // 弹窗面板
+    const panelW = 480;
+    const panelH = result.ok ? 280 : 200;
+    const panel = this.add.rectangle(w / 2, h / 2, panelW, panelH, 0x2a1a0e, 0.95)
+      .setDepth(901)
+      .setStrokeStyle(2, 0xd4a574);
+
+    // 标题
+    const titleText = result.ok
+      ? `✅ 订单完成`
+      : result.reason === "already_delivered"
+        ? `📋 订单已完成`
+        : `❌ 货物不足`;
+    this.add.text(w / 2, h / 2 - panelH / 2 + 30, titleText, {
+      fontSize: "22px",
+      color: "#f0e6d2",
+      fontFamily: "sans-serif",
+    })
+      .setOrigin(0.5)
+      .setDepth(902);
+
+    // 订单名称
+    this.add.text(w / 2, h / 2 - panelH / 2 + 65, order.title, {
+      fontSize: "18px",
+      color: "#d4a574",
+      fontFamily: "sans-serif",
+    })
+      .setOrigin(0.5)
+      .setDepth(902);
+
+    if (result.ok) {
+      // 奖励信息
+      const rewardLine = `获得：银币 +${result.rewardSilver}，火种 +${result.rewardEmbers}，贡献 +${result.cityContribution}`;
+      this.add.text(w / 2, h / 2 - panelH / 2 + 105, rewardLine, {
+        fontSize: "16px",
+        color: "#a8d8a8",
+        fontFamily: "sans-serif",
+        wordWrap: { width: panelW - 40 },
+      })
+        .setOrigin(0.5)
+        .setDepth(902);
+    } else if (result.reason === "not_enough_cargo") {
+      this.add.text(w / 2, h / 2 - panelH / 2 + 105, "当前货物不满足订单需求", {
+        fontSize: "16px",
+        color: "#d4a574",
+        fontFamily: "sans-serif",
+        wordWrap: { width: panelW - 40 },
+      })
+        .setOrigin(0.5)
+        .setDepth(902);
+    }
+
+    // 关闭提示
+    this.add.text(w / 2, h / 2 + panelH / 2 - 35, "点击任意位置关闭", {
+      fontSize: "14px",
+      color: "#888888",
+      fontFamily: "sans-serif",
+    })
+      .setOrigin(0.5)
+      .setDepth(902);
+
+    // 点击关闭
+    bg.on("pointerdown", () => {
+      bg.destroy();
+      panel.destroy();
+      // 销毁所有 depth >= 902 的文本
+      const toDestroy = this.children.list.filter(
+        (c) => (c as Phaser.GameObjects.Text).depth >= 902 && c.type === "Text"
+      );
+      toDestroy.forEach((c) => c.destroy());
+    });
   }
 
   private triggerResolvedContent(cell: MapCell): void {
