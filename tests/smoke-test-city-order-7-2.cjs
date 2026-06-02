@@ -23,6 +23,7 @@
  * 13. selectedOrderId 缺失时直接进入 MapScene 不崩溃
  */
 const { chromium } = require("playwright");
+const { proceedFromCharacterSelectToMap } = require("./helpers/cargo-prep-flow.cjs");
 const BASE_URL = "http://localhost:5173";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -192,17 +193,7 @@ async function runTest() {
         cs.startExpedition();
       }
     });
-    await sleep(1500);
-
-    // 阶段8.5：经过 CargoPrepScene
-    const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
-    assert(cargoPrepReady, "CargoPrepScene 就绪");
-
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("CargoPrepScene");
-      if (scene && scene.startExpedition) scene.startExpedition();
-    });
-    await sleep(2500);
+    await proceedFromCharacterSelectToMap(page, sleep, assert);
 
     assert(await page.evaluate(() => !!window.game.scene.getScene("MapScene")), "成功进入 MapScene");
 
@@ -260,26 +251,27 @@ async function runTest() {
       const cs = window.game.scene.getScene("CharacterSelectScene");
       if (cs && cs.startExpedition) {
         cs.startExpedition();
-      } else {
-        window.game.scene.start("MapScene");
       }
     });
-    await sleep(2000);
+    await proceedFromCharacterSelectToMap(page, sleep, assert);
 
     const mapNotCrash = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
     assert(mapNotCrash, "selectedOrderId 缺失时 MapScene 不崩溃");
 
-    // 验证没有订单信息显示（或显示"未选择"）
+    // 验证没有具体订单标题显示（或显示"未选择"）
     const noOrderDisplay = await page.evaluate(() => {
       const ms = window.game.scene.getScene("MapScene");
       if (ms) {
         const texts = ms.children.list.filter(c => c.type === "Text");
-        const orderText = texts.find(t => t.text && t.text.includes("订单："));
-        return !orderText; // 如果没有找到订单文本，说明是安全的
+        // 不应该显示具体订单标题（如"基础补给委托"）
+        const hasSpecificOrder = texts.some(t => t.text && (t.text.includes("基础补给委托") || t.text.includes("急需药材委托")));
+        // 应该显示"未选择"
+        const hasNoOrder = texts.some(t => t.text && t.text.includes("未选择"));
+        return !hasSpecificOrder && hasNoOrder;
       }
       return true;
     });
-    assert(noOrderDisplay, "selectedOrderId 缺失时不显示订单信息");
+    assert(noOrderDisplay, "selectedOrderId 缺失时不显示具体订单信息");
 
     // ========== 总结 ==========
     console.log("\n========================================");

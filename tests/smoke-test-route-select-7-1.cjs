@@ -16,6 +16,7 @@
  * 9. 进入 BattleScene 并返回地图后 selectedRouteId / selectedCityId 不丢失
  */
 const { chromium } = require("playwright");
+const { proceedFromCharacterSelectToMap } = require("./helpers/cargo-prep-flow.cjs");
 const BASE_URL = "http://localhost:5173";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -119,17 +120,7 @@ async function runTest() {
         cs.startExpedition();
       }
     });
-    await sleep(1500);
-
-    // 阶段8.5：经过 CargoPrepScene
-    const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
-    assert(cargoPrepReady, "CargoPrepScene 就绪");
-
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("CargoPrepScene");
-      if (scene && scene.startExpedition) scene.startExpedition();
-    });
-    await sleep(2500);
+    await proceedFromCharacterSelectToMap(page, sleep, assert);
 
     const mapSceneActive = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
     assert(mapSceneActive, "成功进入 MapScene");
