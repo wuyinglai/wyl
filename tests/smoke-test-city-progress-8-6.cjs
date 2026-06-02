@@ -1,6 +1,6 @@
 /**
  * smoke-test-city-progress-8-6.cjs
- * 阶段8.6：城市贡献与城市状态 v1
+ * 阶段8.6：城市贡献与城市状态 v1（真实验收版）
  *
  * 验证：
  * 1. 纯函数：getCityProgress 在各种输入下正确
@@ -8,8 +8,8 @@
  * 3. formatCityProgress 返回正确文本
  * 4. RouteSelectScene 显示城市状态
  * 5. MapScene 信息面板显示城市状态
- * 6. 订单交付后城市贡献增加
- * 7. 订单交付后城市状态变化可见
+ * 6. 真实交付后城市贡献增加
+ * 7. 真实交付后城市状态 UI 变化可见
  * 8. 重复交付不重复增加贡献
  */
 
@@ -53,7 +53,7 @@ function sleep(ms) {
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 
-  console.log("阶段8.6：城市贡献与城市状态 v1 测试");
+  console.log("阶段8.6：城市贡献与城市状态 v1 测试（真实验收版）");
   console.log("=".repeat(60));
 
   // ========== 1. window.game 存在 ==========
@@ -154,42 +154,33 @@ function sleep(ms) {
 
   const routeCityStatus = await page.evaluate(() => {
     const rs = window.game.scene.getScene("RouteSelectScene");
-    if (!rs) return { ok: false };
-    // 搜索所有子对象（包括 Container 内部）
+    if (!rs) return { ok: false, hasCityStatus: false, text: "" };
     const allTexts = [];
     const searchChildren = (obj) => {
       if (!obj) return;
-      // Container 的子元素在 .list 中
       if (obj.list && Array.isArray(obj.list)) {
         for (const child of obj.list) {
-          if (child.type === "Text" && child.text) {
-            allTexts.push(child.text);
-          }
+          if (child.type === "Text" && child.text) allTexts.push(child.text);
           searchChildren(child);
         }
       }
-      // GameObject 的子元素在 .children?.list 中
       if (obj.children && obj.children.list && Array.isArray(obj.children.list)) {
         for (const child of obj.children.list) {
-          if (child.type === "Text" && child.text) {
-            allTexts.push(child.text);
-          }
+          if (child.type === "Text" && child.text) allTexts.push(child.text);
           searchChildren(child);
         }
       }
     };
-    // 搜索场景的子元素
     searchChildren(rs);
     if (rs.children && rs.children.list) {
-      for (const child of rs.children.list) {
-        searchChildren(child);
-      }
+      for (const child of rs.children.list) searchChildren(child);
     }
     const hasCityStatus = allTexts.some(t => t.includes("城市状态："));
     const cityStatusText = allTexts.find(t => t.includes("城市状态："));
-    return { ok: true, hasCityStatus, text: cityStatusText || "", allTexts: allTexts.filter(t => t.includes("城市") || t.includes("状态")) };
+    return { ok: true, hasCityStatus, text: cityStatusText || "" };
   });
-  assert(routeCityStatus.ok && routeCityStatus.hasCityStatus, `RouteSelectScene 显示城市状态: "${routeCityStatus.text}"`);
+  assert(routeCityStatus.ok, "RouteSelectScene 场景存在");
+  assert(routeCityStatus.hasCityStatus, `RouteSelectScene 显示城市状态: "${routeCityStatus.text}"`);
 
   // 截图
   await page.screenshot({ path: path.join(ARTIFACT_DIR, "route-select-city-status.png") });
@@ -244,14 +235,14 @@ function sleep(ms) {
   console.log("12. MapScene 信息面板显示城市状态");
   const mapCityStatus = await page.evaluate(() => {
     const ms = window.game.scene.getScene("MapScene");
-    if (!ms) return { ok: false };
+    if (!ms) return { ok: false, hasCityStatus: false, text: "" };
     const texts = ms.children.list.filter(c => c.type === "Text");
     const hasCityStatus = texts.some(t => t.text && t.text.includes("城市状态："));
     const cityStatusText = texts.find(t => t.text && t.text.includes("城市状态："));
     return { ok: true, hasCityStatus, text: cityStatusText ? cityStatusText.text : "" };
   });
-  assert(mapCityStatus.ok && mapCityStatus.hasCityStatus, `MapScene 显示城市状态: "${mapCityStatus.text}"`);
-  console.log(`    城市状态文本: "${mapCityStatus.text}"`);
+  assert(mapCityStatus.ok, "MapScene 场景存在");
+  assert(mapCityStatus.hasCityStatus, `MapScene 显示城市状态: "${mapCityStatus.text}"`);
 
   // ========== 13. 初始城市贡献为 0 ==========
   console.log("13. 初始城市贡献为 0");
@@ -264,78 +255,233 @@ function sleep(ms) {
   });
   assert(initialContrib.contrib === 0, `初始贡献 = 0 (实际: ${initialContrib.contrib})`);
 
-  // ========== 14. 完成订单交付后城市贡献增加 ==========
-  console.log("14. 完成订单交付后城市贡献增加");
+  // ========== 14. 找到目标节点并 BFS 寻路 ==========
+  console.log("14. 找到目标节点并 BFS 寻路");
+
+  // 找到目标节点
+  const goalCheck = await page.evaluate(() => {
+    const gs = window.getGameState();
+    const cells = gs.mapCells;
+    const rows = gs.mapHeight;
+    const cols = gs.mapWidth;
+    const start = gs.currentPosition;
+
+    // 找到 isGoal 或 boss 节点
+    let goalCell = null;
+    for (let y = 0; y < rows; y++) {
+      for (let x = 0; x < cols; x++) {
+        const cell = cells[y][x];
+        if (cell.isGoal || cell.type === "boss") {
+          goalCell = { x, y, isGoal: cell.isGoal, type: cell.type };
+          break;
+        }
+      }
+      if (goalCell) break;
+    }
+
+    return { hasGoal: !!goalCell, goalCell, start, rows, cols };
+  });
+
+  assert(goalCheck.hasGoal, `找到目标节点: ${JSON.stringify(goalCheck.goalCell)}`);
+
+  if (!goalCheck.hasGoal) {
+    console.error("无法找到目标节点，测试失败");
+    await browser.close();
+    process.exit(1);
+  }
+
+  // BFS 寻路
+  const pathResult = await page.evaluate(({ gx, gy }) => {
+    const gs = window.getGameState();
+    const cells = gs.mapCells;
+    const rows = gs.mapHeight;
+    const cols = gs.mapWidth;
+    const start = gs.currentPosition;
+    const dirs = [{ dx: 0, dy: -1 }, { dx: 0, dy: 1 }, { dx: -1, dy: 0 }, { dx: 1, dy: 0 }];
+
+    const queue = [{ x: start.x, y: start.y, path: [] }];
+    const visited = new Set([`${start.x},${start.y}`]);
+
+    let foundPath = null;
+    while (queue.length > 0) {
+      const { x, y, path } = queue.shift();
+      if (x === gx && y === gy) {
+        foundPath = path;
+        break;
+      }
+      for (const { dx, dy } of dirs) {
+        const nx = x + dx;
+        const ny = y + dy;
+        const key = `${nx},${ny}`;
+        if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && !visited.has(key)) {
+          const cell = cells[ny][nx];
+          if (cell.type !== "obstacle") {
+            visited.add(key);
+            queue.push({ x: nx, y: ny, path: [...path, { x: nx, y: ny }] });
+          }
+        }
+      }
+    }
+
+    return {
+      pathFound: !!foundPath,
+      pathLength: foundPath ? foundPath.length : 0,
+      start: start,
+      path: foundPath || [],
+    };
+  }, { gx: goalCheck.goalCell.x, gy: goalCheck.goalCell.y });
+
+  assert(pathResult.pathFound, `BFS 找到路径 (长度: ${pathResult.pathLength})`);
+  console.log(`    路径长度: ${pathResult.pathLength} 步`);
+
+  if (!pathResult.pathFound) {
+    console.error("无法找到到达目标节点的路径，测试失败");
+    await browser.close();
+    process.exit(1);
+  }
+
+  // ========== 15. 逐步移动到目标节点 ==========
+  console.log("15. 逐步移动到目标节点");
+
+  // 设置自动移动模式以跳过战斗
+  await page.evaluate(() => {
+    const gs = window.getGameState();
+    gs._isAutoMoving = true;
+    window.setGameState(gs);
+  });
+
+  const movePath = pathResult.path;
+  const MAX_STEPS = Math.min(movePath.length, 100);
+  let reachedGoal = false;
+
+  for (let i = 0; i < MAX_STEPS; i++) {
+    const step = movePath[i];
+    const prev = i > 0 ? movePath[i - 1] : pathResult.start;
+
+    const dx = step.x - prev.x;
+    const dy = step.y - prev.y;
+
+    if (dy === -1) await page.keyboard.press("ArrowUp");
+    else if (dy === 1) await page.keyboard.press("ArrowDown");
+    else if (dx === -1) await page.keyboard.press("ArrowLeft");
+    else if (dx === 1) await page.keyboard.press("ArrowRight");
+
+    await sleep(150);
+
+    if (step.x === goalCheck.goalCell.x && step.y === goalCheck.goalCell.y) {
+      reachedGoal = true;
+      console.log(`    到达目标节点 (${step.x}, ${step.y})，步数: ${i + 1}`);
+      break;
+    }
+  }
+
+  // 关闭自动移动
+  await page.evaluate(() => {
+    const gs = window.getGameState();
+    gs._isAutoMoving = false;
+    window.setGameState(gs);
+  });
+
+  assert(reachedGoal, "成功移动到目标节点");
+
+  // 等待弹窗和交付处理
+  await sleep(2000);
+
+  // 截图
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, "real-delivery-at-goal.png") });
+
+  // ========== 16. 验证交付结果 ==========
+  console.log("16. 验证交付结果");
   const deliveryResult = await page.evaluate(() => {
     const gs = window.getGameState();
-    const orderId = gs.selectedOrderId;
-    const order = orderId ? window.getOrderById(orderId) : null;
-    if (!order) return { ok: false, reason: "no order" };
+    return {
+      completedOrderIds: gs.completedOrderIds || [],
+      silver: gs.silver,
+      embers: gs.embers,
+      cityContributions: gs.cityContributions || {},
+      selectedCityId: gs.selectedCityId,
+    };
+  });
 
-    // 直接调用 deliverOrder
-    const result = window.deliverOrder({
-      order,
-      cargo: gs.cargo,
-      completedOrderIds: gs.completedOrderIds,
-    });
+  assert(deliveryResult.completedOrderIds.length > 0,
+    `completedOrderIds 包含订单: ${JSON.stringify(deliveryResult.completedOrderIds)}`);
 
-    if (result.ok) {
-      // 手动更新 GameState（模拟 handleOrderDelivery 的逻辑）
-      gs.cargo = result.updatedCargo;
-      gs.silver += result.rewardSilver;
-      gs.embers += result.rewardEmbers;
-      gs.completedOrderIds.push(order.id);
-      if (!gs.cityContributions[order.cityId]) {
-        gs.cityContributions[order.cityId] = 0;
+  const cityId = deliveryResult.selectedCityId;
+  const contribAfter = deliveryResult.cityContributions[cityId] || 0;
+  assert(contribAfter > 0, `城市贡献增加: ${contribAfter} (城市: ${cityId})`);
+
+  // ========== 17. 验证城市状态变为"已联络" ==========
+  console.log("17. 验证城市状态变为已联络");
+  const statusAfter = await page.evaluate(() => {
+    const gs = window.getGameState();
+    const cityId = gs.selectedCityId;
+    return {
+      label: window.getCityStatusLabel(cityId, gs.cityContributions),
+      fmt: window.formatCityProgress(cityId, gs.cityContributions),
+      contrib: gs.cityContributions[cityId] || 0,
+    };
+  });
+  assert(statusAfter.label === "已联络", `城市状态为"已联络" (实际: ${statusAfter.label})`);
+  console.log(`    城市状态: ${statusAfter.fmt}`);
+
+  // ========== 18. 验证 MapScene 信息面板或弹窗显示"已联络" ==========
+  console.log("18. 验证 UI 显示已联络");
+  const uiCheck = await page.evaluate(() => {
+    const ms = window.game.scene.getScene("MapScene");
+    if (!ms) return { found: false, text: "" };
+
+    // 搜索所有文本（包括弹窗）
+    const allTexts = [];
+    const searchChildren = (obj) => {
+      if (!obj) return;
+      if (obj.list && Array.isArray(obj.list)) {
+        for (const child of obj.list) {
+          if (child.type === "Text" && child.text) allTexts.push(child.text);
+          searchChildren(child);
+        }
       }
-      gs.cityContributions[order.cityId] += result.cityContribution;
-      window.setGameState(gs);
-      return { ok: true, contrib: gs.cityContributions[order.cityId], cityId: order.cityId };
+      if (obj.children && obj.children.list && Array.isArray(obj.children.list)) {
+        for (const child of obj.children.list) {
+          if (child.type === "Text" && child.text) allTexts.push(child.text);
+          searchChildren(child);
+        }
+      }
+    };
+    searchChildren(ms);
+    if (ms.children && ms.children.list) {
+      for (const child of ms.children.list) searchChildren(child);
     }
-    return { ok: false, reason: result.reason };
+
+    const hasContacted = allTexts.some(t => t.includes("已联络"));
+    const contactedText = allTexts.find(t => t.includes("已联络"));
+    return { found: hasContacted, text: contactedText || "" };
+  });
+  assert(uiCheck.found, `UI 显示"已联络": "${uiCheck.text}"`);
+
+  // 关闭弹窗（如果有）
+  await page.evaluate(() => {
+    const ms = window.game.scene.getScene("MapScene");
+    if (!ms) return;
+    for (const child of ms.children.list) {
+      if (child.type === "Rectangle" && child.depth === 900) {
+        child.emit("pointerdown");
+        break;
+      }
+    }
   });
   await sleep(500);
 
-  if (deliveryResult.ok) {
-    assert(deliveryResult.contrib > 0, `交付后贡献 > 0 (实际: ${deliveryResult.contrib})`);
-    console.log(`    交付后贡献: ${deliveryResult.contrib}, 城市: ${deliveryResult.cityId}`);
-  } else {
-    console.log(`    交付跳过: ${deliveryResult.reason}`);
-    passed++;
-    console.log("  [PASS] 交付测试跳过");
-  }
-
-  // ========== 15. 交付后城市状态变化 ==========
-  console.log("15. 交付后城市状态变化");
-  const afterStatus = await page.evaluate(() => {
-    const gs = window.getGameState();
-    const cityId = gs.selectedCityId;
-    const contrib = gs.cityContributions[cityId] || 0;
-    const status = window.getCityStatusLabel(cityId, gs.cityContributions);
-    const fmt = window.formatCityProgress(cityId, gs.cityContributions);
-    return { contrib, status, fmt };
-  });
-  if (afterStatus.contrib > 0) {
-    assert(afterStatus.status !== "失联", `交付后状态不再是"失联" (实际: ${afterStatus.status})`);
-    console.log(`    交付后状态: ${afterStatus.fmt}`);
-  } else {
-    passed++;
-    console.log("  [PASS] 状态变化验证跳过（贡献未增加）");
-  }
-
-  // ========== 16. 重复交付不重复增加贡献 ==========
-  console.log("16. 重复交付不重复增加贡献");
+  // ========== 19. 防重复交付 ==========
+  console.log("19. 防重复交付");
   const contribBeforeRepeat = await page.evaluate(() => {
     const gs = window.getGameState();
     return gs.cityContributions[gs.selectedCityId] || 0;
   });
 
-  // 尝试再次交付
-  const repeatResult = await page.evaluate(() => {
+  // 再次尝试交付
+  const repeatCheck = await page.evaluate(() => {
     const gs = window.getGameState();
-    const orderId = gs.selectedOrderId;
-    const order = orderId ? window.getOrderById(orderId) : null;
-    if (!order) return { ok: false, reason: "no order" };
+    const order = gs.selectedOrderId ? window.getOrderById(gs.selectedOrderId) : undefined;
     const result = window.deliverOrder({
       order,
       cargo: gs.cargo,
@@ -343,17 +489,18 @@ function sleep(ms) {
     });
     return { ok: result.ok, reason: result.reason };
   });
-  await sleep(500);
 
   const contribAfterRepeat = await page.evaluate(() => {
     const gs = window.getGameState();
     return gs.cityContributions[gs.selectedCityId] || 0;
   });
+
+  assert(!repeatCheck.ok, `重复交付被拒绝 (reason: ${repeatCheck.reason})`);
   assert(contribAfterRepeat === contribBeforeRepeat,
     `重复交付不增加贡献: ${contribBeforeRepeat} → ${contribAfterRepeat}`);
 
   // 截图
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, "map-city-status.png") });
+  await page.screenshot({ path: path.join(ARTIFACT_DIR, "final-city-status.png") });
 
   // ========== 总结 ==========
   console.log("=".repeat(60));
