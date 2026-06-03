@@ -213,27 +213,31 @@ export class CargoPrepScene extends Scene {
         })
         .setOrigin(0.5);
 
-      // [-] 按钮
+      // [-] 按钮（depth 必须高于 hitArea Zone 的 depth(100)，否则鼠标点击被 Zone 拦截）
       const minusBtn = this.add
         .rectangle(w - 120, y + cardHeight / 2, 40, 40, 0x554433)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({ useHandCursor: true })
+        .setDepth(200);
       const minusText = this.add
         .text(w - 120, y + cardHeight / 2, "-", {
           fontSize: "20px",
           color: "#ffffff",
         })
-        .setOrigin(0.5);
+        .setOrigin(0.5)
+        .setDepth(201);
 
-      // [+] 按钮
+      // [+] 按钮（depth 必须高于 hitArea Zone 的 depth(100)）
       const plusBtn = this.add
         .rectangle(w - 60, y + cardHeight / 2, 40, 40, 0x885533)
-        .setInteractive({ useHandCursor: true });
+        .setInteractive({ useHandCursor: true })
+        .setDepth(200);
       const plusText = this.add
         .text(w - 60, y + cardHeight / 2, "+", {
           fontSize: "20px",
           color: "#ffffff",
         })
-        .setOrigin(0.5);
+        .setOrigin(0.5)
+        .setDepth(201);
 
       // 按钮事件
       minusBtn.on("pointerdown", () => {
