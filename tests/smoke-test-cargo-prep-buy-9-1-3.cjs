@@ -101,17 +101,16 @@ async function runTest() {
     });
     console.log(`    初始: grain=${beforeState.grain}, silver=${beforeState.silver}, weight=${beforeState.weight}`);
 
-    // 4. 点击粮食 [+]
+    // 4. 点击粮食 [+] — 按钮是独立 Container，通过 data.action 查找
     console.log("4. 点击粮食 [+]");
     await page.evaluate(() => {
       const scene = window.game.scene.getScene("CargoPrepScene");
-      if (!scene || !scene.goodCards) return;
-      const grainCard = scene.goodCards[0];
-      if (grainCard) {
-        const rectangles = grainCard.list.filter(c => c.type === "Rectangle");
-        const plusBtn = rectangles[2]; // index 2 is plus button
-        if (plusBtn && plusBtn.input && plusBtn.input.enabled) {
-          plusBtn.emit("pointerdown");
+      if (!scene) return;
+      const children = scene.children.list;
+      for (const child of children) {
+        if (child.type === "Container" && child.getData && child.getData("action") === "plus" && child.getData("goodId") === "grain") {
+          child.emit("pointerdown", { x: child.x, y: child.y });
+          break;
         }
       }
     });
@@ -134,17 +133,16 @@ async function runTest() {
     assert(afterPlus.weight > beforeState.weight,
       `weight 增加: ${beforeState.weight} -> ${afterPlus.weight}`);
 
-    // 5. 点击粮食 [-]
+    // 5. 点击粮食 [-] — 按钮是独立 Container，通过 data.action 查找
     console.log("5. 点击粮食 [-]");
     await page.evaluate(() => {
       const scene = window.game.scene.getScene("CargoPrepScene");
-      if (!scene || !scene.goodCards) return;
-      const grainCard = scene.goodCards[0];
-      if (grainCard) {
-        const rectangles = grainCard.list.filter(c => c.type === "Rectangle");
-        const minusBtn = rectangles[1]; // index 1 is minus button
-        if (minusBtn && minusBtn.input && minusBtn.input.enabled) {
-          minusBtn.emit("pointerdown");
+      if (!scene) return;
+      const children = scene.children.list;
+      for (const child of children) {
+        if (child.type === "Container" && child.getData && child.getData("action") === "minus" && child.getData("goodId") === "grain") {
+          child.emit("pointerdown", { x: child.x, y: child.y });
+          break;
         }
       }
     });

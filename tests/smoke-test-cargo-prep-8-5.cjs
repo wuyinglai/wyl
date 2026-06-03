@@ -23,6 +23,23 @@ const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/cargo-prep");
 const FAILED = [];
 let passed = 0, failed = 0;
 
+// Helper: 在 CargoPrepScene 中找到指定 action + goodId 的按钮 Container 并 emit pointerdown
+// 9.1.5 重构后按钮是独立 Container，不再是 goodCards 子元素
+function findAndClickButtonCode(action, goodId) {
+  return `(() => {
+    const scene = window.game.scene.getScene("CargoPrepScene");
+    if (!scene) return false;
+    const children = scene.children.list;
+    for (const child of children) {
+      if (child.type === "Container" && child.getData && child.getData("action") === "${action}" && child.getData("goodId") === "${goodId}") {
+        child.emit("pointerdown", { x: child.x, y: child.y });
+        return true;
+      }
+    }
+    return false;
+  })()`;
+}
+
 function assert(condition, msg) {
   if (condition) {
     passed++;
@@ -148,19 +165,8 @@ function sleep(ms) {
     return { grain: gs.cargo.grain || 0, silver: gs.silver };
   });
 
-  // 找到粮食的 [+] 按钮并点击（第4个商品卡片，右数第一个按钮）
-  await page.evaluate(() => {
-    const scene = window.game.scene.getScene("CargoPrepScene");
-    if (!scene) return;
-    // goodCards[0] 是粮食，找到其中的 plus 按钮（第7个子元素是 plusBtn）
-    const grainCard = scene.goodCards[0];
-    if (grainCard) {
-      const plusBtn = grainCard.list[6]; // index 6 是 plusBtn
-      if (plusBtn && plusBtn.input && plusBtn.input.enabled) {
-        plusBtn.emit("pointerdown");
-      }
-    }
-  });
+  // 找到粮食的 [+] 按钮并点击
+  await page.evaluate(findAndClickButtonCode("plus", "grain"));
   await sleep(300);
 
   const afterPlus = await page.evaluate(() => {
@@ -173,19 +179,8 @@ function sleep(ms) {
   assert(afterPlus.silver === beforePlus.silver - 10,
     `[+] 后 silver -10: ${beforePlus.silver} -> ${afterPlus.silver}`);
 
-  // ========== 9. 点击 [-] 粮食 ==========
-  console.log("9. 点击 [-] 粮食");
-  await page.evaluate(() => {
-    const scene = window.game.scene.getScene("CargoPrepScene");
-    if (!scene) return;
-    const grainCard = scene.goodCards[0];
-    if (grainCard) {
-      const minusBtn = grainCard.list[4]; // index 4 是 minusBtn
-      if (minusBtn && minusBtn.input && minusBtn.input.enabled) {
-        minusBtn.emit("pointerdown");
-      }
-    }
-  });
+  // 点击 [-] 粮食
+  await page.evaluate(findAndClickButtonCode("minus", "grain"));
   await sleep(300);
 
   const afterMinus = await page.evaluate(() => {
@@ -209,17 +204,7 @@ function sleep(ms) {
 
   // 尝试购买 25 个粮食（重量 25 > max 20）
   for (let i = 0; i < 30; i++) {
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("CargoPrepScene");
-      if (!scene) return;
-      const grainCard = scene.goodCards[0];
-      if (grainCard) {
-        const plusBtn = grainCard.list[6];
-        if (plusBtn && plusBtn.input && plusBtn.input.enabled) {
-          plusBtn.emit("pointerdown");
-        }
-      }
-    });
+    await page.evaluate(findAndClickButtonCode("plus", "grain"));
     await sleep(50);
   }
 
@@ -240,18 +225,7 @@ function sleep(ms) {
 
   // 尝试购买超过 silver 的货物
   for (let i = 0; i < 10; i++) {
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("CargoPrepScene");
-      if (!scene) return;
-      // 购买铁器（单价 15）
-      const ironCard = scene.goodCards[2];
-      if (ironCard) {
-        const plusBtn = ironCard.list[6];
-        if (plusBtn && plusBtn.input && plusBtn.input.enabled) {
-          plusBtn.emit("pointerdown");
-        }
-      }
-    });
+    await page.evaluate(findAndClickButtonCode("plus", "iron"));
     await sleep(50);
   }
 

@@ -215,6 +215,7 @@ export class CargoPrepScene extends Scene {
 
       // [-] 按钮：独立 Container，直接添加到 Scene（不在 cardContainer 内）
       // 这样按钮不受 cardContainer 内部 list 顺序和 depth 限制影响
+      // 点击区域 56x56（大于视觉 44x44），确保容易点击
       const minusButton = this.add.container(w - 120, y + cardHeight / 2);
       const minusBg = this.add.rectangle(0, 0, 44, 44, 0x554433);
       const minusLabel = this.add.text(0, 0, "-", {
@@ -222,11 +223,19 @@ export class CargoPrepScene extends Scene {
         color: "#ffffff",
       }).setOrigin(0.5);
       minusButton.add([minusBg, minusLabel]);
-      minusButton.setSize(44, 44);
+      minusButton.setSize(56, 56);
       minusButton.setInteractive({ useHandCursor: true });
       minusButton.setDepth(300);
       minusButton.setData("goodId", goodId);
       minusButton.setData("action", "minus");
+      // hover 反馈：变亮
+      minusButton.on("pointerover", () => {
+        minusBg.setFillStyle(0x776655);
+        console.log(`[CargoPrep] hover minus ${goodId}`);
+      });
+      minusButton.on("pointerout", () => {
+        minusBg.setFillStyle(0x554433);
+      });
       minusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
         console.log(`[CargoPrep] pointerdown minus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`);
         this.changeCargo(goodId, -1);
@@ -240,11 +249,19 @@ export class CargoPrepScene extends Scene {
         color: "#ffffff",
       }).setOrigin(0.5);
       plusButton.add([plusBg, plusLabel]);
-      plusButton.setSize(44, 44);
+      plusButton.setSize(56, 56);
       plusButton.setInteractive({ useHandCursor: true });
       plusButton.setDepth(300);
       plusButton.setData("goodId", goodId);
       plusButton.setData("action", "plus");
+      // hover 反馈：变亮
+      plusButton.on("pointerover", () => {
+        plusBg.setFillStyle(0xaa7744);
+        console.log(`[CargoPrep] hover plus ${goodId}`);
+      });
+      plusButton.on("pointerout", () => {
+        plusBg.setFillStyle(0x885533);
+      });
       plusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
         console.log(`[CargoPrep] pointerdown plus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`);
         this.changeCargo(goodId, 1);
