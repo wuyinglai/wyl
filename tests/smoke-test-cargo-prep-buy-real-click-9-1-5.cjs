@@ -85,27 +85,19 @@ function gameToPage(gameX, gameY, transform) {
 async function realClick(page, gameX, gameY, transform) {
   const pos = gameToPage(gameX, gameY, transform);
 
-  // 方法1: page.mouse.click（CDP 级别鼠标事件）
-  await page.mouse.click(pos.x, pos.y);
-  await sleep(100);
-
-  // 方法2: canvas dispatchEvent（DOM 级别事件）
+  // 方法1: canvas dispatchEvent mousedown/mouseup
+  // Phaser MouseManager 监听的是 mousedown/mouseup，不是 pointerdown/pointerup
   await page.evaluate(({ px, py }) => {
     const canvas = document.querySelector("canvas");
-    canvas.dispatchEvent(new MouseEvent("pointerdown", {
+    canvas.dispatchEvent(new MouseEvent("mousedown", {
       clientX: px, clientY: py,
       bubbles: true, cancelable: true,
-      button: 0, buttons: 1, pointerId: 1,
+      button: 0, buttons: 1,
     }));
-    canvas.dispatchEvent(new MouseEvent("pointerup", {
+    canvas.dispatchEvent(new MouseEvent("mouseup", {
       clientX: px, clientY: py,
       bubbles: true, cancelable: true,
-      button: 0, pointerId: 1,
-    }));
-    canvas.dispatchEvent(new MouseEvent("click", {
-      clientX: px, clientY: py,
-      bubbles: true, cancelable: true,
-      button: 0,
+      button: 0, buttons: 0,
     }));
   }, { px: pos.x, py: pos.y });
   await sleep(100);
