@@ -29,6 +29,11 @@ export class CargoPrepScene extends Scene {
   private weightText: Phaser.GameObjects.Text | null = null;
   private orderStatusText: Phaser.GameObjects.Text | null = null;
   private goodCards: Phaser.GameObjects.Container[] = [];
+  // 9.1.7 调试层
+  private debugText: Phaser.GameObjects.Text | null = null;
+  private debugHitBorders: Phaser.GameObjects.Rectangle[] = [];
+  private lastHitTarget: string = "none";
+  private debugClickLog: string[] = []; // 记录点击日志，供测试读取
 
   constructor() {
     super({ key: "CargoPrepScene" });
@@ -66,6 +71,95 @@ export class CargoPrepScene extends Scene {
 
     this.createUI();
     this.updateDisplay();
+    this.initDebugOverlay();
+  }
+
+  /** 9.1.7: 初始化调试覆盖层 */
+  private initDebugOverlay(): void {
+    const w = this.scale.width;
+    const h = this.scale.height;
+
+    // 调试文本（右下角）
+    this.debugText = this.add
+      .text(w - 10, h - 10, "", {
+        fontSize: "12px",
+        color: "#00ff88",
+        fontFamily: "monospace",
+        backgroundColor: "#000000cc",
+        padding: { x: 6, y: 4 },
+        wordWrap: { width: 300 },
+      })
+      .setOrigin(1, 1) // 右下角对齐
+      .setDepth(9999)
+      .setScrollFactor(0);
+
+    // 场景级 pointerdown 监听：检测点击位置和命中情况
+    this.input.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+      const canvas = this.game.canvas as HTMLCanvasElement;
+      const rect = canvas.getBoundingClientRect();
+      const scaleInfo = this.scale;
+
+      console.log(`[CargoPrepDebug] pointerdown at pointer=(${pointer.x}, ${pointer.y}) world=(${pointer.worldX}, ${pointer.worldY})`);
+      console.log(`[CargoPrepDebug] canvas rect: left=${rect.left} top=${rect.top} w=${rect.width} h=${rect.height}`);
+      console.log(`[CargoPrepDebug] game.scale: ${scaleInfo.width}x${scaleInfo.height} display=${scaleInfo.displaySize.width}x${scaleInfo.displaySize.height} zoom=${scaleInfo.zoom}`);
+
+      if (this.lastHitTarget === "none") {
+        console.log(`[CargoPrepDebug] scene pointerdown no button hit`);
+      }
+
+      this.updateDebugText(pointer);
+    });
+
+    // 排查 overlay 遮挡：列出高 depth 对象
+    this.listHighDepthObjects();
+  }
+
+  /** 更新调试文本内容 */
+  private updateDebugText(pointer?: Phaser.Input.Pointer): void {
+    if (!this.debugText) return;
+    const gs = getGameState();
+    const weight = calculateCargoWeight(gs.cargo);
+    const cargoStr = Object.entries(gs.cargo)
+      .filter(([, v]) => v > 0)
+      .map(([k, v]) => `${k}:${v}`)
+      .join(" ");
+
+    let lines = [
+      `[CargoPrep Debug]`,
+      `hit: ${this.lastHitTarget}`,
+    ];
+    if (pointer) {
+      lines.push(`pointer: (${pointer.x}, ${pointer.y})`);
+      lines.push(`world: (${pointer.worldX}, ${pointer.worldY})`);
+    }
+    lines.push(`cargo: ${cargoStr || "empty"}`);
+    lines.push(`silver: ${gs.silver}`);
+    lines.push(`weight: ${weight}/${gs.maxCargoWeight}`);
+
+    this.debugText.setText(lines.join("\n"));
+  }
+
+  /** 排查高 depth 对象，确认无遮挡 */
+  private listHighDepthObjects(): void {
+    const highDepthObjects: { type: string; depth: number; visible: boolean; active: boolean; x: number; y: number }[] = [];
+    this.children.each((child: any) => {
+      if (child.depth >= 200) {
+        highDepthObjects.push({
+          type: child.type || "unknown",
+          depth: child.depth,
+          visible: child.visible,
+          active: child.active,
+          x: child.x,
+          y: child.y,
+        });
+      }
+    });
+    if (highDepthObjects.length > 0) {
+      console.log(`[CargoPrepDebug] 高 depth 对象 (${highDepthObjects.length}):`);
+      highDepthObjects.forEach((obj) => {
+        console.log(`  depth=${obj.depth} type=${obj.type} visible=${obj.visible} active=${obj.active} pos=(${obj.x}, ${obj.y})`);
+      });
+    }
   }
 
   private createUI(): void {
@@ -228,17 +322,32 @@ export class CargoPrepScene extends Scene {
       minusButton.setDepth(300);
       minusButton.setData("goodId", goodId);
       minusButton.setData("action", "minus");
+
+      // 9.1.7: 命中区域边框（红色 = minus）
+      const minusHitBorder = this.add.rectangle(w - 120, y + cardHeight / 2, 56, 56, 0x000000, 0)
+        .setStrokeStyle(2, 0xff4444)
+        .setDepth(301);
+      this.debugHitBorders.push(minusHitBorder);
+
       // hover 反馈：变亮
       minusButton.on("pointerover", () => {
         minusBg.setFillStyle(0x776655);
-        console.log(`[CargoPrep] hover minus ${goodId}`);
+        this.lastHitTarget = `minus ${goodId}`;
+        console.log(`[CargoPrepDebug] hover minus ${goodId}`);
+        this.updateDebugText();
       });
       minusButton.on("pointerout", () => {
         minusBg.setFillStyle(0x554433);
+        this.lastHitTarget = "none";
+        this.updateDebugText();
       });
       minusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-        console.log(`[CargoPrep] pointerdown minus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`);
+        const logMsg = `[CargoPrepDebug] click minus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`;
+        console.log(logMsg);
+        this.debugClickLog.push(logMsg);
+        this.lastHitTarget = `minus ${goodId}`;
         this.changeCargo(goodId, -1);
+        this.updateDebugText(pointer);
       });
 
       // [+] 按钮：独立 Container，直接添加到 Scene
@@ -254,17 +363,32 @@ export class CargoPrepScene extends Scene {
       plusButton.setDepth(300);
       plusButton.setData("goodId", goodId);
       plusButton.setData("action", "plus");
+
+      // 9.1.7: 命中区域边框（绿色 = plus）
+      const plusHitBorder = this.add.rectangle(w - 60, y + cardHeight / 2, 56, 56, 0x000000, 0)
+        .setStrokeStyle(2, 0x44ff44)
+        .setDepth(301);
+      this.debugHitBorders.push(plusHitBorder);
+
       // hover 反馈：变亮
       plusButton.on("pointerover", () => {
         plusBg.setFillStyle(0xaa7744);
-        console.log(`[CargoPrep] hover plus ${goodId}`);
+        this.lastHitTarget = `plus ${goodId}`;
+        console.log(`[CargoPrepDebug] hover plus ${goodId}`);
+        this.updateDebugText();
       });
       plusButton.on("pointerout", () => {
         plusBg.setFillStyle(0x885533);
+        this.lastHitTarget = "none";
+        this.updateDebugText();
       });
       plusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-        console.log(`[CargoPrep] pointerdown plus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`);
+        const logMsg = `[CargoPrepDebug] click plus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`;
+        console.log(logMsg);
+        this.debugClickLog.push(logMsg);
+        this.lastHitTarget = `plus ${goodId}`;
         this.changeCargo(goodId, 1);
+        this.updateDebugText(pointer);
       });
 
       // Tooltip：绑定到卡片背景上（仅非按钮区域）

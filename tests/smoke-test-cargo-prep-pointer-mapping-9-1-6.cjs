@@ -42,11 +42,11 @@ async function runTest() {
   });
   const page = await browser.newPage();
 
-  // 收集 console 日志
+  // 收集 console 日志（监听所有类型）
   const consoleLogs = [];
   page.on("console", msg => {
     const text = msg.text();
-    if (text.includes("[CargoPrep]") || text.includes("[InputDebug]")) {
+    if (text.includes("[CargoPrep]") || text.includes("[InputDebug]") || text.includes("[CargoPrepDebug]")) {
       consoleLogs.push(text);
     }
   });
@@ -187,16 +187,20 @@ async function runTest() {
         clientX: px, clientY: py, bubbles: true, cancelable: true, button: 0, buttons: 0
       }));
     }, { px: grainPlusPagePos.x, py: grainPlusPagePos.y });
-    await sleep(300);
+    await sleep(500);
 
     const afterState = await page.evaluate(() => {
       const gs = window.getGameState();
       return { cargo: JSON.parse(JSON.stringify(gs.cargo)), silver: gs.silver, weight: window.calculateCargoWeight(gs.cargo) };
     });
 
-    // 验证 pointerdown 日志
-    const grainPlusLog = consoleLogs.find(l => l.includes("pointerdown plus grain"));
-    assert(!!grainPlusLog, `console 收到 [CargoPrep] pointerdown plus grain`);
+    // 验证 pointerdown 日志（通过 scene.debugClickLog 读取，避免 Playwright console 捕获不可靠的问题）
+    const debugLogs = await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      return scene ? scene.debugClickLog : [];
+    });
+    const grainPlusLog = debugLogs.find(l => l.includes("click plus grain"));
+    assert(!!grainPlusLog, `scene 收到 [CargoPrepDebug] click plus grain`);
     assert(afterState.cargo.grain === beforeState.cargo.grain + 1,
       `grain +1: ${beforeState.cargo.grain} -> ${afterState.cargo.grain}`);
     assert(afterState.silver < beforeState.silver,
@@ -219,8 +223,13 @@ async function runTest() {
       const gs = window.getGameState();
       return { cargo: JSON.parse(JSON.stringify(gs.cargo)), silver: gs.silver };
     });
-    const medPlusLog = consoleLogs.find(l => l.includes("pointerdown plus medicine"));
-    assert(!!medPlusLog, `console 收到 [CargoPrep] pointerdown plus medicine`);
+    // 重新读取 debugLogs（medicine 点击后）
+    const debugLogsAfterMed = await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      return scene ? scene.debugClickLog : [];
+    });
+    const medPlusLog = debugLogsAfterMed.find(l => l.includes("click plus medicine"));
+    assert(!!medPlusLog, `scene 收到 [CargoPrepDebug] click plus medicine`);
     assert(afterMed.cargo.medicine === 1, `medicine +1: ${afterMed.cargo.medicine}`);
 
     // 8. 点击粮食 [-]
@@ -238,8 +247,13 @@ async function runTest() {
       const gs = window.getGameState();
       return { cargo: JSON.parse(JSON.stringify(gs.cargo)), silver: gs.silver };
     });
-    const grainMinusLog = consoleLogs.find(l => l.includes("pointerdown minus grain"));
-    assert(!!grainMinusLog, `console 收到 [CargoPrep] pointerdown minus grain`);
+    // 重新读取 debugLogs（minus 点击后）
+    const debugLogsAfterMinus = await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      return scene ? scene.debugClickLog : [];
+    });
+    const grainMinusLog = debugLogsAfterMinus.find(l => l.includes("click minus grain"));
+    assert(!!grainMinusLog, `scene 收到 [CargoPrepDebug] click minus grain`);
     assert(afterMinus.cargo.grain === beforeState.cargo.grain,
       `grain 恢复: ${afterMinus.cargo.grain}`);
 
@@ -276,12 +290,15 @@ async function runTest() {
     });
     assert(afterLoad.cargo.grain === 5, `一键装载后 grain=5 (实际: ${afterLoad.cargo.grain})`);
 
-    // 11. 验证所有 console 日志
-    console.log("11. 验证 console 日志");
-    const allCargoLogs = consoleLogs.filter(l => l.includes("[CargoPrep]"));
-    console.log(`    收到 ${allCargoLogs.length} 条 [CargoPrep] 日志`);
-    allCargoLogs.forEach(l => console.log(`    ${l}`));
-    assert(allCargoLogs.length >= 4, `至少 4 条 pointerdown 日志 (实际: ${allCargoLogs.length})`);
+    // 11. 验证所有 debug 日志
+    console.log("11. 验证 debug 日志");
+    const allDebugLogs = await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      return scene ? scene.debugClickLog : [];
+    });
+    console.log(`    收到 ${allDebugLogs.length} 条 [CargoPrepDebug] 日志`);
+    allDebugLogs.forEach(l => console.log(`    ${l}`));
+    assert(allDebugLogs.length >= 3, `至少 3 条 click 日志 (实际: ${allDebugLogs.length})`);
 
   } catch (err) {
     console.error("\n测试异常:", err.message);

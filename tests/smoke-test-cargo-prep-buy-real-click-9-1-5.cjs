@@ -208,7 +208,7 @@ async function runTest() {
   });
   const page = await browser.newPage();
 
-  // 收集 console 日志
+  // 收集 console 日志（备用）
   const consoleLogs = [];
   page.on("console", msg => {
     const text = msg.text();
@@ -216,6 +216,14 @@ async function runTest() {
       consoleLogs.push(text);
     }
   });
+
+  // 辅助：从 scene.debugClickLog 读取点击日志
+  async function getDebugLogs() {
+    return await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      return scene ? scene.debugClickLog : [];
+    });
+  }
 
   try {
     // 1. 游戏加载
@@ -297,9 +305,10 @@ async function runTest() {
     const displayGrain = await getDisplayCount(page, 0);
     console.log(`    点击后: grain=${afterGrainPlus.cargo.grain || 0}, silver=${afterGrainPlus.silver}, display=${displayGrain}`);
 
-    // 检查 console 是否有 pointerdown 日志
-    const grainPlusLog = consoleLogs.find(l => l.includes("pointerdown plus grain"));
-    assert(!!grainPlusLog, `console 收到 [CargoPrep] pointerdown plus grain`);
+    // 检查 debug 点击日志（9.1.7 改为 [CargoPrepDebug] click 格式）
+    const debugLogs1 = await getDebugLogs();
+    const grainPlusLog = debugLogs1.find(l => l.includes("click plus grain"));
+    assert(!!grainPlusLog, `scene 收到 [CargoPrepDebug] click plus grain`);
     assert((afterGrainPlus.cargo.grain || 0) === (beforeGrain.cargo.grain || 0) + 1,
       `grain +1: ${beforeGrain.cargo.grain || 0} -> ${afterGrainPlus.cargo.grain || 0}`);
     assert(afterGrainPlus.silver < beforeGrain.silver,
@@ -317,8 +326,9 @@ async function runTest() {
     const displayMedicine = await getDisplayCount(page, 1);
     console.log(`    点击后: medicine=${afterMedicine.cargo.medicine || 0}, silver=${afterMedicine.silver}`);
 
-    const medPlusLog = consoleLogs.find(l => l.includes("pointerdown plus medicine"));
-    assert(!!medPlusLog, `console 收到 [CargoPrep] pointerdown plus medicine`);
+    const debugLogs2 = await getDebugLogs();
+    const medPlusLog = debugLogs2.find(l => l.includes("click plus medicine"));
+    assert(!!medPlusLog, `scene 收到 [CargoPrepDebug] click plus medicine`);
     assert((afterMedicine.cargo.medicine || 0) === 1,
       `medicine +1: ${afterMedicine.cargo.medicine || 0}`);
     assert(displayMedicine === 1, `UI 显示药材 x${displayMedicine}`);
@@ -332,8 +342,9 @@ async function runTest() {
     const displayIron = await getDisplayCount(page, 2);
     console.log(`    点击后: iron=${afterIron.cargo.iron || 0}, silver=${afterIron.silver}`);
 
-    const ironPlusLog = consoleLogs.find(l => l.includes("pointerdown plus iron"));
-    assert(!!ironPlusLog, `console 收到 [CargoPrep] pointerdown plus iron`);
+    const debugLogs3 = await getDebugLogs();
+    const ironPlusLog = debugLogs3.find(l => l.includes("click plus iron"));
+    assert(!!ironPlusLog, `scene 收到 [CargoPrepDebug] click plus iron`);
     assert((afterIron.cargo.iron || 0) === 1,
       `iron +1: ${afterIron.cargo.iron || 0}`);
     assert(displayIron === 1, `UI 显示铁器 x${displayIron}`);
@@ -358,8 +369,9 @@ async function runTest() {
     const displayGrainMinus = await getDisplayCount(page, 0);
     console.log(`    点击后: grain=${afterGrainMinus.cargo.grain || 0}, silver=${afterGrainMinus.silver}`);
 
-    const grainMinusLog = consoleLogs.find(l => l.includes("pointerdown minus grain"));
-    assert(!!grainMinusLog, `console 收到 [CargoPrep] pointerdown minus grain`);
+    const debugLogs4 = await getDebugLogs();
+    const grainMinusLog = debugLogs4.find(l => l.includes("click minus grain"));
+    assert(!!grainMinusLog, `scene 收到 [CargoPrepDebug] click minus grain`);
     assert((afterGrainMinus.cargo.grain || 0) === 0,
       `grain -1: ${afterGrainMinus.cargo.grain || 0}`);
     assert(afterGrainMinus.silver > afterIron.silver,
@@ -438,11 +450,12 @@ async function runTest() {
     console.log(`    MapScene cargo: ${JSON.stringify(mapCargo.cargo)}, silver: ${mapCargo.silver}`);
     assert(Object.values(mapCargo.cargo).some(v => v > 0), `MapScene 中 cargo 不为空`);
 
-    // 13. 验证所有 pointerdown 日志
-    console.log("13. 验证 pointerdown 日志");
-    console.log(`    收到 ${consoleLogs.length} 条 [CargoPrep] 日志`);
-    consoleLogs.forEach(l => console.log(`    ${l}`));
-    assert(consoleLogs.length >= 4, `至少 4 条 pointerdown 日志 (实际: ${consoleLogs.length})`);
+    // 13. 验证所有 debug 日志
+    console.log("13. 验证 debug 日志");
+    const allDebugLogs = await getDebugLogs();
+    console.log(`    收到 ${allDebugLogs.length} 条 [CargoPrepDebug] 日志`);
+    allDebugLogs.forEach(l => console.log(`    ${l}`));
+    assert(allDebugLogs.length >= 4, `至少 4 条 click 日志 (实际: ${allDebugLogs.length})`);
 
   } catch (err) {
     console.error("\n测试异常:", err.message);
