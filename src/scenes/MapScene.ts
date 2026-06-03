@@ -29,7 +29,7 @@ import {
 import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
-import { createSuccessExpeditionResult } from "../systems/expeditionResultSystem";
+import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "../systems/expeditionResultSystem";
 import { getLegacyRelicById } from "../data/legacyRelics";
 
 /**
@@ -277,6 +277,9 @@ export class MapScene extends Phaser.Scene {
         if (this.tooltipManager) this.tooltipManager.hide();
       });
     }
+
+    // 撤退按钮（阶段8.9）
+    this.createRetreatButton();
 
     // 如果是从战斗返回的自动移动测试，继续执行
     const gs = getGameState();
@@ -3736,5 +3739,48 @@ export class MapScene extends Phaser.Scene {
       `选择要删除的卡牌：\n\n${cardLines}`,
       options,
     );
+  }
+
+  /**
+   * 创建撤退按钮（阶段8.9）
+   */
+  private createRetreatButton(): void {
+    const btnX = 10;
+    const btnY = this.scale.height - 50;
+    const btnW = 80;
+    const btnH = 36;
+
+    const bg = this.add.rectangle(btnX + btnW / 2, btnY, btnW, btnH, 0x2a1a1a, 0.9)
+      .setStrokeStyle(2, 0x8a4a4a)
+      .setInteractive({ useHandCursor: true })
+      .setDepth(200);
+
+    const text = this.add.text(btnX + btnW / 2, btnY, "撤退", {
+      fontSize: "14px",
+      color: "#d8a8a8",
+      fontFamily: "sans-serif",
+    }).setOrigin(0.5).setDepth(201);
+
+    bg.on("pointerover", () => bg.setFillStyle(0x4a2a2a));
+    bg.on("pointerout", () => bg.setFillStyle(0x2a1a1a));
+    bg.on("pointerdown", () => this.handleRetreat());
+  }
+
+  /**
+   * 处理撤退（阶段8.9）
+   */
+  private handleRetreat(): void {
+    const gs = getGameState();
+    const result = createRetreatedExpeditionResult({
+      cargo: gs.cargo,
+      selectedOrderId: gs.selectedOrderId,
+    });
+
+    gs.lastExpeditionResult = result;
+    gs.embers += result.embersGained;
+    setGameState(gs);
+
+    console.log(`[MapScene] 撤退: 火种+${result.embersGained}`);
+    this.scene.start("ExpeditionResultScene");
   }
 }

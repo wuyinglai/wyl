@@ -106,9 +106,13 @@ import {
 import {
   createSuccessExpeditionResult,
   formatExpeditionResult,
+  createRetreatedExpeditionResult,
+  createFailedExpeditionResult,
 } from "./systems/expeditionResultSystem";
 (window as any).createSuccessExpeditionResult = createSuccessExpeditionResult;
 (window as any).formatExpeditionResult = formatExpeditionResult;
+(window as any).createRetreatedExpeditionResult = createRetreatedExpeditionResult;
+(window as any).createFailedExpeditionResult = createFailedExpeditionResult;
 
 // 失败遗产系统（阶段8.8）
 import {

@@ -5,9 +5,10 @@ import { generateFailureLegacyChoices } from "../systems/legacySystem";
 
 /**
  * ExpeditionResultScene.ts
- * 远征结算界面（阶段8.7）
+ * 远征结算界面（阶段8.7，阶段8.9 扩展）
  *
  * 显示远征结果：订单、奖励、城市贡献、城市状态等
+ * 失败/撤退时可进入遗产选择
  */
 export class ExpeditionResultScene extends Phaser.Scene {
   constructor() {
@@ -35,10 +36,21 @@ export class ExpeditionResultScene extends Phaser.Scene {
 
     if (result) {
       // 结果类型
-      const resultLabel = result.resultType === "success" ? "远征成功" : "远征结束";
+      let resultLabel: string;
+      let resultColor: string;
+      if (result.resultType === "success") {
+        resultLabel = "远征成功";
+        resultColor = "#a8d8a8";
+      } else if (result.resultType === "retreated") {
+        resultLabel = "远征撤退";
+        resultColor = "#d8d8a8";
+      } else {
+        resultLabel = "远征失败";
+        resultColor = "#d8a8a8";
+      }
       this.add.text(w / 2, currentY, resultLabel, {
         fontSize: "22px",
-        color: result.resultType === "success" ? "#a8d8a8" : "#d8a8a8",
+        color: resultColor,
         fontFamily: "sans-serif",
       }).setOrigin(0.5).setDepth(1);
       currentY += 40;
@@ -68,18 +80,39 @@ export class ExpeditionResultScene extends Phaser.Scene {
     }
 
     // 按钮区域
+    const isFailureOrRetreat = result &&
+      (result.resultType === "failed" || result.resultType === "retreated");
+
     const btnY = Math.min(currentY + 30, h - 80);
     const btnGap = 160;
 
-    // 返回主菜单按钮
-    this.createButton(w / 2 - btnGap / 2, btnY, "返回主菜单", () => {
-      this.scene.start("MainMenuScene");
-    });
+    if (isFailureOrRetreat) {
+      // 失败/撤退：显示"选择遗产"和"返回主菜单"
+      this.createButton(w / 2 - btnGap / 2, btnY, "选择遗产", () => {
+        this.goToLegacySelect();
+      });
+      this.createButton(w / 2 + btnGap / 2, btnY, "返回主菜单", () => {
+        this.scene.start("MainMenuScene");
+      });
+    } else {
+      // 成功/无数据：显示"返回主菜单"和"再来一局"
+      this.createButton(w / 2 - btnGap / 2, btnY, "返回主菜单", () => {
+        this.scene.start("MainMenuScene");
+      });
+      this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
+        this.scene.start("RouteSelectScene");
+      });
+    }
+  }
 
-    // 再来一局按钮
-    this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
-      this.scene.start("RouteSelectScene");
-    });
+  /**
+   * 进入遗产选择界面
+   */
+  private goToLegacySelect(): void {
+    const gs = getGameState();
+    gs.legacyChoices = generateFailureLegacyChoices();
+    setGameState(gs);
+    this.scene.start("LegacySelectScene");
   }
 
   /**
@@ -87,10 +120,7 @@ export class ExpeditionResultScene extends Phaser.Scene {
    * 仅用于测试/开发
    */
   startLegacySelectionForTest(): void {
-    const gs = getGameState();
-    gs.legacyChoices = generateFailureLegacyChoices();
-    setGameState(gs);
-    this.scene.start("LegacySelectScene");
+    this.goToLegacySelect();
   }
 
   private createButton(
