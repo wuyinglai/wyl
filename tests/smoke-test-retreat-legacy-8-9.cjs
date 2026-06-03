@@ -245,10 +245,12 @@ function sleep(ms) {
       texts,
       hasRetreated: texts.some(t => t.includes("远征撤退")),
       hasEmbers: texts.some(t => t.includes("火种")),
+      hasSuccess: texts.some(t => t.includes("远征成功")),
     };
   });
   assert(ersTexts.hasRetreated, `显示"远征撤退"`);
   assert(ersTexts.hasEmbers, `显示火种信息`);
+  assert(!ersTexts.hasSuccess, `撤退后不显示"远征成功"`);
 
   // 截图
   await page.screenshot({ path: path.join(ARTIFACT_DIR, "retreat-result.png") });

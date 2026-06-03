@@ -388,34 +388,33 @@ async function runTest() {
       // 模拟 pointerover
       card.emit("pointerover");
       // 检查 Tooltip 是否出现
+      // TooltipManager 在容器层面设 depth=500，内部 Text 的 depth 为默认值
       const children = bs.children.list || [];
       let tooltipFound = false;
       let tooltipText = "";
       for (const child of children) {
-        if (child.type === "Container") {
+        if (child.type === "Container" && child.depth >= 500) {
           const cList = child.list || [];
           for (const c of cList) {
-            if (c.type === "Text" && c.depth >= 500) {
+            if (c.type === "Text") {
               tooltipFound = true;
               tooltipText = c.text || "";
+              break;
             }
           }
+          if (tooltipFound) break;
         }
       }
 
       // 模拟 pointerout
       card.emit("pointerout");
 
-      // 检查 Tooltip 是否消失
+      // 检查 Tooltip 是否消失（容器已被 destroy）
       let tooltipHidden = true;
       for (const child of bs.children.list || []) {
-        if (child.type === "Container") {
-          const cList = child.list || [];
-          for (const c of cList) {
-            if (c.type === "Text" && c.depth >= 500) {
-              tooltipHidden = false;
-            }
-          }
+        if (child.type === "Container" && child.depth >= 500) {
+          tooltipHidden = false;
+          break;
         }
       }
 
@@ -457,20 +456,22 @@ async function runTest() {
       // 模拟 pointerover
       hitArea.emit("pointerover");
 
-      // 检查 Tooltip
+      // 检查 Tooltip（容器 depth >= 500，内部 Text depth 为默认值）
       let tooltipFound = false;
       let tooltipText = "";
       const w = window.game.scale.width;
       const h = window.game.scale.height;
       for (const child of bs.children.list || []) {
-        if (child.type === "Container") {
+        if (child.type === "Container" && child.depth >= 500) {
           const cList = child.list || [];
           for (const c of cList) {
-            if (c.type === "Text" && c.depth >= 500) {
+            if (c.type === "Text") {
               tooltipFound = true;
               tooltipText = c.text || "";
+              break;
             }
           }
+          if (tooltipFound) break;
         }
       }
 
