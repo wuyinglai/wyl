@@ -181,7 +181,7 @@ export class CargoPrepScene extends Scene {
 
       const y = startY + index * (cardHeight + gap);
 
-      // 卡片背景
+      // 卡片背景（仅视觉，不设 interactive）
       const bg = this.add
         .rectangle(w / 2, y + cardHeight / 2, w - 40, cardHeight, 0x2a1a0e)
         .setStrokeStyle(1, 0x554433);
@@ -213,48 +213,47 @@ export class CargoPrepScene extends Scene {
         })
         .setOrigin(0.5);
 
-      // [-] 按钮（depth 必须高于 hitArea Zone 的 depth(100)，否则鼠标点击被 Zone 拦截）
-      const minusBtn = this.add
-        .rectangle(w - 120, y + cardHeight / 2, 40, 40, 0x554433)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(200);
-      const minusText = this.add
-        .text(w - 120, y + cardHeight / 2, "-", {
-          fontSize: "20px",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5)
-        .setDepth(201);
-
-      // [+] 按钮（depth 必须高于 hitArea Zone 的 depth(100)）
-      const plusBtn = this.add
-        .rectangle(w - 60, y + cardHeight / 2, 40, 40, 0x885533)
-        .setInteractive({ useHandCursor: true })
-        .setDepth(200);
-      const plusText = this.add
-        .text(w - 60, y + cardHeight / 2, "+", {
-          fontSize: "20px",
-          color: "#ffffff",
-        })
-        .setOrigin(0.5)
-        .setDepth(201);
-
-      // 按钮事件
-      minusBtn.on("pointerdown", () => {
+      // [-] 按钮：独立 Container，直接添加到 Scene（不在 cardContainer 内）
+      // 这样按钮不受 cardContainer 内部 list 顺序和 depth 限制影响
+      const minusButton = this.add.container(w - 120, y + cardHeight / 2);
+      const minusBg = this.add.rectangle(0, 0, 44, 44, 0x554433);
+      const minusLabel = this.add.text(0, 0, "-", {
+        fontSize: "20px",
+        color: "#ffffff",
+      }).setOrigin(0.5);
+      minusButton.add([minusBg, minusLabel]);
+      minusButton.setSize(44, 44);
+      minusButton.setInteractive({ useHandCursor: true });
+      minusButton.setDepth(300);
+      minusButton.setData("goodId", goodId);
+      minusButton.setData("action", "minus");
+      minusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+        console.log(`[CargoPrep] pointerdown minus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`);
         this.changeCargo(goodId, -1);
       });
 
-      plusBtn.on("pointerdown", () => {
+      // [+] 按钮：独立 Container，直接添加到 Scene
+      const plusButton = this.add.container(w - 60, y + cardHeight / 2);
+      const plusBg = this.add.rectangle(0, 0, 44, 44, 0x885533);
+      const plusLabel = this.add.text(0, 0, "+", {
+        fontSize: "20px",
+        color: "#ffffff",
+      }).setOrigin(0.5);
+      plusButton.add([plusBg, plusLabel]);
+      plusButton.setSize(44, 44);
+      plusButton.setInteractive({ useHandCursor: true });
+      plusButton.setDepth(300);
+      plusButton.setData("goodId", goodId);
+      plusButton.setData("action", "plus");
+      plusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
+        console.log(`[CargoPrep] pointerdown plus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`);
         this.changeCargo(goodId, 1);
       });
 
-      // Tooltip
-      const hitArea = this.add
-        .zone(w / 2, y + cardHeight / 2, w - 40, cardHeight)
-        .setDepth(100)
-        .setInteractive();
-
-      hitArea.on("pointerover", () => {
+      // Tooltip：绑定到卡片背景上（仅非按钮区域）
+      // 使用 nameText 作为 tooltip 触发区域，避免遮挡按钮
+      nameText.setInteractive();
+      nameText.on("pointerover", () => {
         if (this.tooltipManager) {
           this.tooltipManager.show(
             {
@@ -272,25 +271,15 @@ export class CargoPrepScene extends Scene {
         }
       });
 
-      hitArea.on("pointerout", () => {
+      nameText.on("pointerout", () => {
         if (this.tooltipManager) {
           this.tooltipManager.hide();
         }
       });
 
-      // 保存引用以便更新
+      // 保存引用以便更新（只保存视觉元素到 cardContainer）
       const cardContainer = this.add.container(0, 0);
-      cardContainer.add([
-        bg,
-        nameText,
-        infoText,
-        countText,
-        minusBtn,
-        minusText,
-        plusBtn,
-        plusText,
-        hitArea,
-      ]);
+      cardContainer.add([bg, nameText, infoText, countText]);
       this.goodCards.push(cardContainer);
 
       // 保存 countText 引用
@@ -304,56 +293,42 @@ export class CargoPrepScene extends Scene {
     const h = this.scale.height;
     const btnY = h - 50;
 
-    // 一键装载
-    const loadBtn = this.add
-      .rectangle(80, btnY, 140, 40, 0x4a7c59)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(80, btnY, "一键装载订单", {
-      fontSize: "14px",
-      color: "#ffffff",
-    }).setOrigin(0.5);
+    // 辅助函数：创建按钮 Container（bg + label 合为一体，避免 Text 拦截点击）
+    const makeButton = (
+      x: number, y: number, bw: number, bh: number, color: number,
+      label: string, fontSize: string, fontColor: string, handler: () => void,
+    ): Phaser.GameObjects.Container => {
+      const btn = this.add.container(x, y);
+      const bg = this.add.rectangle(0, 0, bw, bh, color);
+      const txt = this.add.text(0, 0, label, {
+        fontSize,
+        color: fontColor,
+        fontStyle: label === "开始远征" ? "bold" : undefined,
+      }).setOrigin(0.5);
+      btn.add([bg, txt]);
+      btn.setSize(bw, bh);
+      btn.setInteractive({ useHandCursor: true });
+      btn.on("pointerdown", handler);
+      return btn;
+    };
 
-    loadBtn.on("pointerdown", () => {
+    // 一键装载
+    makeButton(80, btnY, 140, 40, 0x4a7c59, "一键装载订单", "14px", "#ffffff", () => {
       this.loadOrderRequirements();
     });
 
     // 清空
-    const clearBtn = this.add
-      .rectangle(230, btnY, 80, 40, 0x7c4a4a)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(230, btnY, "清空", {
-      fontSize: "14px",
-      color: "#ffffff",
-    }).setOrigin(0.5);
-
-    clearBtn.on("pointerdown", () => {
+    makeButton(230, btnY, 80, 40, 0x7c4a4a, "清空", "14px", "#ffffff", () => {
       this.clearCargo();
     });
 
     // 开始远征
-    const startBtn = this.add
-      .rectangle(w - 100, btnY, 140, 40, 0x885533)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(w - 100, btnY, "开始远征", {
-      fontSize: "16px",
-      color: "#ffffff",
-      fontStyle: "bold",
-    }).setOrigin(0.5);
-
-    startBtn.on("pointerdown", () => {
+    makeButton(w - 100, btnY, 140, 40, 0x885533, "开始远征", "16px", "#ffffff", () => {
       this.startExpedition();
     });
 
     // 返回
-    const backBtn = this.add
-      .rectangle(w - 260, btnY, 100, 40, 0x555555)
-      .setInteractive({ useHandCursor: true });
-    this.add.text(w - 260, btnY, "返回", {
-      fontSize: "14px",
-      color: "#aaaaaa",
-    }).setOrigin(0.5);
-
-    backBtn.on("pointerdown", () => {
+    makeButton(w - 260, btnY, 100, 40, 0x555555, "返回", "14px", "#aaaaaa", () => {
       this.scene.start("CharacterSelectScene");
     });
   }
