@@ -56,22 +56,48 @@ export class CharacterSelectScene extends Phaser.Scene {
       "scout",
       "inspirer",
     ];
-    const maxCardWidth = 200;
-    const maxCardHeight = 280;
+    const maxCardWidth = 180;
+    const maxCardHeight = 260;
     const cardGap = 15;
-    // 自适应：卡片宽度和高度根据屏幕调整
+    const minCardWidth = 120;
+
+    // 判断是否使用两行布局（屏幕宽度不足时）
     const availableWidth = w - 40;
-    const cardWidth = Math.min(maxCardWidth, (availableWidth - (allChars.length - 1) * cardGap) / allChars.length);
-    const cardHeight = Math.min(maxCardHeight, h - 160); // 留出标题和按钮空间
-    const startX =
-      Math.max(cardWidth / 2 + 10,
-        (w - allChars.length * cardWidth - (allChars.length - 1) * cardGap) / 2 + cardWidth / 2);
+    const singleRowCardWidth = (availableWidth - (allChars.length - 1) * cardGap) / allChars.length;
+    const useTwoRows = singleRowCardWidth < minCardWidth;
+
+    let cardWidth: number;
+    let cardHeight: number;
+    let cardsPerRow: number;
+    let rowGap: number;
+
+    if (useTwoRows) {
+      // 两行布局：3+2
+      cardsPerRow = 3;
+      cardWidth = Math.min(maxCardWidth, (availableWidth - (cardsPerRow - 1) * cardGap) / cardsPerRow);
+      rowGap = 20;
+      cardHeight = Math.min(maxCardHeight, (h - 180 - rowGap) / 2);
+    } else {
+      // 单行布局
+      cardsPerRow = 5;
+      cardWidth = Math.min(maxCardWidth, singleRowCardWidth);
+      rowGap = 0;
+      cardHeight = Math.min(maxCardHeight, h - 160);
+    }
+
+    const startX = (w - Math.min(cardsPerRow, allChars.length) * cardWidth - (Math.min(cardsPerRow, allChars.length) - 1) * cardGap) / 2 + cardWidth / 2;
+    const firstRowY = useTwoRows ? h / 2 - cardHeight / 2 - rowGap / 2 : Math.min(h / 2, h - cardHeight / 2 - 70);
+    const secondRowY = useTwoRows ? h / 2 + cardHeight / 2 + rowGap / 2 : firstRowY;
 
     for (let i = 0; i < allChars.length; i++) {
       const charId = allChars[i];
       const charDef = CHARACTER_DEFS[charId];
-      const x = startX + i * (cardWidth + cardGap);
-      const y = Math.min(h / 2, h - cardHeight / 2 - 70); // 不低于按钮上方70px
+
+      const row = useTwoRows && i >= 3 ? 1 : 0;
+      const col = useTwoRows ? (row === 0 ? i : i - 3) : i;
+      const rowCards = row === 0 ? Math.min(3, allChars.length) : allChars.length - 3;
+      const x = (w - rowCards * cardWidth - (rowCards - 1) * cardGap) / 2 + cardWidth / 2 + col * (cardWidth + cardGap);
+      const y = row === 0 ? firstRowY : secondRowY;
 
       const card = this.createCharacterCard(
         x,
@@ -165,37 +191,46 @@ export class CharacterSelectScene extends Phaser.Scene {
       .setOrigin(0.5);
     container.add(name);
 
-    // 定位
+    // 定位：小卡片缩小字体避免重叠
+    const roleFontSize = width < 140 ? "11px" : "14px";
     const role = this.add
       .text(0, -height / 2 + 120, charDef.role, {
-        fontSize: "14px",
+        fontSize: roleFontSize,
         color: "#aaaaaa",
         fontFamily: "monospace",
+        wordWrap: { width: width - 10 },
+        align: "center",
       })
       .setOrigin(0.5);
     container.add(role);
 
     // 生命值
+    const hpText = width < 140 ? `${charDef.maxHp}HP` : `❤️ ${charDef.maxHp} HP`;
+    const hpFontSize = width < 140 ? "12px" : "16px";
     const hp = this.add
-      .text(0, -height / 2 + 155, `❤️ ${charDef.maxHp} HP`, {
-        fontSize: "16px",
+      .text(0, -height / 2 + 155, hpText, {
+        fontSize: hpFontSize,
         color: "#ff6666",
         fontFamily: "monospace",
       })
       .setOrigin(0.5);
     container.add(hp);
 
-    // 被动说明（自动换行）
-    const passive = this.add
-      .text(0, 20, charDef.passiveDesc, {
-        fontSize: "13px",
-        color: "#cccccc",
-        fontFamily: "monospace",
-        align: "center",
-        wordWrap: { width: width - 20 },
-      })
-      .setOrigin(0.5);
-    container.add(passive);
+    // 被动说明：小卡片隐藏被动说明，避免文字重叠；大卡片显示
+    const showPassive = width >= 140;
+    if (showPassive) {
+      const passiveY = Math.min(20, height / 2 - 40);
+      const passive = this.add
+        .text(0, passiveY, charDef.passiveDesc, {
+          fontSize: "12px",
+          color: "#cccccc",
+          fontFamily: "monospace",
+          align: "center",
+          wordWrap: { width: width - 16 },
+        })
+        .setOrigin(0.5);
+      container.add(passive);
+    }
 
     // 点击区域
     const hitArea = this.add

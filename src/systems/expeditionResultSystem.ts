@@ -180,8 +180,9 @@ export function formatExpeditionResult(result: ExpeditionResult): string[] {
     lines.push(`城市状态：${result.finalCityStatus}`);
   }
 
-  const hasRemaining = Object.values(result.remainingCargo).some(v => v > 0);
-  lines.push(`剩余货物：${hasRemaining ? Object.entries(result.remainingCargo).filter(([_, v]) => v > 0).map(([k, v]) => `${k} x${v}`).join(", ") : "无"}`);
+  const remainingCargo = result.remainingCargo || {};
+  const hasRemaining = Object.values(remainingCargo).some(v => v > 0);
+  lines.push(`剩余货物：${hasRemaining ? Object.entries(remainingCargo).filter(([_, v]) => v > 0).map(([k, v]) => `${k} x${v}`).join(", ") : "无"}`);
 
   return lines;
 }
