@@ -337,6 +337,8 @@ function sleep(ms) {
   assert(sceneCheck.ok, "ExpeditionResultScene 场景存在");
   assert(sceneCheck.hasSuccess, `显示"远征成功"`);
   assert(sceneCheck.hasOrderTitle, `显示"订单完成"`);
+  assert(!sceneCheck.texts.some(t => t.includes("未完成订单")), `成功结算不显示"未完成订单"`);
+  assert(!sceneCheck.texts.some(t => t.includes("选择遗产")), `成功结算不显示"选择遗产"`);
   assert(sceneCheck.hasSilver, `显示银币信息`);
   assert(sceneCheck.hasEmbers, `显示火种信息`);
   assert(sceneCheck.hasCityStatus, `显示"城市状态"`);

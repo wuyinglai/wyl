@@ -5,7 +5,7 @@
  * 提供纯函数生成远征结算结果
  */
 
-import { CityOrder } from "../data/cityOrders";
+import { CityOrder, CITY_ORDERS } from "../data/cityOrders";
 import { getCityStatusLabel, formatCityProgress } from "./cityProgressSystem";
 
 export type ExpeditionResultType = "success" | "failed" | "retreated";
@@ -94,8 +94,18 @@ export function createRetreatedExpeditionResult(
   const remainingCargo = gameState.cargo || {};
   const hasRemaining = Object.values(remainingCargo).some(v => v > 0);
 
+  // 获取订单标题
+  let orderTitle: string | undefined;
+  if (gameState.selectedOrderId) {
+    const order = CITY_ORDERS.find(o => o.id === gameState.selectedOrderId);
+    if (order) orderTitle = order.title;
+  }
+
   const summaryLines: string[] = [];
   summaryLines.push("远征撤退");
+  if (orderTitle) {
+    summaryLines.push(`未完成订单：${orderTitle}`);
+  }
   summaryLines.push("商队保住了余火");
   summaryLines.push("获得火种：+1");
   summaryLines.push("可选择一项失败遗产");
@@ -104,6 +114,7 @@ export function createRetreatedExpeditionResult(
   return {
     resultType: "retreated",
     orderId: gameState.selectedOrderId,
+    orderTitle,
     silverGained: 0,
     embersGained: 1,
     cityContributionGained: 0,
@@ -125,8 +136,18 @@ export function createFailedExpeditionResult(
   const remainingCargo = gameState.cargo || {};
   const hasRemaining = Object.values(remainingCargo).some(v => v > 0);
 
+  // 获取订单标题
+  let orderTitle: string | undefined;
+  if (gameState.selectedOrderId) {
+    const order = CITY_ORDERS.find(o => o.id === gameState.selectedOrderId);
+    if (order) orderTitle = order.title;
+  }
+
   const summaryLines: string[] = [];
   summaryLines.push("远征失败");
+  if (orderTitle) {
+    summaryLines.push(`未完成订单：${orderTitle}`);
+  }
   summaryLines.push("商队未能抵达目标");
   summaryLines.push("获得火种：+1");
   summaryLines.push("可选择一项失败遗产");
@@ -135,6 +156,7 @@ export function createFailedExpeditionResult(
   return {
     resultType: "failed",
     orderId: gameState.selectedOrderId,
+    orderTitle,
     silverGained: 0,
     embersGained: 1,
     cityContributionGained: 0,
@@ -160,7 +182,11 @@ export function formatExpeditionResult(result: ExpeditionResult): string[] {
   lines.push("");
 
   if (result.orderTitle) {
-    lines.push(`订单完成：${result.orderTitle}`);
+    if (result.resultType === "success") {
+      lines.push(`订单完成：${result.orderTitle}`);
+    } else {
+      lines.push(`未完成订单：${result.orderTitle}`);
+    }
   }
   if (result.cityName) {
     lines.push(`目标城市：${result.cityName}`);

@@ -251,6 +251,8 @@ function sleep(ms) {
   assert(ersTexts.hasRetreated, `显示"远征撤退"`);
   assert(ersTexts.hasEmbers, `显示火种信息`);
   assert(!ersTexts.hasSuccess, `撤退后不显示"远征成功"`);
+  assert(!ersTexts.texts.some(t => t.includes("订单完成")), `撤退结算不显示"订单完成"`);
+  assert(ersTexts.texts.some(t => t.includes("未完成订单")), `撤退结算显示"未完成订单"`);
 
   // 截图
   await page.screenshot({ path: path.join(ARTIFACT_DIR, "retreat-result.png") });
