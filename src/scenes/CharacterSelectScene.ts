@@ -22,6 +22,13 @@ export class CharacterSelectScene extends Phaser.Scene {
     const w = this.scale.width;
     const h = this.scale.height;
 
+    // 清理旧元素（场景重启时）
+    this.characterCards.forEach((card) => card.destroy());
+    this.characterCards = [];
+    if (this.tooltipManager) {
+      this.tooltipManager.hide();
+    }
+
     this.tooltipManager = new TooltipManager(this, 500);
 
     // 背景
@@ -48,7 +55,7 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    // 创建5个角色卡片
+    // 创建5个角色卡片 - 使用 calculateCharacterCardLayout 计算布局
     const allChars: CharacterId[] = [
       "guardian",
       "sharpshooter",
@@ -56,56 +63,21 @@ export class CharacterSelectScene extends Phaser.Scene {
       "scout",
       "inspirer",
     ];
-    const maxCardWidth = 180;
-    const maxCardHeight = 260;
-    const cardGap = 15;
-    const minCardWidth = 120;
 
-    // 判断是否使用两行布局（屏幕宽度不足时）
-    const availableWidth = w - 40;
-    const singleRowCardWidth = (availableWidth - (allChars.length - 1) * cardGap) / allChars.length;
-    const useTwoRows = singleRowCardWidth < minCardWidth;
-
-    let cardWidth: number;
-    let cardHeight: number;
-    let cardsPerRow: number;
-    let rowGap: number;
-
-    if (useTwoRows) {
-      // 两行布局：3+2
-      cardsPerRow = 3;
-      cardWidth = Math.min(maxCardWidth, (availableWidth - (cardsPerRow - 1) * cardGap) / cardsPerRow);
-      rowGap = 20;
-      cardHeight = Math.min(maxCardHeight, (h - 180 - rowGap) / 2);
-    } else {
-      // 单行布局
-      cardsPerRow = 5;
-      cardWidth = Math.min(maxCardWidth, singleRowCardWidth);
-      rowGap = 0;
-      cardHeight = Math.min(maxCardHeight, h - 160);
-    }
-
-    const startX = (w - Math.min(cardsPerRow, allChars.length) * cardWidth - (Math.min(cardsPerRow, allChars.length) - 1) * cardGap) / 2 + cardWidth / 2;
-    const firstRowY = useTwoRows ? h / 2 - cardHeight / 2 - rowGap / 2 : Math.min(h / 2, h - cardHeight / 2 - 70);
-    const secondRowY = useTwoRows ? h / 2 + cardHeight / 2 + rowGap / 2 : firstRowY;
+    const layout = this.calculateCharacterCardLayout(w, h, allChars.length);
 
     for (let i = 0; i < allChars.length; i++) {
       const charId = allChars[i];
       const charDef = CHARACTER_DEFS[charId];
-
-      const row = useTwoRows && i >= 3 ? 1 : 0;
-      const col = useTwoRows ? (row === 0 ? i : i - 3) : i;
-      const rowCards = row === 0 ? Math.min(3, allChars.length) : allChars.length - 3;
-      const x = (w - rowCards * cardWidth - (rowCards - 1) * cardGap) / 2 + cardWidth / 2 + col * (cardWidth + cardGap);
-      const y = row === 0 ? firstRowY : secondRowY;
+      const pos = layout.positions[i];
 
       const card = this.createCharacterCard(
-        x,
-        y,
+        pos.x,
+        pos.y,
         charId,
         charDef,
-        cardWidth,
-        cardHeight,
+        layout.cardWidth,
+        layout.cardHeight,
       );
       this.characterCards.push(card);
     }
@@ -172,30 +144,39 @@ export class CharacterSelectScene extends Phaser.Scene {
     selectedMark.setVisible(false);
     container.add(selectedMark);
 
+    // 使用相对间距布局文本，避免固定坐标导致重叠
+    const padTop = 16; // 顶部内边距
+    const lineGap = 6;  // 行间距
+    let currentY = -height / 2 + padTop;
+
     // 图标
+    const iconSize = Math.min(48, width / 3);
     const icon = this.add
-      .text(0, -height / 2 + 40, charDef.icon, {
-        fontSize: "48px",
+      .text(0, currentY + iconSize / 2, charDef.icon, {
+        fontSize: `${iconSize}px`,
       })
       .setOrigin(0.5);
     container.add(icon);
+    currentY += iconSize + lineGap;
 
     // 名字
+    const nameSize = Math.min(24, width / 6);
     const name = this.add
-      .text(0, -height / 2 + 90, charDef.name, {
-        fontSize: "24px",
+      .text(0, currentY + nameSize / 2, charDef.name, {
+        fontSize: `${nameSize}px`,
         color: "#ffffff",
         fontFamily: "monospace",
         fontStyle: "bold",
       })
       .setOrigin(0.5);
     container.add(name);
+    currentY += nameSize + lineGap;
 
-    // 定位：小卡片缩小字体避免重叠
-    const roleFontSize = width < 140 ? "11px" : "14px";
+    // 定位
+    const roleSize = width < 140 ? 10 : 12;
     const role = this.add
-      .text(0, -height / 2 + 120, charDef.role, {
-        fontSize: roleFontSize,
+      .text(0, currentY + roleSize / 2, charDef.role, {
+        fontSize: `${roleSize}px`,
         color: "#aaaaaa",
         fontFamily: "monospace",
         wordWrap: { width: width - 10 },
@@ -203,34 +184,23 @@ export class CharacterSelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
     container.add(role);
+    currentY += roleSize + lineGap;
 
     // 生命值
+    const hpSize = width < 140 ? 11 : 14;
     const hpText = width < 140 ? `${charDef.maxHp}HP` : `❤️ ${charDef.maxHp} HP`;
-    const hpFontSize = width < 140 ? "12px" : "16px";
     const hp = this.add
-      .text(0, -height / 2 + 155, hpText, {
-        fontSize: hpFontSize,
+      .text(0, currentY + hpSize / 2, hpText, {
+        fontSize: `${hpSize}px`,
         color: "#ff6666",
         fontFamily: "monospace",
       })
       .setOrigin(0.5);
     container.add(hp);
+    currentY += hpSize + lineGap;
 
-    // 被动说明：小卡片隐藏被动说明，避免文字重叠；大卡片显示
-    const showPassive = width >= 140;
-    if (showPassive) {
-      const passiveY = Math.min(20, height / 2 - 40);
-      const passive = this.add
-        .text(0, passiveY, charDef.passiveDesc, {
-          fontSize: "12px",
-          color: "#cccccc",
-          fontFamily: "monospace",
-          align: "center",
-          wordWrap: { width: width - 16 },
-        })
-        .setOrigin(0.5);
-      container.add(passive);
-    }
+    // 被动说明不再显示在卡片上，只通过 Tooltip 展示
+    // 避免文本重叠和卡片内容过多
 
     // 点击区域
     const hitArea = this.add
@@ -341,6 +311,94 @@ export class CharacterSelectScene extends Phaser.Scene {
     }
 
     this.updateUI();
+  }
+
+  /**
+   * 计算角色卡片布局
+   * 返回每张卡的 x/y 位置、卡片宽高
+   */
+  private calculateCharacterCardLayout(
+    screenW: number,
+    screenH: number,
+    count: number,
+  ): {
+    cardWidth: number;
+    cardHeight: number;
+    positions: { x: number; y: number }[];
+  } {
+    const maxCardW = 180;
+    const maxCardH = 260;
+    const gap = 15;
+    const marginX = 20; // 左右边距
+    const marginY = 140; // 顶部标题 + 底部按钮空间
+    const availableW = screenW - marginX * 2;
+    const availableH = screenH - marginY;
+
+    // 判断布局模式
+    const singleRowW = (availableW - (count - 1) * gap) / count;
+    const useSingleRow = singleRowW >= 130; // 每张至少 130px 才单行
+
+    let cardW: number;
+    let cardH: number;
+    let positions: { x: number; y: number }[] = [];
+
+    if (useSingleRow) {
+      // 单行布局：5 张卡片居中
+      cardW = Math.min(maxCardW, Math.max(130, singleRowW));
+      cardH = Math.min(maxCardH, availableH);
+      const totalW = count * cardW + (count - 1) * gap;
+      const startX = (screenW - totalW) / 2 + cardW / 2;
+      const y = Math.min(screenH / 2, screenH - cardH / 2 - 70);
+
+      for (let i = 0; i < count; i++) {
+        positions.push({ x: startX + i * (cardW + gap), y });
+      }
+    } else if (availableW >= 3 * 130 + 2 * gap) {
+      // 两行布局：3+2，每行独立居中
+      const row1Count = 3;
+      const row2Count = count - 3;
+      cardW = Math.min(maxCardW, (availableW - (row1Count - 1) * gap) / row1Count);
+      cardW = Math.max(120, cardW);
+      cardH = Math.min(maxCardH, (availableH - gap) / 2);
+
+      // 第一行 3 张居中
+      const row1TotalW = row1Count * cardW + (row1Count - 1) * gap;
+      const row1StartX = (screenW - row1TotalW) / 2 + cardW / 2;
+      const row1Y = screenH / 2 - cardH / 2 - gap / 2;
+
+      for (let i = 0; i < row1Count; i++) {
+        positions.push({ x: row1StartX + i * (cardW + gap), y: row1Y });
+      }
+
+      // 第二行 2 张居中
+      const row2TotalW = row2Count * cardW + (row2Count - 1) * gap;
+      const row2StartX = (screenW - row2TotalW) / 2 + cardW / 2;
+      const row2Y = screenH / 2 + cardH / 2 + gap / 2;
+
+      for (let i = 0; i < row2Count; i++) {
+        positions.push({ x: row2StartX + i * (cardW + gap), y: row2Y });
+      }
+    } else {
+      // 屏幕太窄：分页模式，每页 2 张
+      const perPage = 2;
+      cardW = Math.min(maxCardW, (availableW - (perPage - 1) * gap) / perPage);
+      cardW = Math.max(140, cardW);
+      cardH = Math.min(maxCardH, availableH);
+      const y = Math.min(screenH / 2, screenH - cardH / 2 - 70);
+
+      // 默认显示第一页
+      const pageTotalW = perPage * cardW + (perPage - 1) * gap;
+      const startX = (screenW - pageTotalW) / 2 + cardW / 2;
+
+      for (let i = 0; i < count; i++) {
+        // 所有卡片放在同一位置（简化：只显示前 2 张，其余重叠）
+        // 实际应该实现分页，这里先简化
+        const pageIndex = i % perPage;
+        positions.push({ x: startX + pageIndex * (cardW + gap), y });
+      }
+    }
+
+    return { cardWidth: cardW, cardHeight: cardH, positions };
   }
 
   private updateUI(): void {

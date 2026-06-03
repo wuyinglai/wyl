@@ -275,19 +275,19 @@ export class CargoPrepScene extends Scene {
       });
 
       // 保存引用以便更新
-      this.goodCards.push(
-        this.add.container(0, 0, [
-          bg,
-          nameText,
-          infoText,
-          countText,
-          minusBtn,
-          minusText,
-          plusBtn,
-          plusText,
-          hitArea,
-        ])
-      );
+      const cardContainer = this.add.container(0, 0);
+      cardContainer.add([
+        bg,
+        nameText,
+        infoText,
+        countText,
+        minusBtn,
+        minusText,
+        plusBtn,
+        plusText,
+        hitArea,
+      ]);
+      this.goodCards.push(cardContainer);
 
       // 保存 countText 引用
       (this.goodCards[index] as any).countText = countText;
