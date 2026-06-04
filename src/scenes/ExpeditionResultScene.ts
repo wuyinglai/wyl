@@ -92,17 +92,32 @@ export class ExpeditionResultScene extends Phaser.Scene {
         this.goToLegacySelect();
       });
       this.createButton(w / 2 + btnGap / 2, btnY, "返回主菜单", () => {
+        this.clearResultState();
         this.scene.start("MainMenuScene");
       });
     } else {
       // 成功/无数据：显示"返回主菜单"和"再来一局"
       this.createButton(w / 2 - btnGap / 2, btnY, "返回主菜单", () => {
+        this.clearResultState();
         this.scene.start("MainMenuScene");
       });
       this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
+        this.clearResultState();
         this.scene.start("RouteSelectScene");
       });
     }
+  }
+
+  /**
+   * 清理结算状态，防止跨局污染
+   */
+  private clearResultState(): void {
+    const gs = getGameState();
+    gs.lastExpeditionResult = null;
+    // 注意：不清空 activeLegacyRelicId，因为遗产效果需要延续到新局
+    // 不清空 completedOrderIds / cityContributions，这些需要持久化
+    setGameState(gs);
+    console.log("[ExpeditionResult] 结算状态已清理");
   }
 
   /**

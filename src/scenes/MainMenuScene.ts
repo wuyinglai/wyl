@@ -1,4 +1,5 @@
 import Phaser from "phaser";
+import { getGameState, setGameState } from "../systems/GameState";
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -60,6 +61,7 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     startBtn.on("pointerdown", () => {
+      this.resetGameStateForNewRun();
       this.scene.start("RouteSelectScene");
     });
 
@@ -74,9 +76,40 @@ export class MainMenuScene extends Phaser.Scene {
 
     // 键盘快捷键（备用触发方式）
     this.input.keyboard?.on("keydown-ENTER", () => {
+      this.resetGameStateForNewRun();
       this.scene.start("RouteSelectScene");
     });
 
     console.log("[主菜单] 主菜单场景已加载");
+  }
+
+  /**
+   * 重置游戏状态，防止跨局污染
+   * 保留持久化数据（completedOrderIds, cityContributions, usedLegacyRelicIds, embers）
+   * 清空每局临时状态（cargo, silver, selectedRouteId, selectedCityId, selectedOrderId, activeLegacyRelicId, appliedLegacyRelicIdForRun, legacyChoices, lastExpeditionResult 等）
+   */
+  private resetGameStateForNewRun(): void {
+    const gs = getGameState();
+    // 清空每局临时状态
+    gs.cargo = {};
+    gs.silver = 0;
+    gs.selectedRouteId = null;
+    gs.selectedCityId = null;
+    gs.selectedOrderId = null;
+    gs.activeLegacyRelicId = null;
+    gs.appliedLegacyRelicIdForRun = null;
+    gs.legacyChoices = [];
+    gs.lastExpeditionResult = null;
+    gs.currentPosition = { x: 0, y: 0 };
+    gs.currentBattleType = null;
+    gs.currentBattleNodePosition = null;
+    gs.mapCells = [];
+    gs.bossPosition = null;
+    gs.expeditionGoal = null;
+    gs.selectedCharacters = [];
+    gs.maxCargoWeight = 20;
+    // 保留持久化数据：completedOrderIds, cityContributions, usedLegacyRelicIds, embers
+    setGameState(gs);
+    console.log("[主菜单] 游戏状态已重置，开始新局");
   }
 }

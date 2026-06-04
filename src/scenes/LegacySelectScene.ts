@@ -145,6 +145,8 @@ export class LegacySelectScene extends Phaser.Scene {
   private selectRelic(relicId: string): void {
     const gs = getGameState();
     gs.activeLegacyRelicId = relicId;
+    // 注意：不重置 appliedLegacyRelicIdForRun，因为 selectRelic 在 LegacySelectScene 中执行
+    // 此时还没进入 CargoPrep，appliedLegacyRelicIdForRun 会在 CargoPrep.applyLegacyRelicToGameState 中设置
     gs.legacyChoices = [];
     if (!gs.usedLegacyRelicIds.includes(relicId)) {
       gs.usedLegacyRelicIds.push(relicId);
@@ -155,7 +157,8 @@ export class LegacySelectScene extends Phaser.Scene {
 
   private skipRelic(): void {
     const gs = getGameState();
-    gs.activeLegacyRelicId = undefined;
+    gs.activeLegacyRelicId = null;
+    gs.appliedLegacyRelicIdForRun = null;
     gs.legacyChoices = [];
     setGameState(gs);
     this.scene.start("RouteSelectScene");
