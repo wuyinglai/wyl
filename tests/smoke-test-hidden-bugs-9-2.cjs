@@ -527,9 +527,9 @@ async function runTest() {
     }
 
     // ==========================================
-    // 十五、成功远征闭环截图
+    // 十五、成功订单交付闭环（真实装载 → 真实交付）
     // ==========================================
-    console.log("\n15. 成功远征闭环截图");
+    console.log("\n15. 成功订单交付闭环（真实装载 → 真实交付）");
     await page.evaluate(() => {
       window.game.scene.getScene("RouteSelectScene").scene.start("MainMenuScene");
     });
@@ -543,22 +543,175 @@ async function runTest() {
     });
     await sleep(1500);
     await selectFirstRoute();
+
+    const successOrderId = await page.evaluate(() => window.getGameState().selectedOrderId);
+    assert(!!successOrderId, `成功闭环 selectedOrderId 存在: ${successOrderId}`);
+
+    const successOrder = await page.evaluate(() => {
+      const gs = window.getGameState();
+      return window.getOrderById(gs.selectedOrderId);
+    });
+    assert(!!successOrder, `成功闭环订单存在: ${successOrderId}`);
+    console.log(`  📋 订单需求: ${JSON.stringify(successOrder.requiredGoods)}, 奖励: ${successOrder.rewardSilver}银, ${successOrder.rewardEmbers}火种`);
+
     await selectThreeCharacters();
 
-    // 装载 + 开始远征
+    // 一键装载订单需求（真实流程）
     await page.evaluate(() => {
       const scene = window.game.scene.getScene("CargoPrepScene");
       if (scene && scene.loadOrderRequirements) scene.loadOrderRequirements();
     });
     await sleep(300);
+
+    // 确认 cargo 满足订单需求
+    const loadedCargo = await page.evaluate(() => {
+      const gs = window.getGameState();
+      return { cargo: gs.cargo, silver: gs.silver, weight: window.calculateCargoWeight(gs.cargo) };
+    });
+    console.log(`  📦 装载后 cargo: ${JSON.stringify(loadedCargo.cargo)}, silver: ${loadedCargo.silver}, weight: ${loadedCargo.weight}`);
+
+    // 验证 cargo 满足 requiredGoods
+    let cargoSatisfies = true;
+    for (const [goodId, required] of Object.entries(successOrder.requiredGoods)) {
+      const actual = loadedCargo.cargo[goodId] || 0;
+      if (actual < required) {
+        cargoSatisfies = false;
+        console.log(`  ⚠ cargo 不足: ${goodId} 需要 ${required}, 实际 ${actual}`);
+      }
+    }
+    assert(cargoSatisfies, `cargo 满足订单需求: ${JSON.stringify(successOrder.requiredGoods)}`);
+
+    await screenshot(page, "cargo-prep-loaded-for-success");
+
+    // 开始远征
     await page.evaluate(() => {
       const scene = window.game.scene.getScene("CargoPrepScene");
       if (scene && scene.startExpedition) scene.startExpedition();
     });
     await sleep(2000);
 
-    // 交付订单
-    const successDelivery = await page.evaluate(() => {
+    const mapSceneCheck = await getActiveScene();
+    assert(mapSceneCheck === "MapScene", `进入 MapScene: ${mapSceneCheck}`);
+
+    // 记录交付前状态
+    const beforeDelivery = await page.evaluate(() => {
+      const gs = window.getGameState();
+      return {
+        selectedOrderId: gs.selectedOrderId,
+        cargo: JSON.stringify(gs.cargo),
+        silver: gs.silver,
+        embers: gs.embers || 0,
+        completedOrders: gs.completedOrderIds.length,
+        contributions: JSON.stringify(gs.cityContributions),
+      };
+    });
+    assert(beforeDelivery.selectedOrderId === successOrderId, `到达目标点前 selectedOrderId 保留: ${beforeDelivery.selectedOrderId}`);
+
+    // 移动到目标点并触发真实交付（通过 MapScene.handleOrderDelivery）
+    const realDelivery = await page.evaluate(() => {
+      const gs = window.getGameState();
+      const cells = gs.mapCells;
+      const goalPos = gs.bossPosition;
+      if (!goalPos || !cells) return { error: "no goal" };
+
+      // 确保目标点存在且可达
+      if (!cells[goalPos.y]) {
+        return { error: `goalPos.y=${goalPos.y} out of bounds, cells.length=${cells.length}` };
+      }
+      if (!cells[goalPos.y][goalPos.x]) {
+        return { error: `goalPos.x=${goalPos.x} out of bounds, cells[${goalPos.y}].length=${cells[goalPos.y].length}` };
+      }
+
+      const cell = cells[goalPos.y][goalPos.x];
+      cell.isRevealed = true;
+      cell.isGoal = true;
+      cell.type = "empty";
+      gs.currentPosition = { ...goalPos };
+
+      // 调用 MapScene 的真实交付方法，传入目标 cell
+      const scene = window.game.scene.getScene("MapScene");
+      if (scene && scene.handleOrderDelivery) {
+        scene.handleOrderDelivery(cell);
+        return { triggered: true };
+      }
+      return { error: "no handleOrderDelivery" };
+    });
+    await sleep(1500);
+
+    assert(realDelivery.triggered, `MapScene.handleOrderDelivery 已触发`);
+
+    await screenshot(page, "map-before-success-delivery");
+
+    // 检查交付结果
+    const afterDelivery = await page.evaluate(() => {
+      const gs = window.getGameState();
+      return {
+        selectedOrderId: gs.selectedOrderId,
+        completedOrders: gs.completedOrderIds,
+        silver: gs.silver,
+        embers: gs.embers || 0,
+        contributions: JSON.stringify(gs.cityContributions),
+        lastResult: gs.lastExpeditionResult,
+      };
+    });
+
+    assert(afterDelivery.completedOrders.includes(successOrderId),
+      `completedOrderIds 包含 ${successOrderId}: ${JSON.stringify(afterDelivery.completedOrders)}`);
+    assert(afterDelivery.silver > beforeDelivery.silver,
+      `silver 增加: ${beforeDelivery.silver} -> ${afterDelivery.silver}`);
+    assert(afterDelivery.embers > beforeDelivery.embers,
+      `embers 增加: ${beforeDelivery.embers} -> ${afterDelivery.embers}`);
+
+    // 检查 lastExpeditionResult
+    assert(!!afterDelivery.lastResult, `lastExpeditionResult 已设置`);
+    assert(afterDelivery.lastResult.resultType === "success",
+      `lastExpeditionResult.resultType="success": ${afterDelivery.lastResult.resultType}`);
+    assert(afterDelivery.lastResult.completedOrderIds.includes(successOrderId),
+      `lastExpeditionResult.completedOrderIds 包含 ${successOrderId}`);
+
+    console.log(`  📊 交付后: silver=${afterDelivery.silver}, embers=${afterDelivery.embers}, completed=${JSON.stringify(afterDelivery.completedOrders)}`);
+
+    // 点击"查看结算"按钮进入 ExpeditionResultScene
+    // 直接调用场景切换（headless 下按钮点击可能不工作）
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("MapScene");
+      scene.scene.start("ExpeditionResultScene");
+    });
+    await sleep(1500);
+
+    // 截图远征结算
+    const resultScene = await getActiveScene();
+    assert(resultScene === "ExpeditionResultScene", `进入 ExpeditionResultScene: ${resultScene}`);
+    await screenshot(page, "expedition-result-success-real");
+
+    // ==========================================
+    // 十六、缺货交付失败保护测试（独立验证）
+    // ==========================================
+    console.log("\n16. 缺货交付失败保护测试");
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("ExpeditionResultScene");
+      if (scene && scene.clearResultState) scene.clearResultState();
+      scene.scene.start("RouteSelectScene");
+    });
+    await sleep(1500);
+    await selectFirstRoute();
+    await selectThreeCharacters();
+
+    // 清空 cargo，不装载
+    await page.evaluate(() => {
+      const gs = window.getGameState();
+      gs.cargo = {};
+      window.setGameState(gs);
+    });
+    await sleep(300);
+
+    await page.evaluate(() => {
+      const scene = window.game.scene.getScene("CargoPrepScene");
+      if (scene && scene.startExpedition) scene.startExpedition();
+    });
+    await sleep(2000);
+
+    const missingDelivery = await page.evaluate(() => {
       const gs = window.getGameState();
       const cells = gs.mapCells;
       const goalPos = gs.bossPosition;
@@ -569,6 +722,7 @@ async function runTest() {
         cells[goalPos.y][goalPos.x].type = "empty";
       }
       gs.currentPosition = { ...goalPos };
+
       if (gs.selectedOrderId && window.deliverOrder && window.getOrderById) {
         const order = window.getOrderById(gs.selectedOrderId);
         if (order) {
@@ -578,24 +732,15 @@ async function runTest() {
       }
       return { error: "no order" };
     });
-    await sleep(1000);
+    await sleep(500);
 
-    if (successDelivery.delivered && successDelivery.result.ok) {
-      pass(`成功闭环订单交付成功`);
+    if (missingDelivery.delivered) {
+      assert(!missingDelivery.result.ok, `缺货交付失败: ok=false`);
+      assert(missingDelivery.result.reason !== undefined, `缺货交付返回 reason: ${missingDelivery.result.reason}`);
+      pass(`缺货交付正确失败: reason=${missingDelivery.result.reason}`);
     } else {
-      console.log(`  ⚠ 成功闭环交付: ${JSON.stringify(successDelivery)}`);
+      console.log(`  ⚠ 缺货交付跳过: ${missingDelivery.error}`);
     }
-
-    // 进入远征结算
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("MapScene");
-      if (scene && scene.handleRetreat) scene.handleRetreat();
-    });
-    await sleep(1500);
-
-    const successResultScene = await getActiveScene();
-    pass(`成功闭环进入 ${successResultScene}`);
-    await screenshot(page, "expedition-result-success");
 
   } catch (err) {
     console.log(`\n测试异常: ${err.message}`);
