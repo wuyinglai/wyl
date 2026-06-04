@@ -1574,19 +1574,24 @@ export class MapScene extends Phaser.Scene {
     if (result.ok) {
       // 成功时显示"查看结算"按钮
       const btnY = h / 2 + panelH / 2 - 45;
-      const btnBg = this.add.rectangle(w / 2, btnY, 160, 36, 0x3a2a1a, 0.95)
-        .setStrokeStyle(2, 0xd4a574)
+      const btnContainer = this.add.container(w / 2, btnY)
+        .setSize(160, 36)
         .setInteractive({ useHandCursor: true })
         .setDepth(902);
-      const btnText = this.add.text(w / 2, btnY, "查看结算", {
+      const btnBg = this.add.rectangle(0, 0, 160, 36, 0x3a2a1a, 0.95)
+        .setStrokeStyle(2, 0xd4a574)
+        .setOrigin(0.5);
+      const btnText = this.add.text(0, 0, "查看结算", {
         fontSize: "16px",
         color: "#e8c97a",
         fontFamily: "sans-serif",
-      }).setOrigin(0.5).setDepth(903);
+      }).setOrigin(0.5);
+      btnContainer.add([btnBg, btnText]);
 
-      btnBg.on("pointerover", () => btnBg.setFillStyle(0x5a4a3a));
-      btnBg.on("pointerout", () => btnBg.setFillStyle(0x3a2a1a));
-      btnBg.on("pointerdown", () => {
+      btnContainer.on("pointerover", () => btnBg.setFillStyle(0x5a4a3a));
+      btnContainer.on("pointerout", () => btnBg.setFillStyle(0x3a2a1a));
+      btnContainer.on("pointerdown", () => {
+        console.log("[OrderDeliveryPopup] click view result");
         this.scene.start("ExpeditionResultScene");
       });
 
@@ -1594,8 +1599,7 @@ export class MapScene extends Phaser.Scene {
       bg.on("pointerdown", () => {
         bg.destroy();
         panel.destroy();
-        btnBg.destroy();
-        btnText.destroy();
+        btnContainer.destroy();
         const toDestroy = this.children.list.filter(
           (c) => (c as Phaser.GameObjects.Text).depth >= 902 && c.type === "Text"
         );

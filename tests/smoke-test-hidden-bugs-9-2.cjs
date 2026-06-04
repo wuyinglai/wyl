@@ -671,18 +671,36 @@ async function runTest() {
 
     console.log(`  📊 交付后: silver=${afterDelivery.silver}, embers=${afterDelivery.embers}, completed=${JSON.stringify(afterDelivery.completedOrders)}`);
 
-    // 点击"查看结算"按钮进入 ExpeditionResultScene
-    // 直接调用场景切换（headless 下按钮点击可能不工作）
-    await page.evaluate(() => {
+    // 截图交付成功弹窗
+    const popupScene = await getActiveScene();
+    assert(popupScene === "MapScene", `交付弹窗 active scene = MapScene`);
+    await screenshot(page, "order-delivery-popup-success");
+
+    // 真实点击"查看结算"按钮（Container 对象）
+    const btnClicked = await page.evaluate(() => {
       const scene = window.game.scene.getScene("MapScene");
-      scene.scene.start("ExpeditionResultScene");
+      const children = scene.children.list;
+      for (const child of children) {
+        if (child.type === "Container") {
+          // 找到包含"查看结算"文字的 Container
+          const hasText = child.list.some(c => c.text === "查看结算");
+          if (hasText) {
+            console.log(`[test] 找到查看结算按钮: type=${child.type}, interactive=${child.input?.enabled}, size=${child.width}x${child.height}`);
+            child.emit("pointerdown");
+            return { found: true, interactive: child.input?.enabled };
+          }
+        }
+      }
+      return { found: false };
     });
+    assert(btnClicked.found, `找到"查看结算"按钮`);
+    assert(btnClicked.interactive, `按钮 interactive=true`);
     await sleep(1500);
 
     // 截图远征结算
     const resultScene = await getActiveScene();
-    assert(resultScene === "ExpeditionResultScene", `进入 ExpeditionResultScene: ${resultScene}`);
-    await screenshot(page, "expedition-result-success-real");
+    assert(resultScene === "ExpeditionResultScene", `点击按钮后进入 ExpeditionResultScene: ${resultScene}`);
+    await screenshot(page, "expedition-result-after-view-button");
 
     // ==========================================
     // 十六、缺货交付失败保护测试（独立验证）
