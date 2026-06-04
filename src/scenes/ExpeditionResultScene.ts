@@ -114,6 +114,7 @@ export class ExpeditionResultScene extends Phaser.Scene {
   private clearResultState(): void {
     const gs = getGameState();
     gs.lastExpeditionResult = null;
+    gs.selectedOrderId = null;
     // 注意：不清空 activeLegacyRelicId，因为遗产效果需要延续到新局
     // 不清空 completedOrderIds / cityContributions，这些需要持久化
     setGameState(gs);
