@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-reward-6-3.cjs
  * 阶段6.3 战斗胜利奖励选卡闭环冒烟测试（严格版）
  *
@@ -49,7 +49,11 @@ async function runTest() {
   try {
     // ========== 1. 游戏加载 ==========
     console.log("1. 游戏加载");
-    await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+    await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
     await sleep(2000);
     await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

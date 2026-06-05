@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-order-delivery-real-goal-8-4-1.cjs
  * 阶段8.4.1：修复订单交付目标点生成与真实触发
  *
@@ -84,7 +84,11 @@ function bfsPath(cells, start, goal) {
     failed++;
   });
 
-  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+  await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

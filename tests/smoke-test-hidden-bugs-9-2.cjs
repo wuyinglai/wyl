@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-hidden-bugs-9-2.cjs
  * 阶段9.2.1：隐藏Bug排查验收补强
  * 覆盖12个高风险核心项 + 截图留档 + 两条闭环验证
@@ -34,7 +34,11 @@ async function runTest() {
   await page.setViewportSize({ width: 1280, height: 720 });
 
   try {
-    await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+    await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
     await sleep(2000);
     await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

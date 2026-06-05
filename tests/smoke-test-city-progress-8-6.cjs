@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-city-progress-8-6.cjs
  * 阶段8.6：城市贡献与城市状态 v1（真实验收版）
  *
@@ -49,7 +49,11 @@ function sleep(ms) {
     failed++;
   });
 
-  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+  await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

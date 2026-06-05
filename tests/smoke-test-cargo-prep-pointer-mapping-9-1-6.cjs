@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-cargo-prep-pointer-mapping-9-1-6.cjs
  * 阶段9.1.6：CargoPrep 指针坐标映射测试
  *
@@ -54,7 +54,11 @@ async function runTest() {
   try {
     // 1. 游戏加载
     console.log("1. 游戏加载");
-    await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+    await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
     await sleep(2000);
     await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
     assert(!!(await page.evaluate(() => window.game)), "window.game 存在");

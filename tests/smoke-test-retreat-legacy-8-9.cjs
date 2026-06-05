@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-retreat-legacy-8-9.cjs
  * 阶段8.9：失败与撤退结算入口 v1
  *
@@ -48,7 +48,11 @@ function sleep(ms) {
     failed++;
   });
 
-  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+  await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

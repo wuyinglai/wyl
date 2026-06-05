@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-order-cargo-8-3.cjs
  * 阶段8.3：订单需求与货物状态关联加强
  *
@@ -47,7 +47,11 @@ function sleep(ms) {
     failed++;
   });
 
-  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+  await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-cargo-prep-buy-real-click-9-1-5.cjs
  * 阶段9.1.5：CargoPrep 买货真实鼠标点击测试
  *
@@ -228,7 +228,11 @@ async function runTest() {
   try {
     // 1. 游戏加载
     console.log("1. 游戏加载");
-    await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+    await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
     await sleep(2000);
     await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
     assert(!!(await page.evaluate(() => window.game)), "window.game 存在");

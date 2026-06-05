@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-cargo-prep-8-5.cjs
  * 阶段8.5：出发前货物准备系统 v1
  *
@@ -68,7 +68,11 @@ function sleep(ms) {
     failed++;
   });
 
-  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+  await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

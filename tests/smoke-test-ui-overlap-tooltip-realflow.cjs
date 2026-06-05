@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-ui-overlap-tooltip-realflow.cjs
  * UI重叠与Tooltip真实流程冒烟测试（严格版）
  *
@@ -117,7 +117,11 @@ async function runTest() {
   try {
     // ========== 1. 游戏加载，验证 window.game 存在 ==========
     console.log("1. 游戏加载");
-    await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+    await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
     await sleep(2000);
     await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
     assert(await page.evaluate(() => !!window.game && !!window.game.scene), "window.game 存在");

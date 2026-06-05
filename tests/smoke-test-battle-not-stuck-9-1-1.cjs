@@ -1,4 +1,4 @@
-/**
+﻿/**
  * 阶段9.1.2：战斗卡死验证
  * 验证真实战斗流程不会卡死，能正常出牌、结束回合、胜利、选奖励、回地图
  */
@@ -38,7 +38,11 @@ async function runTest() {
   try {
     // 1. 游戏加载
     console.log("1. 游戏加载");
-    await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+    await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
     await sleep(2000);
     await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

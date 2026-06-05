@@ -7,6 +7,7 @@ import { MapScene } from "./scenes/MapScene";
 import { ExpeditionResultScene } from "./scenes/ExpeditionResultScene";
 import { LegacySelectScene } from "./scenes/LegacySelectScene";
 import { BattleScene } from "./scenes/BattleScene";
+import { isDevCheatEnabled } from "./systems/devConfig";
 import {
   getGameState,
   setGameState,
@@ -51,27 +52,9 @@ const config: Phaser.Types.Core.GameConfig = {
 };
 
 const game = new Phaser.Game(config);
-// 暴露到 window 以便调试
+// 暴露到 window 以便调试（无条件暴露）
 (window as any).game = game;
-(window as any).getGameState = getGameState;
-(window as any).setGameState = setGameState;
-(window as any).getMovableNeighbors = getMovableNeighbors;
-(window as any).resolveQuestionCell = resolveQuestionCell;
-(window as any).resetGameState = resetGameState;
-// 商品与货物系统（阶段8.1）
-(window as any).GOODS = GOODS;
-(window as any).getGoodById = getGoodById;
-(window as any).getGoodName = getGoodName;
-(window as any).formatGoodsRequirement = formatGoodsRequirement;
-(window as any).validateGoods = validateGoods;
-(window as any).createEmptyCargo = createEmptyCargo;
-(window as any).createCargo = createCargo;
-(window as any).getCargoQuantity = getCargoQuantity;
-(window as any).addCargo = addCargo;
-(window as any).removeCargo = removeCargo;
-(window as any).hasCargo = hasCargo;
-(window as any).calculateCargoWeight = calculateCargoWeight;
-(window as any).formatCargo = formatCargo;
+
 // 订单货物检查工具（阶段8.3）
 import {
   checkOrderCargo,
@@ -81,15 +64,7 @@ import {
   getCargoWeightStatusText,
 } from "./systems/orderCargoSystem";
 import { deliverOrder } from "./systems/orderDeliverySystem";
-(window as any).checkOrderCargo = checkOrderCargo;
-(window as any).formatMissingGoods = formatMissingGoods;
-(window as any).getOrderCargoStatusText = getOrderCargoStatusText;
-(window as any).checkCargoWeight = checkCargoWeight;
-(window as any).getCargoWeightStatusText = getCargoWeightStatusText;
-// 订单数据查询（测试需要）
-(window as any).getOrderById = getOrderById;
-// 订单交付系统（阶段8.4）
-(window as any).deliverOrder = deliverOrder;
+
 // 城市贡献与城市状态（阶段8.6）
 import {
   getCityProgress,
@@ -97,10 +72,6 @@ import {
   formatCityProgress,
   getCityProgressDetailLines,
 } from "./systems/cityProgressSystem";
-(window as any).getCityProgress = getCityProgress;
-(window as any).getCityStatusLabel = getCityStatusLabel;
-(window as any).formatCityProgress = formatCityProgress;
-(window as any).getCityProgressDetailLines = getCityProgressDetailLines;
 
 // 远征结算系统（阶段8.7）
 import {
@@ -109,10 +80,6 @@ import {
   createRetreatedExpeditionResult,
   createFailedExpeditionResult,
 } from "./systems/expeditionResultSystem";
-(window as any).createSuccessExpeditionResult = createSuccessExpeditionResult;
-(window as any).formatExpeditionResult = formatExpeditionResult;
-(window as any).createRetreatedExpeditionResult = createRetreatedExpeditionResult;
-(window as any).createFailedExpeditionResult = createFailedExpeditionResult;
 
 // 失败遗产系统（阶段8.8）
 import {
@@ -120,9 +87,68 @@ import {
   applyLegacyRelicToGameState,
 } from "./systems/legacySystem";
 import { getLegacyRelicById, LEGACY_RELICS } from "./data/legacyRelics";
-(window as any).generateFailureLegacyChoices = generateFailureLegacyChoices;
-(window as any).applyLegacyRelicToGameState = applyLegacyRelicToGameState;
-(window as any).getLegacyRelicById = getLegacyRelicById;
-(window as any).LEGACY_RELICS = LEGACY_RELICS;
+
+// 测试 API（仅开发/测试模式暴露）
+function exposeTestApi(): void {
+  const w = window as any;
+
+  // 游戏状态 API
+  w.getGameState = getGameState;
+  w.setGameState = setGameState;
+  w.getMovableNeighbors = getMovableNeighbors;
+  w.resolveQuestionCell = resolveQuestionCell;
+  w.resetGameState = resetGameState;
+
+  // 商品与货物系统
+  w.GOODS = GOODS;
+  w.getGoodById = getGoodById;
+  w.getGoodName = getGoodName;
+  w.formatGoodsRequirement = formatGoodsRequirement;
+  w.validateGoods = validateGoods;
+  w.createEmptyCargo = createEmptyCargo;
+  w.createCargo = createCargo;
+  w.getCargoQuantity = getCargoQuantity;
+  w.addCargo = addCargo;
+  w.removeCargo = removeCargo;
+  w.hasCargo = hasCargo;
+  w.calculateCargoWeight = calculateCargoWeight;
+  w.formatCargo = formatCargo;
+
+  // 订单货物检查工具
+  w.checkOrderCargo = checkOrderCargo;
+  w.formatMissingGoods = formatMissingGoods;
+  w.getOrderCargoStatusText = getOrderCargoStatusText;
+  w.checkCargoWeight = checkCargoWeight;
+  w.getCargoWeightStatusText = getCargoWeightStatusText;
+
+  // 订单数据查询
+  w.getOrderById = getOrderById;
+
+  // 订单交付系统
+  w.deliverOrder = deliverOrder;
+
+  // 城市贡献与城市状态
+  w.getCityProgress = getCityProgress;
+  w.getCityStatusLabel = getCityStatusLabel;
+  w.formatCityProgress = formatCityProgress;
+  w.getCityProgressDetailLines = getCityProgressDetailLines;
+
+  // 远征结算系统
+  w.createSuccessExpeditionResult = createSuccessExpeditionResult;
+  w.formatExpeditionResult = formatExpeditionResult;
+  w.createRetreatedExpeditionResult = createRetreatedExpeditionResult;
+  w.createFailedExpeditionResult = createFailedExpeditionResult;
+
+  // 失败遗产系统
+  w.generateFailureLegacyChoices = generateFailureLegacyChoices;
+  w.applyLegacyRelicToGameState = applyLegacyRelicToGameState;
+  w.getLegacyRelicById = getLegacyRelicById;
+  w.LEGACY_RELICS = LEGACY_RELICS;
+}
+
+// 只在开发/测试模式暴露测试 API
+if (isDevCheatEnabled()) {
+  exposeTestApi();
+}
 
 console.log("[余烬商队] 阶段2 - 地图探索原型已启动");

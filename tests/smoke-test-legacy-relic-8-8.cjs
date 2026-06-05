@@ -1,4 +1,4 @@
-/**
+﻿/**
  * smoke-test-legacy-relic-8-8.cjs
  * 阶段8.8：失败遗产系统 v1
  *
@@ -49,7 +49,11 @@ function sleep(ms) {
     failed++;
   });
 
-  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+  await page.addInitScript(() => {
+          window.__EMBER_TEST_MODE__ = true;
+        });
+        
+        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 
