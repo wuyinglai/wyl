@@ -1,4 +1,4 @@
-﻿/**
+/**
  * smoke-test-retreat-legacy-8-9.cjs
  * 阶段8.9：失败与撤退结算入口 v1
  *
@@ -15,7 +15,7 @@
 const { chromium } = require("playwright");
 const path = require("path");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5175";
 const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/retreat-legacy");
 const FAILED = [];
 let passed = 0, failed = 0;
@@ -92,7 +92,7 @@ function sleep(ms) {
   assert(retreatedResult.embersGained === 1, `embersGained = 1`);
   assert(retreatedResult.cityContributionGained === 0, `cityContributionGained = 0`);
   assert(retreatedResult.summaryLines.some(l => l.includes("远征撤退")), `包含"远征撤退"`);
-  assert(retreatedResult.summaryLines.some(l => l.includes("失败遗产")), `包含"失败遗产"`);
+  // 注意：取消遗产系统后，不再包含"失败遗产"文字
 
   // ========== 4. createFailedExpeditionResult 生成 failed ==========
   console.log("4. createFailedExpeditionResult 生成 failed");
@@ -261,157 +261,18 @@ function sleep(ms) {
   // 截图
   await page.screenshot({ path: path.join(ARTIFACT_DIR, "retreat-result.png") });
 
-  // ========== 14. ExpeditionResultScene 出现"选择遗产"按钮 ==========
-  console.log("14. ExpeditionResultScene 出现选择遗产按钮");
+  // ========== 14. ExpeditionResultScene 不出现"选择遗产"按钮，显示"再来一局" ==========
+  console.log("14. ExpeditionResultScene 不出现选择遗产按钮，显示再来一局");
   const legacyBtnCheck = await page.evaluate(() => {
     const ers = window.game.scene.getScene("ExpeditionResultScene");
-    if (!ers) return { hasBtn: false };
+    if (!ers) return { hasBtn: false, hasPlayAgain: false };
     const texts = ers.children.list.filter(c => c.type === "Text");
     const hasLegacyBtn = texts.some(t => t.text && t.text === "选择遗产");
     const hasPlayAgain = texts.some(t => t.text && t.text === "再来一局");
     return { hasLegacyBtn, hasPlayAgain };
   });
-  assert(legacyBtnCheck.hasLegacyBtn, `撤退后显示"选择遗产"按钮`);
-  assert(!legacyBtnCheck.hasPlayAgain, `撤退后不显示"再来一局"按钮`);
-
-  // ========== 15. 点击"选择遗产"进入 LegacySelectScene ==========
-  console.log("15. 点击选择遗产进入 LegacySelectScene");
-  await page.evaluate(() => {
-    const ers = window.game.scene.getScene("ExpeditionResultScene");
-    if (!ers) return;
-    const texts = ers.children.list.filter(c => c.type === "Text");
-    const legacyText = texts.find(t => t.text === "选择遗产");
-    if (legacyText) {
-      const btns = ers.children.list.filter(c =>
-        c.type === "Rectangle" && c.input && c.input.enabled &&
-        Math.abs(c.y - legacyText.y) < 20 && Math.abs(c.x - legacyText.x) < 80
-      );
-      if (btns.length > 0) btns[0].emit("pointerdown");
-    }
-  });
-  await sleep(2000);
-
-  const lsReady = await page.evaluate(() => !!window.game.scene.getScene("LegacySelectScene"));
-  assert(lsReady, "进入 LegacySelectScene");
-
-  // ========== 16. LegacySelectScene 显示 3 个遗产候选 ==========
-  console.log("16. LegacySelectScene 显示 3 个遗产候选");
-  const lsCheck = await page.evaluate(() => {
-    const ls = window.game.scene.getScene("LegacySelectScene");
-    if (!ls) return { ok: false, cardCount: 0 };
-    const texts = [];
-    const searchChildren = (obj) => {
-      if (!obj) return;
-      if (obj.list && Array.isArray(obj.list)) {
-        for (const child of obj.list) {
-          if (child.type === "Text" && child.text) texts.push(child.text);
-          searchChildren(child);
-        }
-      }
-      if (obj.children && obj.children.list && Array.isArray(obj.children.list)) {
-        for (const child of obj.children.list) {
-          if (child.type === "Text" && child.text) texts.push(child.text);
-          searchChildren(child);
-        }
-      }
-    };
-    searchChildren(ls);
-    if (ls.children && ls.children.list) {
-      for (const child of ls.children.list) searchChildren(child);
-    }
-    const cardCount = texts.filter(t => t === "普通" || t === "稀有").length;
-    return { ok: true, cardCount };
-  });
-  assert(lsCheck.ok, "LegacySelectScene 存在");
-  assert(lsCheck.cardCount >= 3, `显示 >= 3 张遗产卡 (实际: ${lsCheck.cardCount})`);
-
-  // ========== 17. 选择一个遗产后进入 RouteSelectScene ==========
-  console.log("17. 选择遗产后进入 RouteSelectScene");
-  await page.evaluate(() => {
-    const ls = window.game.scene.getScene("LegacySelectScene");
-    if (!ls) return;
-    const containers = ls.children.list.filter(c => c.type === "Container");
-    for (const container of containers) {
-      const texts = [];
-      const searchTexts = (obj) => {
-        if (!obj) return;
-        if (obj.list && Array.isArray(obj.list)) {
-          for (const child of obj.list) {
-            if (child.type === "Text" && child.text) texts.push(child.text);
-            searchTexts(child);
-          }
-        }
-      };
-      searchTexts(container);
-      if (texts.some(t => t.includes("断裂商旗"))) {
-        for (const child of container.list) {
-          if (child.type === "Rectangle" && child.input && child.input.enabled) {
-            child.emit("pointerdown");
-            break;
-          }
-        }
-        break;
-      }
-    }
-  });
-  await sleep(1500);
-
-  const afterSelect = await page.evaluate(() => {
-    const gs = window.getGameState();
-    return {
-      activeLegacyRelicId: gs.activeLegacyRelicId,
-      inRouteSelect: !!window.game.scene.getScene("RouteSelectScene"),
-    };
-  });
-  assert(afterSelect.activeLegacyRelicId === "broken_banner",
-    `activeLegacyRelicId = broken_banner (实际: ${afterSelect.activeLegacyRelicId})`);
-  assert(afterSelect.inRouteSelect, "选择后进入 RouteSelectScene");
-
-  // ========== 18. 下一局 CargoPrepScene 应用遗产效果 ==========
-  console.log("18. 下一局 CargoPrepScene 应用遗产效果");
-  await page.evaluate(() => {
-    const rs = window.game.scene.getScene("RouteSelectScene");
-    if (rs && rs.routes && rs.routes.length > 0) rs.selectRoute(rs.routes[0]);
-  });
-  await sleep(1000);
-
-  await page.evaluate(() => {
-    const cs = window.game.scene.getScene("CharacterSelectScene");
-    if (cs && cs.characterCards && cs.characterCards.length >= 3) {
-      for (let i = 0; i < 3; i++) {
-        const card = cs.characterCards[i];
-        for (const child of card.list) {
-          if ((child.type === "Rectangle" || child.type === "Zone") && child.input && child.input.enabled) {
-            child.emit("pointerdown");
-            break;
-          }
-        }
-      }
-    }
-  });
-  await sleep(500);
-
-  await page.evaluate(() => {
-    const cs = window.game.scene.getScene("CharacterSelectScene");
-    if (cs && cs.startExpedition) cs.startExpedition();
-  });
-  await sleep(1500);
-
-  const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
-  assert(cargoPrepReady, "CargoPrepScene 就绪");
-
-  const silverAfterLegacy = await page.evaluate(() => {
-    const gs = window.getGameState();
-    return {
-      silver: gs.silver,
-      appliedLegacyRelicIdForRun: gs.appliedLegacyRelicIdForRun,
-    };
-  });
-  assert(silverAfterLegacy.appliedLegacyRelicIdForRun === "broken_banner",
-    `appliedLegacyRelicIdForRun = broken_banner`);
-  // silver 应该比撤退后多 10（遗产效果）
-  assert(silverAfterLegacy.silver === afterRetreat.silver + 10,
-    `银币+10: ${afterRetreat.silver} → ${silverAfterLegacy.silver}`);
+  assert(!legacyBtnCheck.hasLegacyBtn, `撤退后不显示"选择遗产"按钮`);
+  assert(legacyBtnCheck.hasPlayAgain, `撤退后显示"再来一局"按钮`);
 
   // ========== 19. 成功结算不显示"选择遗产" ==========
   console.log("19. 成功结算不显示选择遗产");

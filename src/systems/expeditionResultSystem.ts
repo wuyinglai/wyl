@@ -108,7 +108,6 @@ export function createRetreatedExpeditionResult(
   }
   summaryLines.push("商队保住了余火");
   summaryLines.push("获得火种：+1");
-  summaryLines.push("可选择一项失败遗产");
   summaryLines.push(`剩余货物：${hasRemaining ? Object.entries(remainingCargo).filter(([_, v]) => v > 0).map(([k, v]) => `${k} x${v}`).join(", ") : "无"}`);
 
   return {
@@ -150,7 +149,6 @@ export function createFailedExpeditionResult(
   }
   summaryLines.push("商队未能抵达目标");
   summaryLines.push("获得火种：+1");
-  summaryLines.push("可选择一项失败遗产");
   summaryLines.push(`剩余货物：${hasRemaining ? Object.entries(remainingCargo).filter(([_, v]) => v > 0).map(([k, v]) => `${k} x${v}`).join(", ") : "无"}`);
 
   return {

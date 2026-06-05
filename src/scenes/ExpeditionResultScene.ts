@@ -86,26 +86,15 @@ export class ExpeditionResultScene extends Phaser.Scene {
     const btnY = Math.min(currentY + 30, h - 80);
     const btnGap = 160;
 
-    if (isFailureOrRetreat) {
-      // 失败/撤退：显示"选择遗产"和"返回主菜单"
-      this.createButton(w / 2 - btnGap / 2, btnY, "选择遗产", () => {
-        this.goToLegacySelect();
-      });
-      this.createButton(w / 2 + btnGap / 2, btnY, "返回主菜单", () => {
-        this.clearResultState();
-        this.scene.start("MainMenuScene");
-      });
-    } else {
-      // 成功/无数据：显示"返回主菜单"和"再来一局"
-      this.createButton(w / 2 - btnGap / 2, btnY, "返回主菜单", () => {
-        this.clearResultState();
-        this.scene.start("MainMenuScene");
-      });
-      this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
-        this.clearResultState();
-        this.scene.start("RouteSelectScene");
-      });
-    }
+    // 所有结果都显示"返回主菜单"和"再来一局"（取消遗产选择入口）
+    this.createButton(w / 2 - btnGap / 2, btnY, "返回主菜单", () => {
+      this.clearResultState();
+      this.scene.start("MainMenuScene");
+    });
+    this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
+      this.clearResultState();
+      this.scene.start("RouteSelectScene");
+    });
   }
 
   /**
