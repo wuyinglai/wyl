@@ -15,7 +15,7 @@
 const { chromium } = require("playwright");
 const path = require("path");
 
-const BASE_URL = "http://localhost:5175";
+const BASE_URL = "http://localhost:5173";
 const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/retreat-legacy");
 const FAILED = [];
 let passed = 0, failed = 0;
