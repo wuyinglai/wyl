@@ -31,6 +31,7 @@ import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
 import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "../systems/expeditionResultSystem";
 import { getLegacyRelicById } from "../data/legacyRelics";
+import { isDevCheatEnabled } from "../systems/devConfig";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -465,14 +466,17 @@ export class MapScene extends Phaser.Scene {
           this.centerCameraOnPlayer();
           break;
         case "t":
+          if (!isDevCheatEnabled()) break;
           // dev-only: 鼠标点击模拟测试，正式版本移除
           this.clickSimulationTest();
           break;
         case "y":
+          if (!isDevCheatEnabled()) break;
           // dev-only: 自动移动测试，正式版本移除
           this.autoMoveTest();
           break;
         case "g": {
+          if (!isDevCheatEnabled()) break;
           // dev-only: 方向点击测试，正式版本移除
           this.directionalClickTest();
           break;
@@ -492,6 +496,7 @@ export class MapScene extends Phaser.Scene {
           break;
         // ========== dev-only 调试键：后续正式版本应移除 ==========
         case "i": {
+          if (!isDevCheatEnabled()) break;
           // I 键：让第一个角色进入重伤
           const gs = getGameState();
           const firstId = gs.selectedCharacters[0];
@@ -518,6 +523,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "o": {
+          if (!isDevCheatEnabled()) break;
           // O 键：让第一个角色累计重伤 +1
           const gs = getGameState();
           const firstId = gs.selectedCharacters[0];
@@ -539,6 +545,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "p": {
+          if (!isDevCheatEnabled()) break;
           // P 键：打印当前 characterStates
           const gs = getGameState();
           console.log("[调试P] ========== characterStates ==========");
@@ -565,6 +572,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "l": {
+          if (!isDevCheatEnabled()) break;
           // L 键：让全队进入重伤（测试远征失败）
           const gs = getGameState();
           for (const id of gs.selectedCharacters) {
@@ -587,6 +595,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "k": {
+          if (!isDevCheatEnabled()) break;
           // K 键：触发补给点弹窗（测试补给功能）
           const gsK = getGameState();
           const mockSupplyCell: MapCell = {
@@ -607,6 +616,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "m": {
+          if (!isDevCheatEnabled()) break;
           // M 键：触发营地弹窗（测试营地功能）
           const gsM = getGameState();
           const mockCampCell: MapCell = {
@@ -628,6 +638,7 @@ export class MapScene extends Phaser.Scene {
         }
         // ========== dev-only 调试键（B/E/X/H/U） ==========
         case "b": {
+          if (!isDevCheatEnabled()) break;
           // B 键：直接进入普通战斗（dev-only）
           // Item 33 (P0): 检查全队是否可用
           if (checkExpeditionFailed()) {
@@ -640,6 +651,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "e": {
+          if (!isDevCheatEnabled()) break;
           // E 键：直接进入精英战斗（dev-only）
           const gsE = getGameState();
           gsE.currentBattleType = "elite";
@@ -649,6 +661,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "x": {
+          if (!isDevCheatEnabled()) break;
           // X 键：直接进入Boss战斗（dev-only）
           const gsX = getGameState();
           gsX.currentBattleType = "boss";
@@ -658,6 +671,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "h": {
+          if (!isDevCheatEnabled()) break;
           // H 键：商队 HP -20（dev-only）
           const gsH = getGameState();
           gsH.caravanHp = Math.max(0, gsH.caravanHp - 20);
@@ -669,6 +683,7 @@ export class MapScene extends Phaser.Scene {
           break;
         }
         case "u": {
+          if (!isDevCheatEnabled()) break;
           // U 键：所有角色 HP -10（dev-only）
           const gsU = getGameState();
           for (const id of gsU.selectedCharacters) {
@@ -814,49 +829,73 @@ export class MapScene extends Phaser.Scene {
     overlay.fillRect(0, 0, w, h);
     this.modalContainer.add(overlay);
 
-    // 弹窗背景
+    // 弹窗宽度（根据屏幕自适应）
+    const popupW = Math.min(480, w - 40);
+    const padding = 20;
+    const btnHeight = 40;
+    const btnSpacing = 15;
+    const titleHeight = 40;
+    const descLineHeight = 22;
+    
+    // 计算描述文本需要的高度（估算行数）
+    const descLines = Math.max(3, Math.ceil(desc.length / 40));
+    const descHeight = descLines * descLineHeight;
+    
+    // 动态计算弹窗高度
+    const popupH = Math.min(
+      h - 40,
+      padding * 2 + titleHeight + descHeight + btnSpacing + btnHeight + (options.length - 1) * (btnHeight + btnSpacing)
+    );
+
+    // 弹窗背景（动态尺寸）
     const popupBg = this.add.graphics();
     popupBg.fillStyle(0x2a2a3e, 1);
-    popupBg.fillRect(w / 2 - 200, h / 2 - 120, 400, 240);
+    popupBg.fillRect(w / 2 - popupW / 2, h / 2 - popupH / 2, popupW, popupH);
     popupBg.lineStyle(3, 0x555566, 1);
-    popupBg.strokeRect(w / 2 - 200, h / 2 - 120, 400, 240);
+    popupBg.strokeRect(w / 2 - popupW / 2, h / 2 - popupH / 2, popupW, popupH);
     this.modalContainer.add(popupBg);
 
     // 标题
+    const titleY = h / 2 - popupH / 2 + padding + titleHeight / 2;
     const titleText = this.add
-      .text(w / 2, h / 2 - 90, title, {
-        fontSize: "24px",
+      .text(w / 2, titleY, title, {
+        fontSize: "22px",
         color: "#ffcc44",
         fontFamily: "monospace",
         fontStyle: "bold",
+        wordWrap: { width: popupW - padding * 2 },
       })
       .setOrigin(0.5);
     this.modalContainer.add(titleText);
 
-    // 描述
+    // 描述（带 wordWrap）
+    const descY = titleY + titleHeight / 2 + btnSpacing;
     const descText = this.add
-      .text(w / 2, h / 2 - 30, desc, {
-        fontSize: "16px",
+      .text(w / 2, descY, desc, {
+        fontSize: "15px",
         color: "#cccccc",
         fontFamily: "monospace",
         align: "center",
+        wordWrap: { width: popupW - padding * 3 },
       })
-      .setOrigin(0.5);
+      .setOrigin(0.5, 0);
     this.modalContainer.add(descText);
 
-    // 选项按钮
-    const btnY = h / 2 + 40;
-    const btnSpacing = 120;
-    const startX = w / 2 - ((options.length - 1) * btnSpacing) / 2;
+    // 选项按钮（垂直排列，适应小屏）
+    const btnStartY = descY + descHeight + btnSpacing * 2;
+    const btnWidth = Math.min(180, popupW - padding * 2);
+    const btnX = w / 2;
 
     options.forEach((opt, index) => {
+      const btnY = btnStartY + index * (btnHeight + btnSpacing);
       const btn = this.add
-        .text(startX + index * btnSpacing, btnY, opt.text, {
-          fontSize: "16px",
+        .text(btnX, btnY, opt.text, {
+          fontSize: "15px",
           color: "#ffffff",
           backgroundColor: "#2a4a6a",
-          padding: { x: 15, y: 8 },
+          padding: { x: 20, y: 10 },
           fontFamily: "monospace",
+          wordWrap: { width: btnWidth - 40 },
         })
         .setOrigin(0.5)
         .setInteractive();
@@ -869,7 +908,7 @@ export class MapScene extends Phaser.Scene {
     });
 
     console.log(
-      `[弹窗] 已打开: ${title} modalContainer=${this.modalContainer ? "ok" : "undefined"}`,
+      `[弹窗] 已打开: ${title} modalContainer=${this.modalContainer ? "ok" : "undefined"}, size=${popupW}x${popupH}`,
     );
   }
 
