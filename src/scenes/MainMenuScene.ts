@@ -92,7 +92,7 @@ export class MainMenuScene extends Phaser.Scene {
     const gs = getGameState();
     // 清空每局临时状态
     gs.cargo = {};
-    gs.silver = 0;
+    gs.silver = 50;
     gs.selectedRouteId = null;
     gs.selectedCityId = null;
     gs.selectedOrderId = null;
@@ -108,6 +108,14 @@ export class MainMenuScene extends Phaser.Scene {
     gs.expeditionGoal = null;
     gs.selectedCharacters = [];
     gs.maxCargoWeight = 20;
+    // 重置每局资源
+    gs.day = 1;
+    gs.maxDay = 120;
+    gs.food = 8;
+    gs.morale = 3;
+    gs.caravanHp = 45;
+    gs.caravanMaxHp = 45;
+    gs.gold = 0;
     // 保留持久化数据：completedOrderIds, cityContributions, usedLegacyRelicIds, embers
     setGameState(gs);
     console.log("[主菜单] 游戏状态已重置，开始新局");

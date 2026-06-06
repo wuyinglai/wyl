@@ -1,4 +1,4 @@
-﻿/**
+/**
  * smoke-test-hidden-bugs-9-2.cjs
  * 阶段9.2.1：隐藏Bug排查验收补强
  * 覆盖12个高风险核心项 + 截图留档 + 两条闭环验证
@@ -304,11 +304,20 @@ async function runTest() {
       };
     });
 
+    // 直接调用 executeRetreat，不需要点击弹窗按钮，方便测试
     await page.evaluate(() => {
       const scene = window.game.scene.getScene("MapScene");
-      if (scene && scene.handleRetreat) scene.handleRetreat();
+      const gs = window.getGameState();
+      const retreatCheck = window.checkRetreatCost(
+        gs.currentPosition,
+        gs.startPosition,
+        gs.food
+      );
+      if (scene && scene.executeRetreat) {
+        scene.executeRetreat(retreatCheck);
+      }
     });
-    await sleep(1500);
+    await sleep(2000);
 
     const afterRetreat = await page.evaluate(() => {
       const gs = window.getGameState();
@@ -401,7 +410,7 @@ async function runTest() {
     assert(afterMainMenu.activeLegacy === null, `主菜单重置后 activeLegacyRelicId=null`);
     assert(afterMainMenu.appliedLegacy === null, `主菜单重置后 appliedLegacyRelicIdForRun=null`);
     assert(afterMainMenu.selectedOrderId === null, `主菜单重置后 selectedOrderId=null`);
-    assert(afterMainMenu.silver === 0, `主菜单重置后 silver=0`);
+    assert(afterMainMenu.silver === 50, `主菜单重置后 silver=50`);
 
     // ==========================================
     // 十三、遗产不重复触发
