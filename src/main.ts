@@ -81,6 +81,13 @@ import {
   createFailedExpeditionResult,
 } from "./systems/expeditionResultSystem";
 
+// 撤退系统（阶段10.1）
+import {
+  calculateRetreatSupplyCost,
+  checkRetreatCost,
+  getRetreatCostText,
+} from "./systems/retreatSystem";
+
 // 失败遗产系统（阶段8.8）
 import {
   generateFailureLegacyChoices,
@@ -138,6 +145,11 @@ function exposeTestApi(): void {
   w.formatExpeditionResult = formatExpeditionResult;
   w.createRetreatedExpeditionResult = createRetreatedExpeditionResult;
   w.createFailedExpeditionResult = createFailedExpeditionResult;
+
+  // 撤退系统（阶段10.1）
+  w.calculateRetreatSupplyCost = calculateRetreatSupplyCost;
+  w.checkRetreatCost = checkRetreatCost;
+  w.getRetreatCostText = getRetreatCostText;
 
   // 失败遗产系统
   w.generateFailureLegacyChoices = generateFailureLegacyChoices;

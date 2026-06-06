@@ -114,6 +114,23 @@ function sleep(ms) {
   });
   await sleep(2000);
 
+  // ========== 2.5 点击确认撤退 ==========
+  console.log("2.5 点击确认撤退");
+  await page.evaluate(() => {
+    const ms = window.game.scene.getScene("MapScene");
+    if (!ms) return;
+    let confirmBtn = null;
+    if (ms.modalContainer && ms.modalContainer.list) {
+      confirmBtn = ms.modalContainer.list.find(
+        (c) => c.type === "Text" && c.text === "确认撤退" && c.input && c.input.enabled
+      );
+    }
+    if (confirmBtn) {
+      confirmBtn.emit("pointerdown");
+    }
+  });
+  await sleep(2000);
+
   // ========== 3. 进入 ExpeditionResultScene ==========
   console.log("3. 进入 ExpeditionResultScene");
   const ersReady = await page.evaluate(() => !!window.game.scene.getScene("ExpeditionResultScene"));

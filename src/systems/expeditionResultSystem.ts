@@ -1,14 +1,22 @@
 /**
  * expeditionResultSystem.ts
- * 远征结算系统（阶段8.7）
+ * 远征结算系统（阶段8.7/10.1）
  *
  * 提供纯函数生成远征结算结果
  */
 
 import { CityOrder, CITY_ORDERS } from "../data/cityOrders";
 import { getCityStatusLabel, formatCityProgress } from "./cityProgressSystem";
+import { RetreatResultType } from "./retreatSystem";
 
 export type ExpeditionResultType = "success" | "failed" | "retreated";
+
+export interface RetreatResultData {
+  retreatResultType: RetreatResultType;
+  retreatSupplyCost: number;
+  currentSupply: number;
+  shortage?: number;
+}
 
 export interface ExpeditionResult {
   resultType: ExpeditionResultType;
@@ -23,6 +31,7 @@ export interface ExpeditionResult {
   remainingCargo: Record<string, number>;
   completedOrderIds: string[];
   summaryLines: string[];
+  retreatResult?: RetreatResultData;
 }
 
 interface CreateSuccessParams {
@@ -82,22 +91,26 @@ export function createSuccessExpeditionResult(
   };
 }
 
+interface CreateRetreatedParams {
+  cargo: Record<string, number>;
+  selectedOrderId?: string;
+  retreatResultData?: RetreatResultData;
+}
+
 /**
  * 创建撤退远征结算结果
  */
 export function createRetreatedExpeditionResult(
-  gameState: {
-    cargo: Record<string, number>;
-    selectedOrderId?: string;
-  }
+  params: CreateRetreatedParams
 ): ExpeditionResult {
-  const remainingCargo = gameState.cargo || {};
+  const { cargo, selectedOrderId, retreatResultData } = params;
+  const remainingCargo = cargo || {};
   const hasRemaining = Object.values(remainingCargo).some(v => v > 0);
 
   // 获取订单标题
   let orderTitle: string | undefined;
-  if (gameState.selectedOrderId) {
-    const order = CITY_ORDERS.find(o => o.id === gameState.selectedOrderId);
+  if (selectedOrderId) {
+    const order = CITY_ORDERS.find(o => o.id === selectedOrderId);
     if (order) orderTitle = order.title;
   }
 
@@ -106,13 +119,27 @@ export function createRetreatedExpeditionResult(
   if (orderTitle) {
     summaryLines.push(`未完成订单：${orderTitle}`);
   }
-  summaryLines.push("商队保住了余火");
+  
+  if (retreatResultData) {
+    if (retreatResultData.retreatResultType === "safe_retreat") {
+      summaryLines.push("撤离结果：安全撤离");
+    } else {
+      summaryLines.push("撤离结果：撤离失败");
+    }
+    summaryLines.push(`撤离消耗补给：${retreatResultData.retreatSupplyCost}`);
+    if (retreatResultData.shortage && retreatResultData.shortage > 0) {
+      summaryLines.push(`补给不足：缺少 ${retreatResultData.shortage}`);
+    }
+  } else {
+    summaryLines.push("商队保住了余火");
+  }
+
   summaryLines.push("获得火种：+1");
   summaryLines.push(`剩余货物：${hasRemaining ? Object.entries(remainingCargo).filter(([_, v]) => v > 0).map(([k, v]) => `${k} x${v}`).join(", ") : "无"}`);
 
   return {
     resultType: "retreated",
-    orderId: gameState.selectedOrderId,
+    orderId: selectedOrderId,
     orderTitle,
     silverGained: 0,
     embersGained: 1,
@@ -120,6 +147,7 @@ export function createRetreatedExpeditionResult(
     remainingCargo,
     completedOrderIds: [],
     summaryLines,
+    retreatResult: retreatResultData,
   };
 }
 
@@ -210,3 +238,4 @@ export function formatExpeditionResult(result: ExpeditionResult): string[] {
 
   return lines;
 }
+

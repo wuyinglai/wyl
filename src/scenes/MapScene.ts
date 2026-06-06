@@ -30,6 +30,7 @@ import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
 import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "../systems/expeditionResultSystem";
+import { checkRetreatCost, getRetreatCostText, RetreatCostCheck } from "../systems/retreatSystem";
 import { getLegacyRelicById } from "../data/legacyRelics";
 import { isDevCheatEnabled } from "../systems/devConfig";
 
@@ -3810,20 +3811,69 @@ export class MapScene extends Phaser.Scene {
   }
 
   /**
-   * 处理撤退（阶段8.9）
+   * 处理撤退（阶段8.9/10.1）
    */
   private handleRetreat(): void {
     const gs = getGameState();
+    
+    // 计算撤退成本
+    const retreatCheck = checkRetreatCost(
+      gs.currentPosition,
+      gs.startPosition,
+      gs.food // 使用food作为补给
+    );
+
+    // 获取撤退文本提示
+    const costLines = getRetreatCostText(retreatCheck);
+
+    // 显示确认弹窗
+    this.openModal(
+      "确认撤退",
+      costLines.join("\n"),
+      [
+        {
+          text: "确认撤退",
+          action: () => this.executeRetreat(retreatCheck)
+        },
+        {
+          text: "取消",
+          action: () => this.closeModal()
+        }
+      ]
+    );
+  }
+
+  /**
+   * 执行撤退（阶段10.1）
+   */
+  private executeRetreat(retreatCheck: RetreatCostCheck): void {
+    const gs = getGameState();
+
+    // 根据撤退结果决定消耗多少补给
+    if (retreatCheck.canRetreatSafely) {
+      gs.food = Math.max(0, gs.food - retreatCheck.retreatSupplyCost);
+    } else {
+      // 补给不足时仍然消耗所有补给
+      gs.food = 0;
+    }
+
+    // 创建撤退结果
     const result = createRetreatedExpeditionResult({
       cargo: gs.cargo,
       selectedOrderId: gs.selectedOrderId,
+      retreatResultData: {
+        retreatResultType: retreatCheck.resultType,
+        retreatSupplyCost: retreatCheck.retreatSupplyCost,
+        currentSupply: retreatCheck.currentSupply,
+        shortage: retreatCheck.shortage,
+      }
     });
 
     gs.lastExpeditionResult = result;
     gs.embers += result.embersGained;
     setGameState(gs);
 
-    console.log(`[MapScene] 撤退: 火种+${result.embersGained}`);
+    console.log(`[MapScene] 撤退: 火种+${result.embersGained}, 结果: ${retreatCheck.resultType}`);
     this.scene.start("ExpeditionResultScene");
   }
 }
