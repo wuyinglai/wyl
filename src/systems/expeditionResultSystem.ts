@@ -67,6 +67,7 @@ export function createSuccessExpeditionResult(
   const hasRemaining = Object.values(remainingCargo).some(v => v > 0);
 
   const summaryLines: string[] = [];
+  summaryLines.push("远征成功");
   summaryLines.push(`订单完成：${order.title}`);
   summaryLines.push(`抵达城市：${cityName}`);
   summaryLines.push(`获得银币：${deliveryResult.rewardSilver}`);
@@ -95,6 +96,7 @@ interface CreateRetreatedParams {
   cargo: Record<string, number>;
   selectedOrderId?: string;
   retreatResultData?: RetreatResultData;
+  orderTimeState?: { elapsedSteps: number; remainingSteps: number; limitSteps: number; isCompleted: boolean };
 }
 
 /**
@@ -103,7 +105,7 @@ interface CreateRetreatedParams {
 export function createRetreatedExpeditionResult(
   params: CreateRetreatedParams
 ): ExpeditionResult {
-  const { cargo, selectedOrderId, retreatResultData } = params;
+  const { cargo, selectedOrderId, retreatResultData, orderTimeState } = params;
   const remainingCargo = cargo || {};
   const hasRemaining = Object.values(remainingCargo).some(v => v > 0);
 
@@ -118,6 +120,12 @@ export function createRetreatedExpeditionResult(
   summaryLines.push("远征撤退");
   if (orderTitle) {
     summaryLines.push(`未完成订单：${orderTitle}`);
+  }
+  
+  // 显示订单时间状态（阶段10.2）
+  if (orderTimeState && !orderTimeState.isCompleted) {
+    summaryLines.push(`本次已消耗时间：${orderTimeState.elapsedSteps}步`);
+    summaryLines.push(`下次继续剩余时间：${orderTimeState.remainingSteps}步`);
   }
   
   if (retreatResultData) {
@@ -196,6 +204,12 @@ export function createFailedExpeditionResult(
  * 格式化结算结果为可显示文本数组
  */
 export function formatExpeditionResult(result: ExpeditionResult): string[] {
+  // 优先使用已有的 summaryLines（由 createXxxExpeditionResult 生成）
+  if (result.summaryLines && result.summaryLines.length > 0) {
+    return result.summaryLines;
+  }
+
+  // 原有逻辑作为 fallback
   const lines: string[] = [];
 
   if (result.resultType === "success") {

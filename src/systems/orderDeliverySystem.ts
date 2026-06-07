@@ -7,6 +7,7 @@
 
 import type { Cargo } from "./cargoSystem";
 import type { CityOrder } from "../data/cityOrders";
+import { markOrderCompleted } from "./GameState";
 
 /**
  * 订单交付结果
@@ -96,6 +97,9 @@ export function deliverOrder(params: {
       updatedCargo[goodId] = remaining;
     }
   }
+
+  // 标记订单完成（阶段10.2）
+  markOrderCompleted(order.id);
 
   return {
     ok: true,

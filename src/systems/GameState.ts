@@ -37,6 +37,13 @@ export interface MapCell {
 }
 
 // 游戏全局状态
+export interface OrderTimeState {
+  elapsedSteps: number;
+  remainingSteps: number;
+  limitSteps: number;
+  isCompleted: boolean;
+}
+
 export interface GameState {
   // 队伍
   selectedCharacters: CharacterId[];
@@ -71,6 +78,9 @@ export interface GameState {
 
   // 城市订单（阶段7.2）
   selectedOrderId: string | null;
+
+  // 订单时间状态（阶段10.2）
+  orderTimeStates: Record<string, OrderTimeState>;
 
   // 商队货物栏（阶段8.2）
   cargo: Record<string, number>;
@@ -148,6 +158,9 @@ export function createInitialGameState(): GameState {
 
     // 城市订单（阶段7.2）
     selectedOrderId: null,
+
+    // 订单时间状态（阶段10.2）
+    orderTimeStates: {},
 
     // 商队货物栏（阶段8.2）
     cargo: {},
@@ -764,6 +777,17 @@ export function moveToCell(state: GameState, x: number, y: number): boolean {
     console.log("[部件] 备用轮轴触发，本次移动不消耗天数");
   }
 
+  // 记录订单步数（阶段10.2）
+  if (state.selectedOrderId) {
+    const orderId = state.selectedOrderId;
+    const timeState = state.orderTimeStates[orderId];
+    if (timeState && !timeState.isCompleted) {
+      timeState.elapsedSteps += 1;
+      timeState.remainingSteps = Math.max(0, timeState.limitSteps - timeState.elapsedSteps);
+      console.log(`[订单时间] 订单 ${orderId}: +1步, 已走${timeState.elapsedSteps}, 剩余${timeState.remainingSteps}`);
+    }
+  }
+
   console.log("[地图] 移动成功，新位置:", { x, y }, "day:", state.day);
 
   // 更新可达格显示
@@ -911,3 +935,60 @@ export function syncCharacterStatesFromBattle(
   }
   setGameState(gameState);
 }
+
+// ==================== 订单时间管理（阶段10.2） ====================
+
+/**
+ * 初始化订单时间状态
+ */
+export function initOrderTimeState(orderId: string, timeLimitSteps: number): void {
+  const gameState = getGameState();
+  if (!gameState.orderTimeStates[orderId]) {
+    gameState.orderTimeStates[orderId] = {
+      elapsedSteps: 0,
+      remainingSteps: timeLimitSteps,
+      limitSteps: timeLimitSteps,
+      isCompleted: false,
+    };
+    setGameState(gameState);
+    console.log(`[订单时间] 初始化订单 ${orderId}: ${timeLimitSteps}步`);
+  }
+}
+
+/**
+ * 记录订单移动步数
+ */
+export function recordOrderStep(): void {
+  const gameState = getGameState();
+  if (gameState.selectedOrderId) {
+    const orderId = gameState.selectedOrderId;
+    const timeState = gameState.orderTimeStates[orderId];
+    if (timeState && !timeState.isCompleted) {
+      timeState.elapsedSteps += 1;
+      timeState.remainingSteps = Math.max(0, timeState.limitSteps - timeState.elapsedSteps);
+      console.log(`[订单时间] 订单 ${orderId}: +1步, 已走${timeState.elapsedSteps}, 剩余${timeState.remainingSteps}`);
+      setGameState(gameState);
+    }
+  }
+}
+
+/**
+ * 标记订单完成
+ */
+export function markOrderCompleted(orderId: string): void {
+  const gameState = getGameState();
+  if (gameState.orderTimeStates[orderId]) {
+    gameState.orderTimeStates[orderId].isCompleted = true;
+    console.log(`[订单时间] 订单 ${orderId} 标记为完成`);
+    setGameState(gameState);
+  }
+}
+
+/**
+ * 获取订单时间状态
+ */
+export function getOrderTimeState(orderId: string): OrderTimeState | null {
+  const gameState = getGameState();
+  return gameState.orderTimeStates[orderId] || null;
+}
+

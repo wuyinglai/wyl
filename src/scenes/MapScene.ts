@@ -13,6 +13,7 @@ import {
   getMovableNeighbors,
   processInjuryRecovery,
   checkExpeditionFailed,
+  initOrderTimeState,
 } from "../systems/GameState";
 import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
 import { CharacterState, CardDef } from "../data/types";
@@ -157,6 +158,15 @@ export class MapScene extends Phaser.Scene {
 
     const routeInfo = this.getRouteInfoText();
     const orderSummary = this.getOrderSummaryText();
+    
+    // 初始化订单时间状态（阶段10.2）
+    if (gameState.selectedOrderId) {
+      const order = getOrderById(gameState.selectedOrderId);
+      if (order && order.timeLimitSteps) {
+        initOrderTimeState(gameState.selectedOrderId, order.timeLimitSteps);
+      }
+    }
+    
     // 阶段8.3：使用 orderCargoSystem 生成订单/货物状态摘要
     // 阶段8.4：已完成订单显示"已完成"
     let orderStatusText: string;
@@ -189,6 +199,17 @@ export class MapScene extends Phaser.Scene {
     // 订单状态和载重状态（常驻面板显示）
     infoLines.push(orderStatusText);
     infoLines.push(weightStatusText);
+    
+    // 订单时间显示（阶段10.2）
+    if (gameState.selectedOrderId) {
+      const orderTimeState = gameState.orderTimeStates[gameState.selectedOrderId];
+      if (orderTimeState) {
+        const timeText = orderTimeState.isCompleted 
+          ? `订单时限：已完成（${orderTimeState.elapsedSteps}步）`
+          : `订单时限：${orderTimeState.remainingSteps}/${orderTimeState.limitSteps}步（已走${orderTimeState.elapsedSteps}步）`;
+        infoLines.push(timeText);
+      }
+    }
     // 城市状态（阶段8.6）
     if (gameState.selectedCityId) {
       infoLines.push(formatCityProgress(gameState.selectedCityId, gameState.cityContributions));
@@ -3857,6 +3878,9 @@ export class MapScene extends Phaser.Scene {
       gs.food = 0;
     }
 
+    // 获取订单时间状态（阶段10.2）
+    const orderTimeState = gs.selectedOrderId ? gs.orderTimeStates[gs.selectedOrderId] : undefined;
+
     // 创建撤退结果
     const result = createRetreatedExpeditionResult({
       cargo: gs.cargo,
@@ -3866,7 +3890,8 @@ export class MapScene extends Phaser.Scene {
         retreatSupplyCost: retreatCheck.retreatSupplyCost,
         currentSupply: retreatCheck.currentSupply,
         shortage: retreatCheck.shortage,
-      }
+      },
+      orderTimeState,
     });
 
     gs.lastExpeditionResult = result;

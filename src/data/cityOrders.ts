@@ -16,6 +16,7 @@ export interface CityOrder {
   difficulty: string;
   tags: string[];
   isUnlocked: boolean;
+  timeLimitSteps?: number;
 }
 
 export const CITY_ORDERS: CityOrder[] = [
@@ -34,6 +35,7 @@ export const CITY_ORDERS: CityOrder[] = [
     difficulty: "low",
     tags: ["supply", "beginner", "safe"],
     isUnlocked: true,
+    timeLimitSteps: 12,
   },
   {
     id: "order_furnace_food_medicine",
@@ -51,6 +53,7 @@ export const CITY_ORDERS: CityOrder[] = [
     difficulty: "medium",
     tags: ["industry", "mine", "support"],
     isUnlocked: true,
+    timeLimitSteps: 10,
   },
   {
     id: "order_heal_spring_medicine",
@@ -68,6 +71,7 @@ export const CITY_ORDERS: CityOrder[] = [
     difficulty: "low_medium",
     tags: ["medicine", "rescue", "supply"],
     isUnlocked: true,
+    timeLimitSteps: 10,
   },
 ];
 

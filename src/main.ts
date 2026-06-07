@@ -14,9 +14,14 @@ import {
   getMovableNeighbors,
   resolveQuestionCell,
   resetGameState,
+  initOrderTimeState,
+  recordOrderStep,
+  markOrderCompleted,
+  getOrderTimeState,
+  moveToCell,
 } from "./systems/GameState";
 import { GOODS, getGoodById, getGoodName, formatGoodsRequirement, validateGoods } from "./data/goods";
-import { getOrderById } from "./data/cityOrders";
+import { getOrderById, CITY_ORDERS } from "./data/cityOrders";
 import {
   createEmptyCargo,
   createCargo,
@@ -105,6 +110,16 @@ function exposeTestApi(): void {
   w.getMovableNeighbors = getMovableNeighbors;
   w.resolveQuestionCell = resolveQuestionCell;
   w.resetGameState = resetGameState;
+  w.moveToCell = moveToCell;
+  
+  // 订单时间管理 API（阶段10.2）
+  w.initOrderTimeState = initOrderTimeState;
+  w.recordOrderStep = recordOrderStep;
+  w.markOrderCompleted = markOrderCompleted;
+  w.getOrderTimeState = getOrderTimeState;
+  
+  // 订单数据
+  w.CITY_ORDERS = CITY_ORDERS;
 
   // 商品与货物系统
   w.GOODS = GOODS;
