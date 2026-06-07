@@ -7,8 +7,8 @@
  * 2. 初始剩余时间正确
  * 3. 移动后已消耗时间增加
  * 4. 撤退后再来一局，时间仍保持
- * 5. 完成订单后不再增加时间
- * 6. UI显示正确
+ * 5. resetGameState 清空 orderTimeStates
+ * 6. 完成订单后 isCompleted=true
  */
 
 const { chromium } = require("playwright");
@@ -278,8 +278,28 @@ function sleep(ms) {
   assert(afterRetryTime.elapsed === savedTime.elapsed, "已消耗时间保持不变");
   assert(afterRetryTime.remaining === savedTime.remaining, "剩余时间保持不变");
 
-  // 截图
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, "after-retry-time.png") });
+  // ========== 6. 验证 resetGameState 清空 orderTimeStates ==========
+  console.log("6. 验证 resetGameState 清空 orderTimeStates");
+
+  const beforeReset = await page.evaluate(() => {
+    const gs = window.getGameState();
+    return Object.keys(gs.orderTimeStates).length > 0;
+  });
+
+  assert(beforeReset, "reset 前有订单时间状态");
+
+  // 调用 resetGameState
+  await page.evaluate(() => {
+    window.resetGameState();
+  });
+  await sleep(500);
+
+  const afterReset = await page.evaluate(() => {
+    const gs = window.getGameState();
+    return Object.keys(gs.orderTimeStates).length === 0;
+  });
+
+  assert(afterReset, "resetGameState 后订单时间状态已清空");
 
   // ========== 总结 ==========
   console.log("=".repeat(60));

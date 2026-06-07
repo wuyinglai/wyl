@@ -90,6 +90,8 @@ export class MainMenuScene extends Phaser.Scene {
    */
   private resetGameStateForNewRun(): void {
     const gs = getGameState();
+    // 保存需要保留的状态
+    const orderTimeStates = gs.orderTimeStates;
     // 清空每局临时状态
     gs.cargo = {};
     gs.silver = 50;
@@ -116,8 +118,10 @@ export class MainMenuScene extends Phaser.Scene {
     gs.caravanHp = 45;
     gs.caravanMaxHp = 45;
     gs.gold = 0;
-    // 保留持久化数据：completedOrderIds, cityContributions, usedLegacyRelicIds, embers
+    // 恢复保留的状态
+    gs.orderTimeStates = orderTimeStates;
+    // 保留持久化数据：completedOrderIds, cityContributions, usedLegacyRelicIds, embers, orderTimeStates
     setGameState(gs);
-    console.log("[主菜单] 游戏状态已重置，开始新局");
+    console.log("[主菜单] 游戏状态已重置，开始新局，保留订单时间状态");
   }
 }
