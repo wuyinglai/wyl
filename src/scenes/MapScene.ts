@@ -35,7 +35,6 @@ import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
 import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "../systems/expeditionResultSystem";
 import { checkRetreatCost, getRetreatCostText, RetreatCostCheck } from "../systems/retreatSystem";
-import { getLegacyRelicById } from "../data/legacyRelics";
 import { isDevCheatEnabled } from "../systems/devConfig";
 
 /**
@@ -220,13 +219,6 @@ export class MapScene extends Phaser.Scene {
     // 城市状态（阶段8.6）
     if (gameState.selectedCityId) {
       infoLines.push(formatCityProgress(gameState.selectedCityId, gameState.cityContributions));
-    }
-    // 遗产摘要（阶段8.8）
-    if (gameState.activeLegacyRelicId) {
-      const relic = getLegacyRelicById(gameState.activeLegacyRelicId);
-      if (relic) {
-        infoLines.push(`遗产：${relic.name}`);
-      }
     }
 
     if (infoLines.length > 0) {

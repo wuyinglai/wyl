@@ -1,23 +1,23 @@
-﻿/**
+/**
  * smoke-test-legacy-relic-8-8.cjs
- * 阶段8.8：失败遗产系统 v1
+ * 阶段10.4：验证 legacy 遗产系统已移除
  *
  * 验证：
- * 1. 遗产数据存在
- * 2. 纯函数 generateFailureLegacyChoices 返回 3 个候选
- * 3. LegacySelectScene 显示 3 张遗产卡
- * 4. 选择遗产后 activeLegacyRelicId 设置正确
- * 5. CargoPrepScene 应用遗产效果（银币+10 / 药材+1）
- * 6. 防止重复应用
- * 7. MapScene 显示遗产摘要
- * 8. 跳过遗产功能
+ * 1. legacyRelics.ts 数据文件已删除
+ * 2. legacySystem.ts 系统文件已删除
+ * 3. LegacySelectScene.ts 场景文件已删除
+ * 4. GameState 中 legacy 字段已移除
+ * 5. main.ts 中 legacy API 已移除
+ * 6. CargoPrepScene 不再显示遗产提示
+ * 7. MapScene 不再显示遗产摘要
  */
 
 const { chromium } = require("playwright");
 const path = require("path");
+const fs = require("fs");
 
 const BASE_URL = "http://localhost:5173";
-const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/legacy-relic");
+const PROJECT_ROOT = path.join(__dirname, "..", "..");
 const FAILED = [];
 let passed = 0, failed = 0;
 
@@ -37,11 +37,26 @@ function sleep(ms) {
 }
 
 (async () => {
-  const fs = require("fs");
-  if (!fs.existsSync(ARTIFACT_DIR)) {
-    fs.mkdirSync(ARTIFACT_DIR, { recursive: true });
-  }
+  console.log("阶段10.4：验证 legacy 遗产系统已移除");
+  console.log("=".repeat(60));
 
+  // ========== 1. legacyRelics.ts 数据文件已删除 ==========
+  console.log("1. legacyRelics.ts 数据文件已删除");
+  const legacyRelicsPath = path.join(PROJECT_ROOT, "src", "data", "legacyRelics.ts");
+  assert(!fs.existsSync(legacyRelicsPath), `src/data/legacyRelics.ts 已删除`);
+
+  // ========== 2. legacySystem.ts 系统文件已删除 ==========
+  console.log("2. legacySystem.ts 系统文件已删除");
+  const legacySystemPath = path.join(PROJECT_ROOT, "src", "systems", "legacySystem.ts");
+  assert(!fs.existsSync(legacySystemPath), `src/systems/legacySystem.ts 已删除`);
+
+  // ========== 3. LegacySelectScene.ts 场景文件已删除 ==========
+  console.log("3. LegacySelectScene.ts 场景文件已删除");
+  const legacyScenePath = path.join(PROJECT_ROOT, "src", "scenes", "LegacySelectScene.ts");
+  assert(!fs.existsSync(legacyScenePath), `src/scenes/LegacySelectScene.ts 已删除`);
+
+  // ========== 4. 启动浏览器验证运行时行为 ==========
+  console.log("4. 启动浏览器验证运行时行为");
   const browser = await chromium.launch({ headless: true });
   const page = await browser.newPage({ viewport: { width: 1024, height: 800 } });
   page.on("pageerror", err => {
@@ -50,137 +65,52 @@ function sleep(ms) {
   });
 
   await page.addInitScript(() => {
-          window.__EMBER_TEST_MODE__ = true;
-        });
-        
-        await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
+    window.__EMBER_TEST_MODE__ = true;
+  });
+  
+  await page.goto(BASE_URL, { waitUntil: "networkidle", timeout: 30000 });
   await sleep(2000);
   await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 
-  console.log("阶段8.8：失败遗产系统 v1 测试");
-  console.log("=".repeat(60));
-
-  // ========== 1. window.game 存在 ==========
-  console.log("1. window.game 存在");
+  // ========== 5. window.game 存在 ==========
+  console.log("5. window.game 存在");
   assert(!!(await page.evaluate(() => window.game)), "window.game 存在");
 
-  // ========== 2. LEGACY_RELICS 至少 3 个 ==========
-  console.log("2. LEGACY_RELICS 至少 3 个");
-  const relicCount = await page.evaluate(() => window.LEGACY_RELICS.length);
-  assert(relicCount >= 3, `LEGACY_RELICS 数量 >= 3 (实际: ${relicCount})`);
-
-  // ========== 3. generateFailureLegacyChoices 返回 3 个候选 ==========
-  console.log("3. generateFailureLegacyChoices 返回 3 个候选");
-  const choices = await page.evaluate(() => window.generateFailureLegacyChoices());
-  assert(choices.length === 3, `遗产候选 = 3 (实际: ${choices.length})`);
-
-  // ========== 4. 每个遗产 id 唯一 ==========
-  console.log("4. 每个遗产 id 唯一");
-  const uniqueIds = new Set(choices);
-  assert(uniqueIds.size === choices.length, "遗产 id 唯一");
-
-  // ========== 5. getLegacyRelicById 可返回遗失药箱 ==========
-  console.log("5. getLegacyRelicById 可返回遗失药箱");
-  const medkit = await page.evaluate(() => window.getLegacyRelicById("lost_medkit"));
-  assert(!!medkit, "getLegacyRelicById('lost_medkit') 存在");
-  assert(medkit.name === "遗失药箱", `name = 遗失药箱 (实际: ${medkit.name})`);
-  assert(medkit.effectType === "starting_medicine", `effectType = starting_medicine`);
-
-  // ========== 6. 进入 LegacySelectScene 后显示 3 张遗产卡 ==========
-  console.log("6. LegacySelectScene 显示 3 张遗产卡");
-  // 先设置 legacyChoices
-  await page.evaluate(() => {
-    const gs = window.getGameState();
-    gs.legacyChoices = window.generateFailureLegacyChoices();
-    window.setGameState(gs);
-  });
-  await page.evaluate(() => { window.game.scene.start("LegacySelectScene"); });
-  await sleep(2000);
-
-  const sceneCheck = await page.evaluate(() => {
-    const ls = window.game.scene.getScene("LegacySelectScene");
-    if (!ls) return { ok: false, cardCount: 0, texts: [] };
-    const texts = [];
-    const searchChildren = (obj) => {
-      if (!obj) return;
-      if (obj.list && Array.isArray(obj.list)) {
-        for (const child of obj.list) {
-          if (child.type === "Text" && child.text) texts.push(child.text);
-          searchChildren(child);
-        }
-      }
-      if (obj.children && obj.children.list && Array.isArray(obj.children.list)) {
-        for (const child of obj.children.list) {
-          if (child.type === "Text" && child.text) texts.push(child.text);
-          searchChildren(child);
-        }
-      }
-    };
-    searchChildren(ls);
-    if (ls.children && ls.children.list) {
-      for (const child of ls.children.list) searchChildren(child);
+  // ========== 6. LegacySelectScene 不在场景配置中 ==========
+  console.log("6. LegacySelectScene 不在场景配置中");
+  const legacySceneInConfig = await page.evaluate(() => {
+    const config = window.game.config;
+    if (config && config.scene && Array.isArray(config.scene)) {
+      return config.scene.includes("LegacySelectScene");
     }
-    const cardCount = texts.filter(t => t === "普通" || t === "稀有").length;
-    return { ok: true, cardCount, texts };
+    return false;
   });
-  assert(sceneCheck.ok, "LegacySelectScene 场景存在");
-  assert(sceneCheck.cardCount >= 3, `显示 >= 3 张遗产卡 (实际: ${sceneCheck.cardCount})`);
-  assert(sceneCheck.texts.some(t => t.includes("烧焦地图")), `显示"烧焦地图"`);
-  assert(sceneCheck.texts.some(t => t.includes("遗失药箱")), `显示"遗失药箱"`);
-  assert(sceneCheck.texts.some(t => t.includes("断裂商旗")), `显示"断裂商旗"`);
+  assert(!legacySceneInConfig, `LegacySelectScene 不在场景配置中`);
 
-  // 截图
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, "legacy-select-scene.png") });
-
-  // ========== 7. 选择 lost_medkit 后状态正确 ==========
-  console.log("7. 选择 lost_medkit 后状态正确");
-  await page.evaluate(() => {
-    const ls = window.game.scene.getScene("LegacySelectScene");
-    if (!ls) return;
-    // 找到遗失药箱卡片并点击（通过 Container 搜索）
-    const containers = ls.children.list.filter(c => c.type === "Container");
-    for (const container of containers) {
-      const texts = [];
-      const searchTexts = (obj) => {
-        if (!obj) return;
-        if (obj.list && Array.isArray(obj.list)) {
-          for (const child of obj.list) {
-            if (child.type === "Text" && child.text) texts.push(child.text);
-            searchTexts(child);
-          }
-        }
-      };
-      searchTexts(container);
-      if (texts.some(t => t.includes("遗失药箱"))) {
-        // 点击卡片的背景 Rectangle
-        for (const child of container.list) {
-          if (child.type === "Rectangle" && child.input && child.input.enabled) {
-            child.emit("pointerdown");
-            break;
-          }
-        }
-        break;
-      }
-    }
+  // ========== 7. legacy API 已从 window 对象中移除 ==========
+  console.log("7. legacy API 已从 window 对象中移除");
+  const legacyApisRemoved = await page.evaluate(() => {
+    return typeof window.generateFailureLegacyChoices === 'undefined' &&
+           typeof window.applyLegacyRelicToGameState === 'undefined' &&
+           typeof window.getLegacyRelicById === 'undefined' &&
+           typeof window.LEGACY_RELICS === 'undefined';
   });
-  await sleep(1500);
+  assert(legacyApisRemoved, `遗产 API (generateFailureLegacyChoices, applyLegacyRelicToGameState, getLegacyRelicById, LEGACY_RELICS) 已从 window 对象中移除`);
 
-  const afterSelect = await page.evaluate(() => {
+  // ========== 8. GameState 中不存在 legacy 字段 ==========
+  console.log("8. GameState 中不存在 legacy 字段");
+  const legacyFieldsRemoved = await page.evaluate(() => {
     const gs = window.getGameState();
-    return {
-      activeLegacyRelicId: gs.activeLegacyRelicId,
-      legacyChoices: gs.legacyChoices,
-      usedLegacyRelicIds: gs.usedLegacyRelicIds,
-      inRouteSelect: !!window.game.scene.getScene("RouteSelectScene"),
-    };
+    return !('activeLegacyRelicId' in gs) &&
+           !('appliedLegacyRelicIdForRun' in gs) &&
+           !('legacyChoices' in gs) &&
+           !('usedLegacyRelicIds' in gs);
   });
-  assert(afterSelect.activeLegacyRelicId === "lost_medkit", `activeLegacyRelicId = lost_medkit (实际: ${afterSelect.activeLegacyRelicId})`);
-  assert(afterSelect.legacyChoices.length === 0, `legacyChoices 被清空`);
-  assert(afterSelect.usedLegacyRelicIds.includes("lost_medkit"), `usedLegacyRelicIds 包含 lost_medkit`);
-  assert(afterSelect.inRouteSelect, "选择后进入 RouteSelectScene");
+  assert(legacyFieldsRemoved, `GameState 中不存在 activeLegacyRelicId/appliedLegacyRelicIdForRun/legacyChoices/usedLegacyRelicIds 字段`);
 
-  // ========== 8. 进入下一局 CargoPrepScene 后 cargo.medicine 增加 1 ==========
-  console.log("8. CargoPrepScene 应用遗产效果（药材+1）");
+  // ========== 9. 进入 CargoPrepScene 验证不显示遗产提示 ==========
+  console.log("9. 进入 CargoPrepScene 验证不显示遗产提示");
+  // 进入 CargoPrepScene
   await page.evaluate(() => {
     const rs = window.game.scene.getScene("RouteSelectScene");
     if (rs && rs.routes && rs.routes.length > 0) rs.selectRoute(rs.routes[0]);
@@ -213,164 +143,88 @@ function sleep(ms) {
   const cargoPrepReady = await page.evaluate(() => !!window.game.scene.getScene("CargoPrepScene"));
   assert(cargoPrepReady, "CargoPrepScene 就绪");
 
-  const cargoCheck = await page.evaluate(() => {
-    const gs = window.getGameState();
-    return {
-      medicine: gs.cargo.medicine || 0,
-      activeLegacyRelicId: gs.activeLegacyRelicId,
-      appliedLegacyRelicIdForRun: gs.appliedLegacyRelicIdForRun,
-    };
-  });
-  assert(cargoCheck.medicine >= 1, `cargo.medicine >= 1 (实际: ${cargoCheck.medicine})`);
-  assert(cargoCheck.appliedLegacyRelicIdForRun === "lost_medkit", `appliedLegacyRelicIdForRun = lost_medkit`);
-
-  // 检查 UI 显示遗产提示
+  // 检查 CargoPrepScene 中不显示遗产提示
   const cargoUI = await page.evaluate(() => {
     const cp = window.game.scene.getScene("CargoPrepScene");
     if (!cp) return { hasLegacyHint: false };
     const texts = cp.children.list.filter(c => c.type === "Text");
-    const legacyText = texts.find(t => t.text && t.text.includes("遗产："));
-    return { hasLegacyHint: !!legacyText, text: legacyText ? legacyText.text : "" };
+    const legacyText = texts.find(t => t.text && t.text.includes("遗产"));
+    return { hasLegacyHint: !!legacyText };
   });
-  assert(cargoUI.hasLegacyHint, `CargoPrepScene 显示遗产提示: "${cargoUI.text}"`);
+  assert(!cargoUI.hasLegacyHint, `CargoPrepScene 不显示遗产提示`);
 
-  // 截图
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, "cargo-prep-legacy.png") });
-
-  // ========== 9. 重复刷新 CargoPrepScene 不会重复增加 medicine ==========
-  console.log("9. 防止重复应用遗产");
-  const medicineBefore = cargoCheck.medicine;
-
-  // 模拟重新进入 CargoPrepScene（通过 scene restart）
-  await page.evaluate(() => { window.game.scene.start("CargoPrepScene"); });
+  // ========== 10. 进入 MapScene 验证不显示遗产摘要 ==========
+  console.log("10. 进入 MapScene 验证不显示遗产摘要");
+  await page.evaluate(() => {
+    const cp = window.game.scene.getScene("CargoPrepScene");
+    if (cp && cp.startExpedition) cp.startExpedition();
+  });
   await sleep(1500);
 
-  const medicineAfter = await page.evaluate(() => {
-    const gs = window.getGameState();
-    return gs.cargo.medicine || 0;
-  });
-  assert(medicineAfter === medicineBefore, `重复进入不增加 medicine: ${medicineBefore} → ${medicineAfter}`);
+  const mapSceneReady = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
+  assert(mapSceneReady, "MapScene 就绪");
 
-  // ========== 10. 进入 MapScene 后显示遗产摘要 ==========
-  console.log("10. MapScene 显示遗产摘要");
-  await page.evaluate(() => {
-    const scene = window.game.scene.getScene("CargoPrepScene");
-    if (scene && scene.startExpedition) scene.startExpedition();
-  });
-  await sleep(2500);
-
-  const mapReady = await page.evaluate(() => !!window.game.scene.getScene("MapScene"));
-  assert(mapReady, "MapScene 就绪");
-
-  const mapLegacy = await page.evaluate(() => {
+  // 检查 MapScene 中不显示遗产摘要
+  const mapUI = await page.evaluate(() => {
     const ms = window.game.scene.getScene("MapScene");
-    if (!ms) return { hasLegacy: false };
+    if (!ms) return { hasLegacyHint: false };
     const texts = ms.children.list.filter(c => c.type === "Text");
-    const legacyText = texts.find(t => t.text && t.text.includes("遗产："));
-    return { hasLegacy: !!legacyText, text: legacyText ? legacyText.text : "" };
+    const legacyText = texts.find(t => t.text && t.text.includes("遗产"));
+    return { hasLegacyHint: !!legacyText };
   });
-  assert(mapLegacy.hasLegacy, `MapScene 显示遗产: "${mapLegacy.text}"`);
+  assert(!mapUI.hasLegacyHint, `MapScene 不显示遗产摘要`);
 
-  // 截图
-  await page.screenshot({ path: path.join(ARTIFACT_DIR, "map-legacy-hint.png") });
-
-  // ========== 11. 测试 broken_banner（银币+10）==========
-  console.log("11. 测试 broken_banner（银币+10）");
-  // 重置并选择断裂商旗
+  // ========== 11. 主菜单重置后不保留 legacy 状态 ==========
+  console.log("11. 主菜单重置后验证状态");
   await page.evaluate(() => {
-    const gs = window.getGameState();
-    gs.activeLegacyRelicId = "broken_banner";
-    gs.appliedLegacyRelicIdForRun = undefined;
-    gs.cargo = {};
-    gs.silver = 100;
-    window.setGameState(gs);
+    const mm = window.game.scene.getScene("MainMenuScene");
+    if (mm && mm.resetGameStateForNewRun) mm.resetGameStateForNewRun();
   });
-  await page.evaluate(() => { window.game.scene.start("CargoPrepScene"); });
-  await sleep(1500);
+  await sleep(500);
 
-  const silverCheck = await page.evaluate(() => {
+  const afterReset = await page.evaluate(() => {
     const gs = window.getGameState();
     return {
+      hasLegacyField: 'activeLegacyRelicId' in gs || 'appliedLegacyRelicIdForRun' in gs || 'legacyChoices' in gs,
+      selectedOrderId: gs.selectedOrderId,
       silver: gs.silver,
-      appliedLegacyRelicIdForRun: gs.appliedLegacyRelicIdForRun,
     };
   });
-  assert(silverCheck.silver === 110, `silver = 110 (实际: ${silverCheck.silver})`);
-  assert(silverCheck.appliedLegacyRelicIdForRun === "broken_banner", `appliedLegacyRelicIdForRun = broken_banner`);
+  assert(!afterReset.hasLegacyField, `主菜单重置后 GameState 不包含 legacy 字段`);
+  assert(afterReset.selectedOrderId === null, `主菜单重置后 selectedOrderId=null`);
+  assert(afterReset.silver === 50, `主菜单重置后 silver=50`);
 
-  // 再次进入不应重复增加
-  await page.evaluate(() => { window.game.scene.start("CargoPrepScene"); });
-  await sleep(1500);
-  const silverAfterRepeat = await page.evaluate(() => window.getGameState().silver);
-  assert(silverAfterRepeat === 110, `重复进入不增加 silver: ${silverAfterRepeat}`);
-
-  // ========== 12. 测试 burned_map（MapScene 显示）==========
-  console.log("12. 测试 burned_map（MapScene 显示）");
+  // ========== 12. 尝试进入 LegacySelectScene 应失败 ==========
+  console.log("12. 尝试进入 LegacySelectScene 应失败");
   await page.evaluate(() => {
-    const gs = window.getGameState();
-    gs.activeLegacyRelicId = "burned_map";
-    gs.appliedLegacyRelicIdForRun = undefined;
-    window.setGameState(gs);
-  });
-  await page.evaluate(() => { window.game.scene.start("MapScene"); });
-  await sleep(1500);
-
-  const mapBurned = await page.evaluate(() => {
-    const ms = window.game.scene.getScene("MapScene");
-    if (!ms) return { hasLegacy: false };
-    const texts = ms.children.list.filter(c => c.type === "Text");
-    const legacyText = texts.find(t => t.text && t.text.includes("遗产：烧焦地图"));
-    return { hasLegacy: !!legacyText, text: legacyText ? legacyText.text : "" };
-  });
-  assert(mapBurned.hasLegacy, `MapScene 显示烧焦地图: "${mapBurned.text}"`);
-
-  // ========== 13. 测试跳过遗产 ==========
-  console.log("13. 测试跳过遗产");
-  await page.evaluate(() => {
-    const gs = window.getGameState();
-    gs.legacyChoices = window.generateFailureLegacyChoices();
-    gs.activeLegacyRelicId = undefined;
-    window.setGameState(gs);
-  });
-  await page.evaluate(() => { window.game.scene.start("LegacySelectScene"); });
-  await sleep(2000);
-
-  await page.evaluate(() => {
-    const ls = window.game.scene.getScene("LegacySelectScene");
-    if (!ls) return;
-    // 点击"跳过遗产"按钮
-    for (const child of ls.children.list) {
-      if (child.type === "Rectangle" && child.input && child.input.enabled) {
-        const textObj = ls.children.list.find(c => c.type === "Text" && c.y === child.y && c.text && c.text.includes("跳过"));
-        if (textObj) {
-          child.emit("pointerdown");
-          break;
-        }
-      }
+    try {
+      window.game.scene.start("LegacySelectScene");
+    } catch (e) {
+      // 预期失败
     }
   });
-  await sleep(1500);
+  await sleep(500);
 
-  const skipCheck = await page.evaluate(() => {
-    const gs = window.getGameState();
-    return {
-      activeLegacyRelicId: gs.activeLegacyRelicId,
-      legacyChoices: gs.legacyChoices,
-      inRouteSelect: !!window.game.scene.getScene("RouteSelectScene"),
-    };
+  const legacySceneStarted = await page.evaluate(() => {
+    // LegacySelectScene 不会启动，检查当前场景
+    const currentScene = window.game.scene.getScene("LegacySelectScene");
+    return !!currentScene;
   });
-  assert(!skipCheck.activeLegacyRelicId, `跳过遗产后 activeLegacyRelicId 为空`);
-  assert(skipCheck.legacyChoices.length === 0, `跳过遗产后 legacyChoices 被清空`);
-  assert(skipCheck.inRouteSelect, "跳过遗产后进入 RouteSelectScene");
+  assert(!legacySceneStarted, `无法进入 LegacySelectScene（场景已删除）`);
 
-  // ========== 总结 ==========
-  console.log("=".repeat(60));
-  console.log(`测试完成: ${passed} passed, ${failed} failed`);
-  if (FAILED.length > 0) {
-    console.error("失败项:");
-    FAILED.forEach(f => console.error(`  - ${f}`));
-  }
-
+  // 清理
   await browser.close();
-  process.exit(failed > 0 ? 1 : 0);
+
+  // ========== 输出结果 ==========
+  console.log("=".repeat(60));
+  if (failed > 0) {
+    console.error(`\n❌ 测试失败: ${passed} 通过, ${failed} 失败`);
+    console.error("失败项:");
+    FAILED.forEach((msg, i) => console.error(`  ${i + 1}. ${msg}`));
+    process.exit(1);
+  } else {
+    console.log(`\n✅ 测试通过: ${passed} 通过, ${failed} 失败`);
+    console.log("\n验证完成：legacy 遗产系统已成功移除");
+    process.exit(0);
+  }
 })();

@@ -85,8 +85,8 @@ export class MainMenuScene extends Phaser.Scene {
 
   /**
    * 重置游戏状态，防止跨局污染
-   * 保留持久化数据（completedOrderIds, cityContributions, usedLegacyRelicIds, embers）
-   * 清空每局临时状态（cargo, silver, selectedRouteId, selectedCityId, selectedOrderId, activeLegacyRelicId, appliedLegacyRelicIdForRun, legacyChoices, lastExpeditionResult 等）
+   * 保留持久化数据（completedOrderIds, cityContributions, embers, orderTimeStates, unfinishedOrderIds）
+   * 清空每局临时状态（cargo, silver, selectedRouteId, selectedCityId, selectedOrderId, lastExpeditionResult 等）
    */
   private resetGameStateForNewRun(): void {
     const gs = getGameState();
@@ -99,9 +99,6 @@ export class MainMenuScene extends Phaser.Scene {
     gs.selectedRouteId = null;
     gs.selectedCityId = null;
     gs.selectedOrderId = null;
-    gs.activeLegacyRelicId = null;
-    gs.appliedLegacyRelicIdForRun = null;
-    gs.legacyChoices = [];
     gs.lastExpeditionResult = null;
     gs.currentPosition = { x: 0, y: 0 };
     gs.currentBattleType = null;
@@ -122,7 +119,7 @@ export class MainMenuScene extends Phaser.Scene {
     // 恢复保留的状态
     gs.orderTimeStates = orderTimeStates;
     gs.unfinishedOrderIds = unfinishedOrderIds;
-    // 保留持久化数据：completedOrderIds, cityContributions, usedLegacyRelicIds, embers, orderTimeStates, unfinishedOrderIds
+    // 保留持久化数据：completedOrderIds, cityContributions, embers, orderTimeStates, unfinishedOrderIds
     setGameState(gs);
     console.log("[主菜单] 游戏状态已重置，开始新局，保留订单时间状态和未完成订单");
   }

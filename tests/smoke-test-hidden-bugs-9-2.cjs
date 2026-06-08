@@ -387,10 +387,9 @@ async function runTest() {
     assert(afterNewRun.cargo === "{}", `再来一局后 cargo 为空`);
 
     // ==========================================
-    // 十二、activeLegacyRelicId 返回主菜单后不污染新局
+    // 十二、Legacy 字段已移除（阶段10.4）
     // ==========================================
-    console.log("\n12. activeLegacyRelicId 返回主菜单后不污染新局");
-    // MainMenuScene.resetGameStateForNewRun 会清空 activeLegacyRelicId
+    console.log("\n12. Legacy 字段已移除");
     await page.evaluate(() => {
       // 模拟从主菜单开始新游戏
       const mm = window.game.scene.getScene("MainMenuScene");
@@ -401,116 +400,45 @@ async function runTest() {
     const afterMainMenu = await page.evaluate(() => {
       const gs = window.getGameState();
       return {
-        activeLegacy: gs.activeLegacyRelicId,
-        appliedLegacy: gs.appliedLegacyRelicIdForRun,
         selectedOrderId: gs.selectedOrderId,
         silver: gs.silver,
+        // Legacy 字段已移除
+        legacyFieldsExist: 'activeLegacyRelicId' in gs || 'appliedLegacyRelicIdForRun' in gs || 'legacyChoices' in gs,
       };
     });
-    assert(afterMainMenu.activeLegacy === null, `主菜单重置后 activeLegacyRelicId=null`);
-    assert(afterMainMenu.appliedLegacy === null, `主菜单重置后 appliedLegacyRelicIdForRun=null`);
+    // Legacy 字段已移除，不应存在
+    assert(!afterMainMenu.legacyFieldsExist, `Legacy 字段已移除（activeLegacyRelicId/appliedLegacyRelicIdForRun/legacyChoices 不存在于 GameState）`);
     assert(afterMainMenu.selectedOrderId === null, `主菜单重置后 selectedOrderId=null`);
     assert(afterMainMenu.silver === 50, `主菜单重置后 silver=50`);
 
     // ==========================================
-    // 十三、遗产不重复触发
+    // 十三、LegacySelectScene 已移除（阶段10.4）
     // ==========================================
-    console.log("\n13. 遗产不重复触发");
-    // 走到撤退 → 遗产选择
-    await selectFirstRoute();
-    await selectThreeCharacters();
-
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("CargoPrepScene");
-      if (scene && scene.startExpedition) scene.startExpedition();
+    console.log("\n13. LegacySelectScene 已移除");
+    // 验证 LegacySelectScene 不再存在于游戏场景列表中
+    const legacySceneExists = await page.evaluate(() => {
+      // 检查 LegacySelectScene 是否在配置中
+      const config = window.game.config;
+      if (config && config.scene && Array.isArray(config.scene)) {
+        return config.scene.includes("LegacySelectScene");
+      }
+      return false;
     });
-    await sleep(2000);
-
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("MapScene");
-      if (scene && scene.handleRetreat) scene.handleRetreat();
-    });
-    await sleep(1500);
-
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("ExpeditionResultScene");
-      if (scene && scene.startLegacySelectionForTest) scene.startLegacySelectionForTest();
-    });
-    await sleep(1500);
-
-    const legacyScene = await getActiveScene();
-    if (legacyScene === "LegacySelectScene") {
-      await screenshot(page, "legacy-select");
-
-      // 选择遗产
-      await page.evaluate(() => {
-        const scene = window.game.scene.getScene("LegacySelectScene");
-        const gs = window.getGameState();
-        if (scene && scene.selectRelic && gs.legacyChoices && gs.legacyChoices.length > 0) {
-          scene.selectRelic(gs.legacyChoices[0]);
-        }
-      });
-      await sleep(1500);
-
-      const afterSelect = await page.evaluate(() => {
-        const gs = window.getGameState();
-        return {
-          activeLegacy: gs.activeLegacyRelicId,
-          legacyChoices: gs.legacyChoices.length,
-        };
-      });
-      assert(!!afterSelect.activeLegacy, `选择后 activeLegacyRelicId 已设置: ${afterSelect.activeLegacy}`);
-      assert(afterSelect.legacyChoices === 0, `legacyChoices 已清空`);
-
-      // 进入 CargoPrep 检查遗产
-      await selectFirstRoute();
-      await selectThreeCharacters();
-
-      const cargoPrepScene = await getActiveScene();
-      assert(cargoPrepScene === "CargoPrepScene", `进入 CargoPrepScene`);
-
-      const legacyApplied = await page.evaluate(() => {
-        const gs = window.getGameState();
-        return {
-          activeLegacy: gs.activeLegacyRelicId,
-          appliedLegacy: gs.appliedLegacyRelicIdForRun,
-        };
-      });
-      assert(!!legacyApplied.activeLegacy, `CargoPrep 中 activeLegacyRelicId 存在: ${legacyApplied.activeLegacy}`);
-
-      await screenshot(page, "cargo-prep-legacy-applied");
-
-      // 重进 CargoPrep 检查不重复触发
-      await page.evaluate(() => {
-        window.game.scene.getScene("CargoPrepScene").scene.restart();
-      });
-      await sleep(1500);
-
-      const afterRestart = await page.evaluate(() => {
-        const gs = window.getGameState();
-        return { appliedLegacy: gs.appliedLegacyRelicIdForRun };
-      });
-      // appliedLegacyRelicIdForRun 在第一次进入时设置，重进后应保持一致
-      assert(afterRestart.appliedLegacy === legacyApplied.appliedLegacy || afterRestart.appliedLegacy !== null,
-        `重进 CargoPrep 后 appliedLegacyRelicIdForRun 未异常重复: ${legacyApplied.appliedLegacy} -> ${afterRestart.appliedLegacy}`);
-    } else {
-      console.log(`  ⚠ 未进入 LegacySelectScene (实际: ${legacyScene})`);
-    }
+    assert(!legacySceneExists, `LegacySelectScene 已从场景配置中移除`);
+    console.log(`  ✅ LegacySelectScene 已从场景配置中移除`);
 
     // ==========================================
-    // 十四、跳过遗产清空 activeLegacyRelicId
+    // 十四、遗产 API 已移除（阶段10.4）
     // ==========================================
-    console.log("\n14. 跳过遗产清空 activeLegacyRelicId");
-    await page.evaluate(() => {
-      window.game.scene.getScene("CargoPrepScene").scene.start("MapScene");
+    console.log("\n14. 遗产 API 已移除");
+    const legacyApisRemoved = await page.evaluate(() => {
+      return typeof window.generateFailureLegacyChoices === 'undefined' &&
+             typeof window.applyLegacyRelicToGameState === 'undefined' &&
+             typeof window.getLegacyRelicById === 'undefined' &&
+             typeof window.LEGACY_RELICS === 'undefined';
     });
-    await sleep(1500);
-
-    await page.evaluate(() => {
-      const scene = window.game.scene.getScene("MapScene");
-      if (scene && scene.handleRetreat) scene.handleRetreat();
-    });
-    await sleep(1500);
+    assert(legacyApisRemoved, `遗产相关 API 已从 window 对象中移除`);
+    console.log(`  ✅ 遗产 API 已从 window 对象中移除`);
 
     await page.evaluate(() => {
       const scene = window.game.scene.getScene("ExpeditionResultScene");

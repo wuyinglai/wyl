@@ -1,14 +1,13 @@
 import Phaser from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
 import { formatExpeditionResult } from "../systems/expeditionResultSystem";
-import { generateFailureLegacyChoices } from "../systems/legacySystem";
 
 /**
  * ExpeditionResultScene.ts
- * 远征结算界面（阶段8.7，阶段8.9 扩展）
+ * 远征结算界面（阶段8.7）
  *
  * 显示远征结果：订单、奖励、城市贡献、城市状态等
- * 失败/撤退时可进入遗产选择
+ * 注意：遗产系统已移除（阶段10.4）
  */
 export class ExpeditionResultScene extends Phaser.Scene {
   constructor() {
@@ -104,28 +103,9 @@ export class ExpeditionResultScene extends Phaser.Scene {
     const gs = getGameState();
     gs.lastExpeditionResult = null;
     gs.selectedOrderId = null;
-    // 注意：不清空 activeLegacyRelicId，因为遗产效果需要延续到新局
     // 不清空 completedOrderIds / cityContributions，这些需要持久化
     setGameState(gs);
     console.log("[ExpeditionResult] 结算状态已清理");
-  }
-
-  /**
-   * 进入遗产选择界面
-   */
-  private goToLegacySelect(): void {
-    const gs = getGameState();
-    gs.legacyChoices = generateFailureLegacyChoices();
-    setGameState(gs);
-    this.scene.start("LegacySelectScene");
-  }
-
-  /**
-   * 测试入口：生成失败遗产候选并进入 LegacySelectScene
-   * 仅用于测试/开发
-   */
-  startLegacySelectionForTest(): void {
-    this.goToLegacySelect();
   }
 
   private createButton(

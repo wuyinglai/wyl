@@ -5,7 +5,6 @@ import { CharacterSelectScene } from "./scenes/CharacterSelectScene";
 import { CargoPrepScene } from "./scenes/CargoPrepScene";
 import { MapScene } from "./scenes/MapScene";
 import { ExpeditionResultScene } from "./scenes/ExpeditionResultScene";
-import { LegacySelectScene } from "./scenes/LegacySelectScene";
 import { BattleScene } from "./scenes/BattleScene";
 import { isDevCheatEnabled } from "./systems/devConfig";
 import {
@@ -53,7 +52,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   parent: "app",
   backgroundColor: "#0a0a1a",
-  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, LegacySelectScene, BattleScene],
+  scene: [MainMenuScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, BattleScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -96,13 +95,6 @@ import {
   checkRetreatCost,
   getRetreatCostText,
 } from "./systems/retreatSystem";
-
-// 失败遗产系统（阶段8.8）
-import {
-  generateFailureLegacyChoices,
-  applyLegacyRelicToGameState,
-} from "./systems/legacySystem";
-import { getLegacyRelicById, LEGACY_RELICS } from "./data/legacyRelics";
 
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
@@ -175,12 +167,6 @@ function exposeTestApi(): void {
   w.calculateRetreatSupplyCost = calculateRetreatSupplyCost;
   w.checkRetreatCost = checkRetreatCost;
   w.getRetreatCostText = getRetreatCostText;
-
-  // 失败遗产系统
-  w.generateFailureLegacyChoices = generateFailureLegacyChoices;
-  w.applyLegacyRelicToGameState = applyLegacyRelicToGameState;
-  w.getLegacyRelicById = getLegacyRelicById;
-  w.LEGACY_RELICS = LEGACY_RELICS;
 }
 
 // 只在开发/测试模式暴露测试 API

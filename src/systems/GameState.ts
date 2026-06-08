@@ -124,12 +124,6 @@ export interface GameState {
 
   // 远征结算结果（阶段8.7）
     lastExpeditionResult?: ExpeditionResult;
-
-    // 失败遗产（阶段8.8）
-    legacyChoices: string[];
-    activeLegacyRelicId?: string;
-    usedLegacyRelicIds: string[];
-    appliedLegacyRelicIdForRun?: string;
 }
 
 // 初始游戏状态
@@ -199,10 +193,6 @@ export function createInitialGameState(): GameState {
     _directionalTestStep: 0,
     _directionalTestResumeStep: 0,
     _directionalTestMaxSteps: 0,
-
-    // 失败遗产（阶段8.8）
-    legacyChoices: [],
-    usedLegacyRelicIds: [],
   };
 }
 

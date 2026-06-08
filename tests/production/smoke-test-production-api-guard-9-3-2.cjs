@@ -52,8 +52,6 @@ async function main() {
       'removeCargo',
       'deliverOrder',
       'createSuccessExpeditionResult',
-      'generateFailureLegacyChoices',
-      'applyLegacyRelicToGameState',
     ];
     
     let allPassed = true;
