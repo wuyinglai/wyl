@@ -19,6 +19,10 @@ import {
   markOrderCompleted,
   getOrderTimeState,
   moveToCell,
+  addUnfinishedOrder,
+  removeUnfinishedOrder,
+  isUnfinishedOrder,
+  getUnfinishedOrderIds,
 } from "./systems/GameState";
 import { GOODS, getGoodById, getGoodName, formatGoodsRequirement, validateGoods } from "./data/goods";
 import { getOrderById, CITY_ORDERS } from "./data/cityOrders";
@@ -117,6 +121,12 @@ function exposeTestApi(): void {
   w.recordOrderStep = recordOrderStep;
   w.markOrderCompleted = markOrderCompleted;
   w.getOrderTimeState = getOrderTimeState;
+  
+  // 未完成订单管理 API（阶段10.3）
+  w.addUnfinishedOrder = addUnfinishedOrder;
+  w.removeUnfinishedOrder = removeUnfinishedOrder;
+  w.isUnfinishedOrder = isUnfinishedOrder;
+  w.getUnfinishedOrderIds = getUnfinishedOrderIds;
   
   // 订单数据
   w.CITY_ORDERS = CITY_ORDERS;

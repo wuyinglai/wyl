@@ -14,6 +14,9 @@ import {
   processInjuryRecovery,
   checkExpeditionFailed,
   initOrderTimeState,
+  addUnfinishedOrder,
+  markOrderCompleted,
+  removeUnfinishedOrder,
 } from "../systems/GameState";
 import { CHARACTER_DEFS, createCharacterState } from "../data/characters";
 import { CharacterState, CardDef } from "../data/types";
@@ -209,6 +212,10 @@ export class MapScene extends Phaser.Scene {
           : `订单时限：${orderTimeState.remainingSteps}/${orderTimeState.limitSteps}步（已走${orderTimeState.elapsedSteps}步）`;
         infoLines.push(timeText);
       }
+    }
+    // 阶段10.3：未完成订单标记
+    if (gameState.selectedOrderId && gameState.unfinishedOrderIds && gameState.unfinishedOrderIds.includes(gameState.selectedOrderId)) {
+      infoLines.push("【未完成订单继续中】");
     }
     // 城市状态（阶段8.6）
     if (gameState.selectedCityId) {
@@ -1481,6 +1488,11 @@ export class MapScene extends Phaser.Scene {
         gameState.cityContributions[order!.cityId] = 0;
       }
       gameState.cityContributions[order!.cityId] += result.cityContribution;
+
+      // 阶段10.2：标记订单完成
+      markOrderCompleted(order!.id);
+      // 阶段10.3：从未完成订单列表移除
+      removeUnfinishedOrder(order!.id);
 
       // 生成远征结算结果（阶段8.7）
       const route = gameState.selectedRouteId ? getRouteById(gameState.selectedRouteId) : undefined;
@@ -3880,6 +3892,14 @@ export class MapScene extends Phaser.Scene {
 
     // 获取订单时间状态（阶段10.2）
     const orderTimeState = gs.selectedOrderId ? gs.orderTimeStates[gs.selectedOrderId] : undefined;
+
+    // 阶段10.3：处理未完成订单
+    if (gs.selectedOrderId) {
+      const isCompleted = gs.completedOrderIds && gs.completedOrderIds.includes(gs.selectedOrderId);
+      if (!isCompleted) {
+        addUnfinishedOrder(gs.selectedOrderId);
+      }
+    }
 
     // 创建撤退结果
     const result = createRetreatedExpeditionResult({

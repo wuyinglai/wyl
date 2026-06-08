@@ -82,6 +82,9 @@ export interface GameState {
   // 订单时间状态（阶段10.2）
   orderTimeStates: Record<string, OrderTimeState>;
 
+  // 未完成订单（阶段10.3）
+  unfinishedOrderIds: string[];
+
   // 商队货物栏（阶段8.2）
   cargo: Record<string, number>;
   silver: number;
@@ -161,6 +164,9 @@ export function createInitialGameState(): GameState {
 
     // 订单时间状态（阶段10.2）
     orderTimeStates: {},
+
+    // 未完成订单（阶段10.3）
+    unfinishedOrderIds: [],
 
     // 商队货物栏（阶段8.2）
     cargo: {},
@@ -990,5 +996,48 @@ export function markOrderCompleted(orderId: string): void {
 export function getOrderTimeState(orderId: string): OrderTimeState | null {
   const gameState = getGameState();
   return gameState.orderTimeStates[orderId] || null;
+}
+
+// ==================== 未完成订单管理（阶段10.3） ====================
+
+/**
+ * 添加订单到未完成列表
+ */
+export function addUnfinishedOrder(orderId: string): void {
+  const gameState = getGameState();
+  if (!gameState.unfinishedOrderIds.includes(orderId)) {
+    gameState.unfinishedOrderIds.push(orderId);
+    console.log(`[未完成订单] 订单 ${orderId} 添加到未完成列表`);
+    setGameState(gameState);
+  }
+}
+
+/**
+ * 从未完成列表移除订单
+ */
+export function removeUnfinishedOrder(orderId: string): void {
+  const gameState = getGameState();
+  const index = gameState.unfinishedOrderIds.indexOf(orderId);
+  if (index !== -1) {
+    gameState.unfinishedOrderIds.splice(index, 1);
+    console.log(`[未完成订单] 订单 ${orderId} 从未完成列表移除`);
+    setGameState(gameState);
+  }
+}
+
+/**
+ * 检查订单是否为未完成
+ */
+export function isUnfinishedOrder(orderId: string): boolean {
+  const gameState = getGameState();
+  return gameState.unfinishedOrderIds.includes(orderId);
+}
+
+/**
+ * 获取未完成订单列表
+ */
+export function getUnfinishedOrderIds(): string[] {
+  const gameState = getGameState();
+  return [...gameState.unfinishedOrderIds];
 }
 

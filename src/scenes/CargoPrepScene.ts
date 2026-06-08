@@ -14,6 +14,18 @@ import {
   updateReachableCells,
   initializeCharacterStates,
 } from "../systems/GameState";
+
+// 阶段10.3：未完成订单显示
+function getUnfinishedOrderInfo(): string | null {
+  const gs = getGameState();
+  if (!gs.selectedOrderId) return null;
+  if (!gs.unfinishedOrderIds || !gs.unfinishedOrderIds.includes(gs.selectedOrderId)) return null;
+  
+  const timeState = gs.orderTimeStates[gs.selectedOrderId];
+  if (!timeState) return null;
+  
+  return `【继续未完成订单】剩余步数：${timeState.remainingSteps}/${timeState.limitSteps}`;
+}
 import { getOrderById } from "../data/cityOrders";
 import { GOODS, getGoodById, formatGoodsRequirement } from "../data/goods";
 import { calculateCargoWeight } from "../systems/cargoSystem";
@@ -203,6 +215,18 @@ export class CargoPrepScene extends Scene {
         fontFamily: "sans-serif",
       })
       .setOrigin(0, 0);
+
+    // 阶段10.3：未完成订单提示
+    const unfinishedInfo = getUnfinishedOrderInfo();
+    if (unfinishedInfo) {
+      this.add
+        .text(30, 130, unfinishedInfo, {
+          fontSize: "14px",
+          color: "#ff8844",
+          fontFamily: "sans-serif",
+        })
+        .setOrigin(0, 0);
+    }
 
     // 状态显示区域
     this.cargoText = this.add
