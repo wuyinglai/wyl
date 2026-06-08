@@ -321,68 +321,24 @@ export class MapScene extends Phaser.Scene {
     // 撤退按钮（阶段8.9）
     this.createRetreatButton();
 
-    // 如果是从战斗返回的自动移动测试，继续执行
+    // 清理并重置所有测试状态，防止旧状态干扰新一局游戏
     const gs = getGameState();
-    if (gs._isAutoMoving && gs._autoMoveResumeStep > 0) {
-      const gameOver = checkGameOver(gs);
-      if (gameOver.isOver) {
-        console.log("[地图V2] 自动移动测试停止：游戏结束");
-        gs._isAutoMoving = false;
-        gs._autoMoveResumeStep = 0;
-        gs._autoMovePrevPos = null;
-        setGameState(gs);
-      } else {
-        console.log(
-          `[地图V2] 从战斗/弹窗返回，继续自动移动测试 step=${gs._autoMoveResumeStep}`,
-        );
-        this.time.delayedCall(500, () => {
-          this.autoMoveStep(gs._autoMoveResumeStep);
-        });
-      }
-    }
+    const hasPendingTest = (gs._isAutoMoving && gs._autoMoveResumeStep > 0) ||
+      (gs._isClickTesting && gs._clickTestResumeStep > 0) ||
+      (gs._isDirectionalTesting && gs._directionalTestResumeStep > 0);
 
-    // 如果是从战斗返回的鼠标点击模拟测试，继续执行
-    if (gs._isClickTesting && gs._clickTestResumeStep > 0) {
-      const gameOver2 = checkGameOver(gs);
-      if (gameOver2.isOver) {
-        console.log("[鼠标模拟测试] 停止：游戏结束");
-        gs._isClickTesting = false;
-        gs._clickTestResumeStep = 0;
-        gs._clickTestStep = 0;
-        setGameState(gs);
-      } else {
-        console.log(
-          `[鼠标模拟测试] 从战斗返回，继续点击模拟测试 step=${gs._clickTestResumeStep}`,
-        );
-        gs._clickTestStep = gs._clickTestResumeStep;
-        gs._clickTestResumeStep = 0;
-        setGameState(gs);
-        this.time.delayedCall(500, () => {
-          this.clickSimStep();
-        });
-      }
-    }
-
-    // 如果是从战斗返回的G键方向模拟测试，继续执行
-    if (gs._isDirectionalTesting && gs._directionalTestResumeStep > 0) {
-      const gameOver3 = checkGameOver(gs);
-      if (gameOver3.isOver) {
-        console.log("[方向模拟测试] 停止：游戏结束");
-        gs._isDirectionalTesting = false;
-        gs._directionalTestResumeStep = 0;
-        gs._directionalTestStep = 0;
-        setGameState(gs);
-      } else {
-        console.log(
-          `[方向模拟测试] 从战斗返回，继续方向模拟测试 step=${gs._directionalTestResumeStep}`,
-        );
-        gs._directionalTestStep = gs._directionalTestResumeStep;
-        gs._directionalTestResumeStep = 0;
-        setGameState(gs);
-        this.time.delayedCall(500, () => {
-          this.directionalSimStep();
-        });
-      }
+    if (hasPendingTest) {
+      console.log("[地图V2] 清理未完成的测试状态，防止干扰新一局游戏");
+      gs._isAutoMoving = false;
+      gs._autoMoveResumeStep = 0;
+      gs._autoMovePrevPos = null;
+      gs._isClickTesting = false;
+      gs._clickTestResumeStep = 0;
+      gs._clickTestStep = 0;
+      gs._isDirectionalTesting = false;
+      gs._directionalTestResumeStep = 0;
+      gs._directionalTestStep = 0;
+      setGameState(gs);
     }
   }
 

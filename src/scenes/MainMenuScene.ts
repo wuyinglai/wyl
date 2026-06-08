@@ -93,6 +93,9 @@ export class MainMenuScene extends Phaser.Scene {
     // 保存需要保留的状态
     const orderTimeStates = gs.orderTimeStates;
     const unfinishedOrderIds = gs.unfinishedOrderIds;
+    const completedOrderIds = gs.completedOrderIds;
+    const cityContributions = gs.cityContributions;
+    const embers = gs.embers;
     // 清空每局临时状态
     gs.cargo = {};
     gs.silver = 50;
@@ -116,9 +119,25 @@ export class MainMenuScene extends Phaser.Scene {
     gs.caravanHp = 45;
     gs.caravanMaxHp = 45;
     gs.gold = 0;
+    // 重置临时测试状态，防止跨局污染
+    gs._isAutoMoving = false;
+    gs._autoMoveResumeStep = 0;
+    gs._autoMovePrevPos = null;
+    gs._debugStep = 0;
+    gs._isClickTesting = false;
+    gs._clickTestStep = 0;
+    gs._clickTestResumeStep = 0;
+    gs._clickTestMaxSteps = 0;
+    gs._isDirectionalTesting = false;
+    gs._directionalTestStep = 0;
+    gs._directionalTestResumeStep = 0;
+    gs._directionalTestMaxSteps = 0;
     // 恢复保留的状态
     gs.orderTimeStates = orderTimeStates;
     gs.unfinishedOrderIds = unfinishedOrderIds;
+    gs.completedOrderIds = completedOrderIds;
+    gs.cityContributions = cityContributions;
+    gs.embers = embers;
     // 保留持久化数据：completedOrderIds, cityContributions, embers, orderTimeStates, unfinishedOrderIds
     setGameState(gs);
     console.log("[主菜单] 游戏状态已重置，开始新局，保留订单时间状态和未完成订单");

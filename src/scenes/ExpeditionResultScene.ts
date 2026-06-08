@@ -103,6 +103,19 @@ export class ExpeditionResultScene extends Phaser.Scene {
     const gs = getGameState();
     gs.lastExpeditionResult = null;
     gs.selectedOrderId = null;
+    // 重置临时测试状态，防止跨局污染
+    gs._isAutoMoving = false;
+    gs._autoMoveResumeStep = 0;
+    gs._autoMovePrevPos = null;
+    gs._debugStep = 0;
+    gs._isClickTesting = false;
+    gs._clickTestStep = 0;
+    gs._clickTestResumeStep = 0;
+    gs._clickTestMaxSteps = 0;
+    gs._isDirectionalTesting = false;
+    gs._directionalTestStep = 0;
+    gs._directionalTestResumeStep = 0;
+    gs._directionalTestMaxSteps = 0;
     // 不清空 completedOrderIds / cityContributions，这些需要持久化
     setGameState(gs);
     console.log("[ExpeditionResult] 结算状态已清理");
