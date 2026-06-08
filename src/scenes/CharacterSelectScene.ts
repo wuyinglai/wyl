@@ -31,6 +31,10 @@ export class CharacterSelectScene extends Phaser.Scene {
 
     this.tooltipManager = new TooltipManager(this, 500);
 
+    // 从 GameState 同步角色选择状态，确保再来一局后状态正确
+    const gameState = getGameState();
+    this.selectedChars = gameState.selectedCharacters ? [...gameState.selectedCharacters] : [];
+
     // 背景
     const bg = this.add.graphics();
     bg.fillStyle(0x1a1a2e, 1);
@@ -311,6 +315,11 @@ export class CharacterSelectScene extends Phaser.Scene {
     }
 
     this.updateUI();
+
+    // 同步到 GameState，确保状态一致
+    const gameState = getGameState();
+    gameState.selectedCharacters = [...this.selectedChars];
+    setGameState(gameState);
   }
 
   /**

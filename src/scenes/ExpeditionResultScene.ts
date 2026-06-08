@@ -103,6 +103,9 @@ export class ExpeditionResultScene extends Phaser.Scene {
     const gs = getGameState();
     gs.lastExpeditionResult = null;
     gs.selectedOrderId = null;
+    // 重置角色选择状态，防止再来一局时角色选择判定残留
+    gs.selectedCharacters = [];
+    gs.reserveCharacters = [];
     // 重置临时测试状态，防止跨局污染
     gs._isAutoMoving = false;
     gs._autoMoveResumeStep = 0;
