@@ -219,9 +219,27 @@ export class CargoPrepScene extends Scene {
         .setOrigin(0, 0);
     }
 
+    // 阶段10.5：订单附加条款显示
+    if (order && order.specialTerms && order.specialTerms.length > 0) {
+      let termY = 155;
+      for (const term of order.specialTerms) {
+        const termText = term.type === "confidential" ? "【保密】" : "【易损】";
+        const termColor = term.type === "confidential" ? "#aa88ff" : "#ffaa88";
+        this.add
+          .text(30, termY, `${termText} ${term.description}`, {
+            fontSize: "13px",
+            color: termColor,
+            fontFamily: "sans-serif",
+            wordWrap: { width: 350 },
+          })
+          .setOrigin(0, 0);
+        termY += 20;
+      }
+    }
+
     // 状态显示区域
     this.cargoText = this.add
-      .text(30, 135, "当前货物：", {
+      .text(30, 135 + (order?.specialTerms?.length || 0) * 20, "当前货物：", {
         fontSize: "14px",
         color: "#ffffff",
         fontFamily: "sans-serif",

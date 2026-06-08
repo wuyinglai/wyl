@@ -202,7 +202,7 @@ export class MapScene extends Phaser.Scene {
     infoLines.push(orderStatusText);
     infoLines.push(weightStatusText);
     
-    // 订单时间显示（阶段10.2）
+    // 阶段10.2 订单时间显示
     if (gameState.selectedOrderId) {
       const orderTimeState = gameState.orderTimeStates[gameState.selectedOrderId];
       if (orderTimeState) {
@@ -215,6 +215,16 @@ export class MapScene extends Phaser.Scene {
     // 阶段10.3：未完成订单标记
     if (gameState.selectedOrderId && gameState.unfinishedOrderIds && gameState.unfinishedOrderIds.includes(gameState.selectedOrderId)) {
       infoLines.push("【未完成订单继续中】");
+    }
+    // 阶段10.5：订单附加条款显示
+    if (gameState.selectedOrderId) {
+      const currentOrder = getOrderById(gameState.selectedOrderId);
+      if (currentOrder && currentOrder.specialTerms && currentOrder.specialTerms.length > 0) {
+        for (const term of currentOrder.specialTerms) {
+          const termText = term.type === "confidential" ? "【保密】" : "【易损】";
+          infoLines.push(`附加条款：${termText}`);
+        }
+      }
     }
     // 城市状态（阶段8.6）
     if (gameState.selectedCityId) {
@@ -279,6 +289,14 @@ export class MapScene extends Phaser.Scene {
           lines.push(`奖励：银币 +${order.rewardSilver}，火种 +${order.rewardEmbers}`);
           lines.push(`贡献：+${order.cityContribution}`);
           lines.push(`难度：${order.difficulty}`);
+          // 阶段10.5：附加条款详情
+          if (order.specialTerms && order.specialTerms.length > 0) {
+            lines.push("");
+            lines.push("附加条款：");
+            for (const term of order.specialTerms) {
+              lines.push(`• ${term.title}: ${term.description}`);
+            }
+          }
         }
         // 阶段8.3：使用 orderCargoSystem 显示订单货物详情
         const detailLines = getOrderCargoDetailLines(

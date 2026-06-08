@@ -3,6 +3,17 @@
 
 import { formatGoodsRequirement } from "./goods";
 
+// 阶段10.5：订单附加条款类型
+export type OrderSpecialTermType =
+  | "confidential"  // 保密订单
+  | "fragile";      // 易损订单
+
+export interface OrderSpecialTerm {
+  type: OrderSpecialTermType;
+  title: string;
+  description: string;
+}
+
 export interface CityOrder {
   id: string;
   cityId: string;
@@ -17,6 +28,8 @@ export interface CityOrder {
   tags: string[];
   isUnlocked: boolean;
   timeLimitSteps?: number;
+  // 阶段10.5：订单附加条款
+  specialTerms?: OrderSpecialTerm[];
 }
 
 export const CITY_ORDERS: CityOrder[] = [
@@ -54,6 +67,14 @@ export const CITY_ORDERS: CityOrder[] = [
     tags: ["industry", "mine", "support"],
     isUnlocked: true,
     timeLimitSteps: 10,
+    // 阶段10.5：附加条款 - 保密订单
+    specialTerms: [
+      {
+        type: "confidential",
+        title: "保密订单",
+        description: "进入村落或营地时可能暴露委托内容",
+      },
+    ],
   },
   {
     id: "order_heal_spring_medicine",
@@ -72,6 +93,14 @@ export const CITY_ORDERS: CityOrder[] = [
     tags: ["medicine", "rescue", "supply"],
     isUnlocked: true,
     timeLimitSteps: 10,
+    // 阶段10.5：附加条款 - 易损订单
+    specialTerms: [
+      {
+        type: "fragile",
+        title: "易损订单",
+        description: "货物容易因车厢受损、袭击或恶劣路况损坏",
+      },
+    ],
   },
 ];
 
