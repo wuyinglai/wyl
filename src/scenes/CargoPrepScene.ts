@@ -648,6 +648,19 @@ export class CargoPrepScene extends Scene {
   private startExpedition(): void {
     const gameState = getGameState();
 
+    // 至少选择3个角色才能开始远征（角色不足时显示提示，不静默失败）
+    if (!gameState.selectedCharacters || gameState.selectedCharacters.length < 3) {
+      const w = this.scale.width;
+      const warn = this.add.text(w / 2, 80, "请先选择至少3名角色", {
+        fontSize: "18px",
+        color: "#ff6666",
+        fontFamily: "monospace",
+      }).setOrigin(0.5);
+      this.time.delayedCall(1500, () => { if (warn.active) warn.destroy(); });
+      console.log("[CargoPrepScene] 角色不足，无法开始远征");
+      return;
+    }
+
     // 初始化地图（从 CharacterSelectScene 迁移过来的逻辑）
     const { cells, startPos, bossPos, expeditionGoal } = createExpeditionMap(
       gameState.mapWidth,

@@ -452,8 +452,11 @@ export class CharacterSelectScene extends Phaser.Scene {
   }
 
   private startExpedition(): void {
-    // 保存选择
+    // 保存选择 - 如果 selectedChars 为空（场景重入时），尝试从 gameState 读取（撤退/再来一局场景重入保护）
     const gameState = getGameState();
+    if (this.selectedChars.length === 0 && gameState.selectedCharacters && gameState.selectedCharacters.length >= 3) {
+      this.selectedChars = [...gameState.selectedCharacters];
+    }
     gameState.selectedCharacters = [...this.selectedChars];
 
     // 未选择的角色进入候补池

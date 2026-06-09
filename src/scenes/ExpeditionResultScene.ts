@@ -92,6 +92,14 @@ export class ExpeditionResultScene extends Phaser.Scene {
     });
     this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
       this.clearResultState();
+      // 显式停止所有相关场景，确保场景状态完全重置
+      const scenesToStop = ["MapScene", "BattleScene", "CargoPrepScene", "CharacterSelectScene"];
+      for (const sceneKey of scenesToStop) {
+        const scene = this.scene.get(sceneKey);
+        if (scene) {
+          this.scene.stop(sceneKey);
+        }
+      }
       this.scene.start("RouteSelectScene");
     });
   }
@@ -106,6 +114,13 @@ export class ExpeditionResultScene extends Phaser.Scene {
     // 重置角色选择状态，防止再来一局时角色选择判定残留
     gs.selectedCharacters = [];
     gs.reserveCharacters = [];
+    // 重置位置状态，防止再来一局时位置污染
+    gs.currentPosition = { x: 0, y: 0 };
+    gs.startPosition = { x: 0, y: 0 };
+    // 重置战斗相关状态，防止BattleScene残留污染
+    gs.currentBattleType = null;
+    gs.currentBattleNodePosition = null;
+    gs.battleResult = null;
     // 重置临时测试状态，防止跨局污染
     gs._isAutoMoving = false;
     gs._autoMoveResumeStep = 0;
@@ -119,7 +134,7 @@ export class ExpeditionResultScene extends Phaser.Scene {
     gs._directionalTestStep = 0;
     gs._directionalTestResumeStep = 0;
     gs._directionalTestMaxSteps = 0;
-    // 不清空 completedOrderIds / cityContributions，这些需要持久化
+    // 不清空 completedOrderIds / cityContributions / orderTimeStates / unfinishedOrderIds，这些需要持久化
     setGameState(gs);
     console.log("[ExpeditionResult] 结算状态已清理");
   }

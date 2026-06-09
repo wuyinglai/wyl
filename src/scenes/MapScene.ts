@@ -106,6 +106,11 @@ export class MapScene extends Phaser.Scene {
       this._deckViewerOpen = false;
     }
     this._victoryOverlayOpen = false;
+    // 清理弹窗容器（防止场景切换后弹窗残留）
+    if (this.modalContainer) {
+      this.modalContainer.destroy(true);
+      this.modalContainer = undefined;
+    }
     this.input.keyboard?.off("keydown");
     this.input.off("pointerdown");
   }
@@ -1216,17 +1221,17 @@ export class MapScene extends Phaser.Scene {
         `[地图] route/city 不一致: selectedRouteId=${selectedRouteId} 对应 cityId=${route.cityId}, 但 selectedCityId=${selectedCityId}`
       );
       // 以 route 数据为准显示
-      return `目标: ${route.cityName} | ${route.routeName}`;
+      return `目标：${route.cityName} | ${route.routeName}`;
     }
 
     // route 存在且一致
     if (route) {
-      return `目标: ${route.cityName} | ${route.routeName}`;
+      return `目标：${route.cityName} | ${route.routeName}`;
     }
 
     // route 不存在，fallback 到 cityId
     console.warn(`[地图] 未找到商路: ${selectedRouteId}，使用 cityId fallback`);
-    return `目标: ${selectedCityId}`;
+    return `目标：${selectedCityId}`;
   }
 
   /**
@@ -3885,6 +3890,13 @@ export class MapScene extends Phaser.Scene {
     setGameState(gs);
 
     console.log(`[MapScene] 撤退: 火种+${result.embersGained}, 结果: ${retreatCheck.resultType}`);
+
+    // 关闭弹窗（防止弹窗残留到下一局）
+    if (this.modalContainer) {
+      this.modalContainer.destroy(true);
+      this.modalContainer = undefined;
+    }
+
     this.scene.start("ExpeditionResultScene");
   }
 }
