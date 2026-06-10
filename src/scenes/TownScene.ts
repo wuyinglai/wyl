@@ -113,13 +113,53 @@ export class TownScene extends Phaser.Scene {
       });
     });
 
+    // ========== 返回主菜单按钮（左上角）==========
+    const backBtnX = 30;
+    const backBtnY = 30;
+    const backBtnW = 140;
+    const backBtnH = 36;
+    const backBg = this.add.graphics();
+    backBg.fillStyle(0x555555, 1);
+    backBg.fillRoundedRect(backBtnX, backBtnY, backBtnW, backBtnH, 6);
+    const backText = this.add.text(backBtnX + backBtnW / 2, backBtnY + backBtnH / 2, "返回主菜单", {
+      fontSize: "14px",
+      color: "#cccccc",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+    const backHit = this.add.rectangle(backBtnX + backBtnW / 2, backBtnY + backBtnH / 2, backBtnW, backBtnH, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    backHit.on("pointerover", () => {
+      backBg.clear();
+      backBg.fillStyle(0x777777, 1);
+      backBg.fillRoundedRect(backBtnX, backBtnY, backBtnW, backBtnH, 6);
+    });
+    backHit.on("pointerout", () => {
+      backBg.clear();
+      backBg.fillStyle(0x555555, 1);
+      backBg.fillRoundedRect(backBtnX, backBtnY, backBtnW, backBtnH, 6);
+    });
+    backHit.on("pointerdown", () => {
+      console.log("[城镇] 返回主菜单");
+      this.scene.start("MainMenuScene");
+    });
+
+    // ESC 返回主菜单
+    this.input.keyboard?.on("keydown-ESC", () => {
+      console.log("[城镇] ESC 返回主菜单");
+      this.scene.start("MainMenuScene");
+    });
+
     // ========== 底部提示 ==========
-    this.add.text(w / 2, h - 35, "阶段11.1：城镇入口 v1，更多设施后续开放", {
+    this.add.text(w / 2, h - 35, "阶段11.1.1：城镇入口 v1，更多设施后续开放", {
       fontSize: "14px",
       color: "#555555",
       fontFamily: "monospace",
     }).setOrigin(0.5);
 
     console.log("[城镇] 城镇场景已加载");
+  }
+
+  shutdown(): void {
+    this.input.keyboard?.off("keydown-ESC");
   }
 }

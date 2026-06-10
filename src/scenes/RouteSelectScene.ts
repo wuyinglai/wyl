@@ -81,17 +81,22 @@ export class RouteSelectScene extends Scene {
 
       // 底部提示
       this.add
-        .text(w / 2, h - 30, "点击商路卡片选择 | 按 ESC 返回主菜单", {
+        .text(w / 2, h - 30, "点击商路卡片选择 | 按 ESC 返回城镇", {
           fontSize: "14px",
           color: "#666666",
           fontFamily: "monospace",
         })
         .setOrigin(0.5);
+
+      // 返回城镇按钮（左上角）
+      this.createBackButton(30, 30, 120, 36, "返回城镇", () => {
+        this.scene.start("TownScene");
+      });
     }
 
-    // ESC 返回主菜单
+    // ESC 返回城镇
     this.input.keyboard?.on("keydown-ESC", () => {
-      this.scene.start("MainMenuScene");
+      this.scene.start("TownScene");
     });
 
     console.log("[商路选择] 场景初始化完成，显示", this.routes.length, "条商路");
@@ -539,5 +544,45 @@ export class RouteSelectScene extends Scene {
 
     // 进入角色选择场景
     this.scene.start("CharacterSelectScene");
+  }
+
+  /**
+   * 创建返回按钮（左上角统一样式）
+   */
+  private createBackButton(
+    x: number, y: number, w: number, h: number,
+    label: string, onClick: () => void
+  ): Phaser.GameObjects.GameObject {
+    const bg = this.add.graphics();
+    bg.fillStyle(0x555555, 1);
+    bg.fillRoundedRect(x, y, w, h, 6);
+    const text = this.add.text(x + w / 2, y + h / 2, label, {
+      fontSize: "14px",
+      color: "#cccccc",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+    const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    hit.on("pointerover", () => {
+      bg.clear();
+      bg.fillStyle(0x777777, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+    });
+    hit.on("pointerout", () => {
+      bg.clear();
+      bg.fillStyle(0x555555, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+    });
+    hit.on("pointerdown", onClick);
+    return hit;
+  }
+
+  shutdown(): void {
+    this.input.keyboard?.off("keydown-ESC");
+    this.input.keyboard?.off("keydown-LEFT");
+    this.input.keyboard?.off("keydown-RIGHT");
+    if (this.tooltipManager) {
+      this.tooltipManager.hide();
+    }
   }
 }

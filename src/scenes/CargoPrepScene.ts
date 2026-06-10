@@ -486,8 +486,14 @@ export class CargoPrepScene extends Scene {
       this.startExpedition();
     });
 
-    // 返回
-    makeButton(w - 260, btnY, 100, 40, 0x555555, "返回", "14px", "#aaaaaa", () => {
+    // 返回角色选择
+    makeButton(w - 260, btnY, 120, 40, 0x555555, "返回角色选择", "14px", "#aaaaaa", () => {
+      this.scene.start("CharacterSelectScene");
+    });
+
+    // ESC 返回角色选择
+    this.input.keyboard?.on("keydown-ESC", () => {
+      console.log("[货物整备] ESC 返回角色选择");
       this.scene.start("CharacterSelectScene");
     });
   }
@@ -694,5 +700,12 @@ export class CargoPrepScene extends Scene {
     console.log(`[CargoPrepScene] 开始远征，cargo: ${JSON.stringify(gameState.cargo)}, silver: ${gameState.silver}`);
 
     this.scene.start("MapScene");
+  }
+
+  shutdown(): void {
+    this.input.keyboard?.off("keydown-ESC");
+    if (this.tooltipManager) {
+      this.tooltipManager.hide();
+    }
   }
 }

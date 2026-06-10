@@ -117,7 +117,58 @@ export class CharacterSelectScene extends Phaser.Scene {
       }
     });
 
+    // ESC 返回商路选择
+    this.input.keyboard?.on("keydown-ESC", () => {
+      console.log("[角色选择] ESC 返回商路选择");
+      this.scene.start("RouteSelectScene");
+    });
+
+    // 返回商路按钮（左上角）
+    this.createBackButton(30, 30, 120, 36, "返回商路", () => {
+      console.log("[角色选择] 点击返回商路");
+      this.scene.start("RouteSelectScene");
+    });
+
     console.log("[角色选择] 角色选择场景已加载");
+  }
+
+  /**
+   * 创建返回按钮（左上角统一样式）
+   */
+  private createBackButton(
+    x: number, y: number, w: number, h: number,
+    label: string, onClick: () => void
+  ): Phaser.GameObjects.GameObject {
+    const bg = this.add.graphics();
+    bg.fillStyle(0x555555, 1);
+    bg.fillRoundedRect(x, y, w, h, 6);
+    const text = this.add.text(x + w / 2, y + h / 2, label, {
+      fontSize: "14px",
+      color: "#cccccc",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+    const hit = this.add.rectangle(x + w / 2, y + h / 2, w, h, 0x000000, 0)
+      .setInteractive({ useHandCursor: true });
+    hit.on("pointerover", () => {
+      bg.clear();
+      bg.fillStyle(0x777777, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+    });
+    hit.on("pointerout", () => {
+      bg.clear();
+      bg.fillStyle(0x555555, 1);
+      bg.fillRoundedRect(x, y, w, h, 6);
+    });
+    hit.on("pointerdown", onClick);
+    return hit;
+  }
+
+  shutdown(): void {
+    this.input.keyboard?.off("keydown");
+    this.input.keyboard?.off("keydown-ESC");
+    if (this.tooltipManager) {
+      this.tooltipManager.hide();
+    }
   }
 
   private createCharacterCard(

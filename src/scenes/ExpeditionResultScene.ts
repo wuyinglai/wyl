@@ -103,6 +103,13 @@ export class ExpeditionResultScene extends Phaser.Scene {
       // 进入城镇（阶段11.1新流程：再来一局 → 城镇 → 商路）
       this.scene.start("TownScene");
     });
+
+    // ESC 返回主菜单
+    this.input.keyboard?.on("keydown-ESC", () => {
+      console.log("[远征结算] ESC 返回主菜单");
+      this.clearResultState();
+      this.scene.start("MainMenuScene");
+    });
   }
 
   /**
@@ -169,5 +176,9 @@ export class ExpeditionResultScene extends Phaser.Scene {
     bg.on("pointerdown", () => {
       onClick();
     });
+  }
+
+  shutdown(): void {
+    this.input.keyboard?.off("keydown-ESC");
   }
 }
