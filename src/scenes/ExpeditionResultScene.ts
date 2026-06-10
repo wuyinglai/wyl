@@ -93,14 +93,15 @@ export class ExpeditionResultScene extends Phaser.Scene {
     this.createButton(w / 2 + btnGap / 2, btnY, "再来一局", () => {
       this.clearResultState();
       // 显式停止所有相关场景，确保场景状态完全重置
-      const scenesToStop = ["MapScene", "BattleScene", "CargoPrepScene", "CharacterSelectScene"];
+      const scenesToStop = ["MapScene", "BattleScene", "CargoPrepScene", "CharacterSelectScene", "RouteSelectScene"];
       for (const sceneKey of scenesToStop) {
         const scene = this.scene.get(sceneKey);
         if (scene) {
           this.scene.stop(sceneKey);
         }
       }
-      this.scene.start("RouteSelectScene");
+      // 进入城镇（阶段11.1新流程：再来一局 → 城镇 → 商路）
+      this.scene.start("TownScene");
     });
   }
 

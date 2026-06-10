@@ -10,7 +10,7 @@
 
 const { chromium } = require("playwright");
 const assert = require("assert");
-const { clickGamePoint, waitForSceneReady, gameToScreen } = require("./_real_helpers.cjs");
+const { clickGamePoint, waitForSceneReady, gameToScreen, findInteractiveButtonByText } = require("./_real_helpers.cjs");
 
 async function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
@@ -74,6 +74,17 @@ async function sleep(ms) {
     console.log("  转换后 screen 坐标: (" + Math.round(screenBefore.x) + ", " + Math.round(screenBefore.y) + ")");
 
     await clickGamePoint(page, { x: startBtn.x, y: startBtn.y }, "主菜单开始按钮");
+
+    // 阶段11.1：主菜单现在进入 TownScene，等待 TownScene ready
+    console.log("\n[4b] 等待 TownScene ready（阶段11.1 新增）...");
+    const townReady = await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 8000 });
+    console.log("  TownScene active: ✓");
+
+    // 真实点击 TownScene 的"查看商路"
+    console.log("\n[4c] 真实点击 TownScene '查看商路'...");
+    const townBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
+    if (!townBtn) throw new Error("TownScene 没有找到'查看商路'按钮");
+    await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 查看商路");
 
     // 5. 等待 RouteSelectScene ready
     console.log("\n[5] 等待 RouteSelectScene ready...");

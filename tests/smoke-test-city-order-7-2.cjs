@@ -101,6 +101,13 @@ async function runTest() {
       await clickGamePoint(page, { x: startBtn.x, y: startBtn.y }, "主菜单开始远征");
     }
 
+    // 阶段11.1：主菜单现在进入 TownScene
+    await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 10000 });
+    const townBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
+    assert(townBtn !== null, "TownScene 找到'查看商路'按钮");
+    await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 查看商路");
+    await sleep(1000);
+
     // ========== 3. 等待 RouteSelectScene ready ==========
     console.log("3. 等待 RouteSelectScene ready");
     await waitForSceneReady(page, "RouteSelectScene", { requireRouteCards: true, timeoutMs: 10000 });
@@ -316,6 +323,14 @@ async function runTest() {
     });
     if (startBtn2) {
       await clickGamePoint(page, { x: startBtn2.x, y: startBtn2.y }, "主菜单开始远征（无订单边界）");
+    }
+
+    // 阶段11.1：主菜单现在进入 TownScene
+    await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 10000 });
+    const townBtn2 = await findInteractiveButtonByText(page, "TownScene", "查看商路");
+    if (townBtn2) {
+      await clickGamePoint(page, { x: townBtn2.x, y: townBtn2.y }, "TownScene 查看商路（无订单边界）");
+      await sleep(500);
     }
 
     // 等待 RouteSelectScene，但不点击路线卡（保持 selectedOrderId = null）

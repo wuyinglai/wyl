@@ -62,7 +62,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     startBtn.on("pointerdown", () => {
       this.resetGameStateForNewRun();
-      this.scene.start("RouteSelectScene");
+      this.scene.start("TownScene");
     });
 
     // 版本信息
@@ -77,7 +77,7 @@ export class MainMenuScene extends Phaser.Scene {
     // 键盘快捷键（备用触发方式）
     this.input.keyboard?.on("keydown-ENTER", () => {
       this.resetGameStateForNewRun();
-      this.scene.start("RouteSelectScene");
+      this.scene.start("TownScene");
     });
 
     console.log("[主菜单] 主菜单场景已加载");
