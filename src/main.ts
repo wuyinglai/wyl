@@ -7,6 +7,7 @@ import { CargoPrepScene } from "./scenes/CargoPrepScene";
 import { MapScene } from "./scenes/MapScene";
 import { ExpeditionResultScene } from "./scenes/ExpeditionResultScene";
 import { BattleScene } from "./scenes/BattleScene";
+import { WorldMapScene } from "./scenes/WorldMapScene";
 import { isDevCheatEnabled } from "./systems/devConfig";
 import {
   getGameState,
@@ -53,7 +54,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   parent: "app",
   backgroundColor: "#0a0a1a",
-  scene: [MainMenuScene, TownScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, BattleScene],
+  scene: [MainMenuScene, TownScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, BattleScene, WorldMapScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
