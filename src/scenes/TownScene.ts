@@ -2,11 +2,11 @@ import Phaser from "phaser";
 import { getGameState } from "../systems/GameState";
 
 /**
- * TownScene.ts — 阶段11.3 工坊详情占位 v1
+ * TownScene.ts — 阶段11.4 休整所详情占位 v1
  *
  * 玩家从主菜单进入城镇，作为远征前的整备界面。
- * 本轮新增工坊详情区：工具图纸、修理商队设备、升级商队设备。
- * 只做 UI 占位，不做真实制作、购买、升级、资源扣除。
+ * 本轮新增休整所详情区：队伍休整、伤病处理、队伍调整。
+ * 只做 UI 占位，不做真实恢复、伤病、疲劳、角色状态修改。
  */
 export class TownScene extends Phaser.Scene {
   /** 当前选中的设施 */
@@ -20,6 +20,9 @@ export class TownScene extends Phaser.Scene {
 
   /** 工坊详情卡片容器 */
   private workshopCards: Phaser.GameObjects.Container | null = null;
+
+  /** 休整所详情卡片容器 */
+  private restHouseCards: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super({ key: "TownScene" });
@@ -90,7 +93,7 @@ export class TownScene extends Phaser.Scene {
     const facilities = [
       { id: "route_hall", label: "商路大厅", desc: "商路大厅：查看可用商路、接取订单并准备出发。", action: "route" },
       { id: "workshop", label: "工坊", desc: "工坊：后续可用于修理装备、制作工具、升级商队设备。", action: "workshop" },
-      { id: "rest_house", label: "休整所", desc: "休整所：后续可用于恢复角色状态、处理伤病、调整队伍。", action: "panel" },
+      { id: "rest_house", label: "休整所", desc: "休整所：后续可用于恢复角色状态、处理伤病、调整队伍。", action: "rest_house" },
       { id: "intel_office", label: "情报所", desc: "情报所：后续可用于查看商路风险、城市状态、订单情报。", action: "panel" },
       { id: "warehouse", label: "仓库/工具", desc: "仓库/工具：后续可用于管理货物、查看工具、准备远征物资。", action: "panel" },
     ];
@@ -139,6 +142,9 @@ export class TownScene extends Phaser.Scene {
         } else if (facility.action === "workshop") {
           // 工坊：显示工坊详情面板
           this.showWorkshopDetail();
+        } else if (facility.action === "rest_house") {
+          // 休整所：显示休整所详情面板
+          this.showRestHouseDetail();
         } else {
           // 其他设施：更新说明面板
           this.updateDescPanel(facility.label, facility.desc);
@@ -217,7 +223,7 @@ export class TownScene extends Phaser.Scene {
     });
 
     // ========== 底部提示 ==========
-    this.add.text(w / 2, h - 35, "阶段11.3：工坊详情占位 v1，真实制作系统后续开放", {
+    this.add.text(w / 2, h - 35, "阶段11.4：休整所详情占位 v1，真实恢复系统后续开放", {
       fontSize: "14px",
       color: "#555555",
       fontFamily: "monospace",
@@ -261,6 +267,10 @@ export class TownScene extends Phaser.Scene {
     if (this.workshopCards) {
       this.workshopCards.setVisible(false);
     }
+    // 隐藏休整所详情卡片
+    if (this.restHouseCards) {
+      this.restHouseCards.setVisible(false);
+    }
     if (!this.descText) return;
     this.descText.setVisible(true);
     this.descText.setText(`${title}\n\n${desc}`);
@@ -273,6 +283,10 @@ export class TownScene extends Phaser.Scene {
     // 隐藏普通说明文本
     if (this.descText) {
       this.descText.setVisible(false);
+    }
+    // 隐藏休整所详情卡片
+    if (this.restHouseCards) {
+      this.restHouseCards.setVisible(false);
     }
 
     // 如果已有工坊卡片，直接显示
@@ -319,6 +333,99 @@ export class TownScene extends Phaser.Scene {
       { title: "升级商队设备", desc: "后续可提升载重、防护、侦察和补给效率。" },
     ];
 
+    this.addDetailCards(this.workshopCards, cardStartY, cardW, cardH, cardGap, cards);
+
+    // 底部提示
+    const hint = this.add.text(panelX + panelW / 2, panelY + 305, "阶段11.3：工坊详情占位，真实制作系统后续开放。", {
+      fontSize: "12px",
+      color: "#666666",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+    this.workshopCards.add(hint);
+  }
+
+  /**
+   * 显示休整所详情面板
+   */
+  private showRestHouseDetail(): void {
+    // 隐藏普通说明文本
+    if (this.descText) {
+      this.descText.setVisible(false);
+    }
+    // 隐藏工坊详情卡片
+    if (this.workshopCards) {
+      this.workshopCards.setVisible(false);
+    }
+
+    // 如果已有休整所卡片，直接显示
+    if (this.restHouseCards) {
+      this.restHouseCards.setVisible(true);
+      return;
+    }
+
+    // 创建休整所详情卡片容器
+    const panelX = 520;
+    const panelY = 180;
+    const panelW = 400;
+
+    this.restHouseCards = this.add.container(0, 0);
+
+    // 休整所标题
+    const titleText = this.add.text(panelX + panelW / 2, panelY + 75, "休整所", {
+      fontSize: "22px",
+      color: "#ffcc44",
+      fontFamily: "monospace",
+      fontStyle: "bold",
+    }).setOrigin(0.5);
+    this.restHouseCards.add(titleText);
+
+    // 休整所副标题
+    const subtitleText = this.add.text(panelX + panelW / 2, panelY + 105, "恢复、休整与队伍调整将在这里进行。", {
+      fontSize: "14px",
+      color: "#aaaaaa",
+      fontFamily: "monospace",
+      align: "center",
+      wordWrap: { width: panelW - 40 },
+    }).setOrigin(0.5);
+    this.restHouseCards.add(subtitleText);
+
+    // 详情卡片
+    const cardStartY = panelY + 140;
+    const cardH = 55;
+    const cardGap = 8;
+    const cardW = panelW - 40;
+
+    const cards = [
+      { title: "队伍休整", desc: "后续可让角色恢复状态，降低远征后的疲惫影响。" },
+      { title: "伤病处理", desc: "后续可处理受伤、虚弱、异常状态等远征损耗。" },
+      { title: "队伍调整", desc: "后续可查看角色状态，并为下一次远征调整出发队伍。" },
+    ];
+
+    this.addDetailCards(this.restHouseCards, cardStartY, cardW, cardH, cardGap, cards);
+
+    // 底部提示
+    const hint = this.add.text(panelX + panelW / 2, panelY + 305, "阶段11.4：休整所详情占位，真实恢复系统后续开放。", {
+      fontSize: "12px",
+      color: "#666666",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+    this.restHouseCards.add(hint);
+  }
+
+  /**
+   * 复用方法：添加详情卡片（工坊和休整所共用）
+   */
+  private addDetailCards(
+    container: Phaser.GameObjects.Container,
+    cardStartY: number,
+    cardW: number,
+    cardH: number,
+    cardGap: number,
+    cards: Array<{ title: string; desc: string }>
+  ): void {
+    const panelX = 520;
+    const panelY = 180;
+
     cards.forEach((card, i) => {
       const cardY = cardStartY + i * (cardH + cardGap);
 
@@ -328,7 +435,7 @@ export class TownScene extends Phaser.Scene {
       cardBg.fillRoundedRect(panelX + 20, cardY, cardW, cardH, 6);
       cardBg.lineStyle(1, 0x4488ff, 0.3);
       cardBg.strokeRoundedRect(panelX + 20, cardY, cardW, cardH, 6);
-      this.workshopCards.add(cardBg);
+      container.add(cardBg);
 
       // 卡片标题
       const cardTitle = this.add.text(panelX + 35, cardY + 15, card.title, {
@@ -337,7 +444,7 @@ export class TownScene extends Phaser.Scene {
         fontFamily: "monospace",
         fontStyle: "bold",
       }).setOrigin(0, 0);
-      this.workshopCards.add(cardTitle);
+      container.add(cardTitle);
 
       // 卡片描述
       const cardDesc = this.add.text(panelX + 35, cardY + 35, card.desc, {
@@ -346,16 +453,8 @@ export class TownScene extends Phaser.Scene {
         fontFamily: "monospace",
         wordWrap: { width: cardW - 30 },
       }).setOrigin(0, 0);
-      this.workshopCards.add(cardDesc);
+      container.add(cardDesc);
     });
-
-    // 底部提示
-    const hint = this.add.text(panelX + panelW / 2, panelY + 305, "阶段11.3：工坊详情占位，真实制作系统后续开放。", {
-      fontSize: "12px",
-      color: "#666666",
-      fontFamily: "monospace",
-    }).setOrigin(0.5);
-    this.workshopCards.add(hint);
   }
 
   shutdown(): void {

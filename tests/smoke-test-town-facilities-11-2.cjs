@@ -147,8 +147,19 @@ async function runTest() {
     await sleep(500);
     const descAfterRest = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
-      if (!ts || !ts.descText) return "";
-      return ts.descText.text;
+      if (!ts) return "";
+      // 休整所使用 restHouseCards 容器
+      if (ts.restHouseCards && ts.restHouseCards.visible) {
+        const texts = [];
+        ts.restHouseCards.each((child) => {
+          if (child.type === "Text" && child.text) {
+            texts.push(String(child.text));
+          }
+        });
+        return texts.join("\n");
+      }
+      if (ts.descText) return ts.descText.text;
+      return "";
     });
     mark(descAfterRest.includes("休整所"), "说明面板显示「休整所」");
 
