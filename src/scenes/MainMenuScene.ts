@@ -65,29 +65,6 @@ export class MainMenuScene extends Phaser.Scene {
       this.scene.start("TownScene");
     });
 
-    // 大地图原型按钮（阶段11.1）
-    const worldMapBtn = this.add
-      .text(w / 2, h * 0.72, "大地图原型", {
-        fontSize: "24px",
-        color: "#ffffff",
-        backgroundColor: "#2a6a4a",
-        padding: { x: 30, y: 10 },
-        fontFamily: "monospace",
-      })
-      .setOrigin(0.5)
-      .setInteractive({ useHandCursor: true });
-
-    worldMapBtn.on("pointerover", () => {
-      worldMapBtn.setStyle({ backgroundColor: "#3a8a6a" });
-    });
-    worldMapBtn.on("pointerout", () => {
-      worldMapBtn.setStyle({ backgroundColor: "#2a6a4a" });
-    });
-    worldMapBtn.on("pointerdown", () => {
-      console.log("[主菜单] 进入大地图原型场景");
-      this.scene.start("WorldMapScene");
-    });
-
     // 版本信息
     this.add
       .text(w / 2, h - 40, "阶段 2 - 地图探索原型", {
