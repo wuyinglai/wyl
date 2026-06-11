@@ -184,8 +184,19 @@ async function runTest() {
     await sleep(500);
     const descAfterIntel = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
-      if (!ts || !ts.descText) return "";
-      return ts.descText.text;
+      if (!ts) return "";
+      // 情报所使用 intelOfficeCards 容器
+      if (ts.intelOfficeCards && ts.intelOfficeCards.visible) {
+        const texts = [];
+        ts.intelOfficeCards.each((child) => {
+          if (child.type === "Text" && child.text) {
+            texts.push(String(child.text));
+          }
+        });
+        return texts.join("\n");
+      }
+      if (ts.descText) return ts.descText.text;
+      return "";
     });
     mark(descAfterIntel.includes("情报所"), "说明面板显示「情报所」");
 

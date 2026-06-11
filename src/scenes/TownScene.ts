@@ -2,11 +2,11 @@ import Phaser from "phaser";
 import { getGameState } from "../systems/GameState";
 
 /**
- * TownScene.ts — 阶段11.4 休整所详情占位 v1
+ * TownScene.ts — 阶段11.5 情报所详情占位 v1
  *
  * 玩家从主菜单进入城镇，作为远征前的整备界面。
- * 本轮新增休整所详情区：队伍休整、伤病处理、队伍调整。
- * 只做 UI 占位，不做真实恢复、伤病、疲劳、角色状态修改。
+ * 本轮新增情报所详情区：商路风险、城市状态、目标情报。
+ * 只做 UI 占位，不做真实情报计算、风险生成、怪物巢穴系统。
  */
 export class TownScene extends Phaser.Scene {
   /** 当前选中的设施 */
@@ -23,6 +23,9 @@ export class TownScene extends Phaser.Scene {
 
   /** 休整所详情卡片容器 */
   private restHouseCards: Phaser.GameObjects.Container | null = null;
+
+  /** 情报所详情卡片容器 */
+  private intelOfficeCards: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super({ key: "TownScene" });
@@ -94,7 +97,7 @@ export class TownScene extends Phaser.Scene {
       { id: "route_hall", label: "商路大厅", desc: "商路大厅：查看可用商路、接取订单并准备出发。", action: "route" },
       { id: "workshop", label: "工坊", desc: "工坊：后续可用于修理装备、制作工具、升级商队设备。", action: "workshop" },
       { id: "rest_house", label: "休整所", desc: "休整所：后续可用于恢复角色状态、处理伤病、调整队伍。", action: "rest_house" },
-      { id: "intel_office", label: "情报所", desc: "情报所：后续可用于查看商路风险、城市状态、订单情报。", action: "panel" },
+      { id: "intel_office", label: "情报所", desc: "情报所：后续可用于查看商路风险、城市状态、订单情报。", action: "intel_office" },
       { id: "warehouse", label: "仓库/工具", desc: "仓库/工具：后续可用于管理货物、查看工具、准备远征物资。", action: "panel" },
     ];
 
@@ -145,6 +148,9 @@ export class TownScene extends Phaser.Scene {
         } else if (facility.action === "rest_house") {
           // 休整所：显示休整所详情面板
           this.showRestHouseDetail();
+        } else if (facility.action === "intel_office") {
+          // 情报所：显示情报所详情面板
+          this.showIntelOfficeDetail();
         } else {
           // 其他设施：更新说明面板
           this.updateDescPanel(facility.label, facility.desc);
@@ -223,7 +229,7 @@ export class TownScene extends Phaser.Scene {
     });
 
     // ========== 底部提示 ==========
-    this.add.text(w / 2, h - 35, "阶段11.4：休整所详情占位 v1，真实恢复系统后续开放", {
+    this.add.text(w / 2, h - 35, "阶段11.5：情报所详情占位 v1，真实情报系统后续开放", {
       fontSize: "14px",
       color: "#555555",
       fontFamily: "monospace",
@@ -271,6 +277,10 @@ export class TownScene extends Phaser.Scene {
     if (this.restHouseCards) {
       this.restHouseCards.setVisible(false);
     }
+    // 隐藏情报所详情卡片
+    if (this.intelOfficeCards) {
+      this.intelOfficeCards.setVisible(false);
+    }
     if (!this.descText) return;
     this.descText.setVisible(true);
     this.descText.setText(`${title}\n\n${desc}`);
@@ -287,6 +297,10 @@ export class TownScene extends Phaser.Scene {
     // 隐藏休整所详情卡片
     if (this.restHouseCards) {
       this.restHouseCards.setVisible(false);
+    }
+    // 隐藏情报所详情卡片
+    if (this.intelOfficeCards) {
+      this.intelOfficeCards.setVisible(false);
     }
 
     // 如果已有工坊卡片，直接显示
@@ -356,6 +370,10 @@ export class TownScene extends Phaser.Scene {
     if (this.workshopCards) {
       this.workshopCards.setVisible(false);
     }
+    // 隐藏情报所详情卡片
+    if (this.intelOfficeCards) {
+      this.intelOfficeCards.setVisible(false);
+    }
 
     // 如果已有休整所卡片，直接显示
     if (this.restHouseCards) {
@@ -413,7 +431,79 @@ export class TownScene extends Phaser.Scene {
   }
 
   /**
-   * 复用方法：添加详情卡片（工坊和休整所共用）
+   * 显示情报所详情面板
+   */
+  private showIntelOfficeDetail(): void {
+    // 隐藏普通说明文本
+    if (this.descText) {
+      this.descText.setVisible(false);
+    }
+    // 隐藏工坊详情卡片
+    if (this.workshopCards) {
+      this.workshopCards.setVisible(false);
+    }
+    // 隐藏休整所详情卡片
+    if (this.restHouseCards) {
+      this.restHouseCards.setVisible(false);
+    }
+
+    // 如果已有情报所卡片，直接显示
+    if (this.intelOfficeCards) {
+      this.intelOfficeCards.setVisible(true);
+      return;
+    }
+
+    // 创建情报所详情卡片容器
+    const panelX = 520;
+    const panelY = 180;
+    const panelW = 400;
+
+    this.intelOfficeCards = this.add.container(0, 0);
+
+    // 情报所标题
+    const titleText = this.add.text(panelX + panelW / 2, panelY + 75, "情报所", {
+      fontSize: "22px",
+      color: "#ffcc44",
+      fontFamily: "monospace",
+      fontStyle: "bold",
+    }).setOrigin(0.5);
+    this.intelOfficeCards.add(titleText);
+
+    // 情报所副标题
+    const subtitleText = this.add.text(panelX + panelW / 2, panelY + 105, "商路风险、城市状态与订单线索将在这里汇总。", {
+      fontSize: "14px",
+      color: "#aaaaaa",
+      fontFamily: "monospace",
+      align: "center",
+      wordWrap: { width: panelW - 40 },
+    }).setOrigin(0.5);
+    this.intelOfficeCards.add(subtitleText);
+
+    // 详情卡片
+    const cardStartY = panelY + 140;
+    const cardH = 55;
+    const cardGap = 8;
+    const cardW = panelW - 40;
+
+    const cards = [
+      { title: "商路风险", desc: "后续可查看商路危险等级、敌人活动和特殊条款风险。" },
+      { title: "城市状态", desc: "后续可查看各城市贡献、恢复进度和可用订单变化。" },
+      { title: "目标情报", desc: "后续可查看订单目标、怪物巢穴、废墟和特殊地点线索。" },
+    ];
+
+    this.addDetailCards(this.intelOfficeCards, cardStartY, cardW, cardH, cardGap, cards);
+
+    // 底部提示
+    const hint = this.add.text(panelX + panelW / 2, panelY + 305, "阶段11.5：情报所详情占位，真实情报系统后续开放。", {
+      fontSize: "12px",
+      color: "#666666",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+    this.intelOfficeCards.add(hint);
+  }
+
+  /**
+   * 复用方法：添加详情卡片（工坊、休整所和情报所共用）
    */
   private addDetailCards(
     container: Phaser.GameObjects.Container,
