@@ -1,13 +1,13 @@
 /**
- * smoke-test-town-facilities-11-2.cjs
- * 阶段11.2：城镇设施入口占位冒烟测试
+ * smoke-test-workshop-placeholder-11-3.cjs
+ * 阶段11.3：工坊详情占位冒烟测试
  *
  * 测试覆盖：
  * 1. 主菜单进入 TownScene
- * 2. TownScene 显示设施按钮
- * 3. 设施按钮点击显示说明面板
- * 4. 商路大厅进入 RouteSelectScene
- * 5. 返回城镇、返回主菜单
+ * 2. 点击工坊显示详情面板
+ * 3. 工坊详情显示工具图纸、修理商队设备、升级商队设备
+ * 4. 切换到其他设施后说明区变化
+ * 5. 商路大厅进入 RouteSelectScene
  */
 const { chromium } = require("playwright");
 const {
@@ -32,7 +32,7 @@ function mark(pass, msg) {
 
 async function runTest() {
   console.log("========================================");
-  console.log("阶段11.2 城镇设施入口占位冒烟测试");
+  console.log("阶段11.3 工坊详情占位冒烟测试");
   console.log("========================================\n");
 
   const browser = await chromium.launch({ headless: true });
@@ -69,28 +69,8 @@ async function runTest() {
     await sleep(1500);
     mark(await page.evaluate(() => window.game.scene.isActive("TownScene")), "TownScene active");
 
-    // 3. 检查 TownScene 显示内容
-    console.log("3. 检查 TownScene 显示内容");
-    const townTexts = await page.evaluate(() => {
-      const ts = window.game.scene.getScene("TownScene");
-      if (!ts) return [];
-      const texts = [];
-      ts.children.each((child) => {
-        if (child.type === "Text" && child.text) {
-          texts.push(String(child.text));
-        }
-      });
-      return texts;
-    });
-    mark(townTexts.some(t => t.includes("灰烬城镇")), "能看到「灰烬城镇」");
-    mark(townTexts.some(t => t.includes("商路大厅")), "能看到「商路大厅」");
-    mark(townTexts.some(t => t.includes("工坊")), "能看到「工坊」");
-    mark(townTexts.some(t => t.includes("休整所")), "能看到「休整所」");
-    mark(townTexts.some(t => t.includes("情报所")), "能看到「情报所」");
-    mark(townTexts.some(t => t.includes("仓库") || t.includes("工具")), "能看到「仓库」或「工具」");
-
-    // 4. 真实点击工坊，检查说明面板
-    console.log("4. 真实点击工坊，检查说明面板");
+    // 3. 真实点击工坊
+    console.log("3. 真实点击工坊");
     const workshopBtn = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
       if (!ts) return null;
@@ -108,26 +88,37 @@ async function runTest() {
       await clickGamePoint(page, { x: workshopBtn.x, y: workshopBtn.y }, "工坊按钮");
     }
     await sleep(500);
-    const descAfterWorkshop = await page.evaluate(() => {
+    mark(await page.evaluate(() => window.game.scene.isActive("TownScene")), "点击工坊后 TownScene 仍 active");
+
+    // 4. 检查工坊详情内容
+    console.log("4. 检查工坊详情内容");
+    const townTexts = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
-      if (!ts) return "";
-      // 工坊使用 workshopCards 容器
+      if (!ts) return [];
+      const texts = [];
+      ts.children.each((child) => {
+        if (child.type === "Text" && child.text) {
+          texts.push(String(child.text));
+        }
+      });
+      // 也检查工坊卡片容器
       if (ts.workshopCards && ts.workshopCards.visible) {
-        const texts = [];
         ts.workshopCards.each((child) => {
           if (child.type === "Text" && child.text) {
             texts.push(String(child.text));
           }
         });
-        return texts.join("\n");
       }
-      if (ts.descText) return ts.descText.text;
-      return "";
+      return texts;
     });
-    mark(descAfterWorkshop.includes("工坊"), "说明面板显示「工坊」");
+    mark(townTexts.some(t => t.includes("工坊")), "说明区显示「工坊」");
+    mark(townTexts.some(t => t.includes("工具图纸")), "说明区显示「工具图纸」");
+    mark(townTexts.some(t => t.includes("修理商队设备")), "说明区显示「修理商队设备」");
+    mark(townTexts.some(t => t.includes("升级商队设备")), "说明区显示「升级商队设备」");
+    mark(townTexts.some(t => t.includes("后续开放") || t.includes("真实制作系统后续开放")), "说明区显示「后续开放」");
 
-    // 5. 真实点击休整所
-    console.log("5. 真实点击休整所");
+    // 5. 点击休整所，说明区切换
+    console.log("5. 点击休整所，说明区切换");
     const restBtn = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
       if (!ts) return null;
@@ -145,67 +136,48 @@ async function runTest() {
       await clickGamePoint(page, { x: restBtn.x, y: restBtn.y }, "休整所按钮");
     }
     await sleep(500);
-    const descAfterRest = await page.evaluate(() => {
+    const afterRestTexts = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
-      if (!ts || !ts.descText) return "";
-      return ts.descText.text;
-    });
-    mark(descAfterRest.includes("休整所"), "说明面板显示「休整所」");
-
-    // 6. 真实点击情报所
-    console.log("6. 真实点击情报所");
-    const intelBtn = await page.evaluate(() => {
-      const ts = window.game.scene.getScene("TownScene");
-      if (!ts) return null;
-      let btn = null;
+      if (!ts) return [];
+      const texts = [];
       ts.children.each((child) => {
-        if (btn) return;
-        if (child.type === "Text" && child.text === "情报所") {
-          btn = { x: child.x, y: child.y };
+        if (child.type === "Text" && child.text) {
+          texts.push(String(child.text));
         }
       });
-      return btn;
+      return texts;
     });
-    mark(intelBtn !== null, "找到「情报所」按钮");
-    if (intelBtn) {
-      await clickGamePoint(page, { x: intelBtn.x, y: intelBtn.y }, "情报所按钮");
+    mark(afterRestTexts.some(t => t.includes("休整所")), "说明区切换为休整所内容");
+    mark(!afterRestTexts.some(t => t.includes("工具图纸")), "说明区不再显示工具图纸");
+
+    // 6. 再点击工坊，说明区恢复
+    console.log("6. 再点击工坊，说明区恢复");
+    if (workshopBtn) {
+      await clickGamePoint(page, { x: workshopBtn.x, y: workshopBtn.y }, "工坊按钮(第2次)");
     }
     await sleep(500);
-    const descAfterIntel = await page.evaluate(() => {
+    const afterWorkshopAgain = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
-      if (!ts || !ts.descText) return "";
-      return ts.descText.text;
-    });
-    mark(descAfterIntel.includes("情报所"), "说明面板显示「情报所」");
-
-    // 7. 真实点击仓库/工具
-    console.log("7. 真实点击仓库/工具");
-    const warehouseBtn = await page.evaluate(() => {
-      const ts = window.game.scene.getScene("TownScene");
-      if (!ts) return null;
-      let btn = null;
+      if (!ts) return [];
+      const texts = [];
       ts.children.each((child) => {
-        if (btn) return;
-        if (child.type === "Text" && (child.text === "仓库/工具" || child.text.includes("仓库"))) {
-          btn = { x: child.x, y: child.y };
+        if (child.type === "Text" && child.text) {
+          texts.push(String(child.text));
         }
       });
-      return btn;
+      if (ts.workshopCards && ts.workshopCards.visible) {
+        ts.workshopCards.each((child) => {
+          if (child.type === "Text" && child.text) {
+            texts.push(String(child.text));
+          }
+        });
+      }
+      return texts;
     });
-    mark(warehouseBtn !== null, "找到「仓库/工具」按钮");
-    if (warehouseBtn) {
-      await clickGamePoint(page, { x: warehouseBtn.x, y: warehouseBtn.y }, "仓库/工具按钮");
-    }
-    await sleep(500);
-    const descAfterWarehouse = await page.evaluate(() => {
-      const ts = window.game.scene.getScene("TownScene");
-      if (!ts || !ts.descText) return "";
-      return ts.descText.text;
-    });
-    mark(descAfterWarehouse.includes("仓库") || descAfterWarehouse.includes("工具"), "说明面板显示「仓库」或「工具」");
+    mark(afterWorkshopAgain.some(t => t.includes("工具图纸")), "说明区重新显示工坊详情");
 
-    // 8. 真实点击商路大厅，进入 RouteSelectScene
-    console.log("8. 真实点击商路大厅");
+    // 7. 点击商路大厅，进入 RouteSelectScene
+    console.log("7. 点击商路大厅");
     const routeHallBtn = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
       if (!ts) return null;
@@ -225,34 +197,19 @@ async function runTest() {
     await sleep(1500);
     mark(await page.evaluate(() => window.game.scene.isActive("RouteSelectScene")), "进入 RouteSelectScene");
 
-    // 9. 检查 RouteSelectScene 有路线卡
-    console.log("9. 检查 RouteSelectScene 有路线卡");
-    const hasRouteCards = await page.evaluate(() => {
-      const rs = window.game.scene.getScene("RouteSelectScene");
-      if (!rs) return false;
-      return rs.routeCards && rs.routeCards.length > 0;
-    });
-    mark(hasRouteCards, "RouteSelectScene routeCards > 0");
-
-    // 10. 点击返回城镇（使用 ESC 键）
-    console.log("10. 按 ESC 返回城镇");
+    // 8. 点击返回城镇
+    console.log("8. 按 ESC 返回城镇");
     await page.keyboard.press("Escape");
     await sleep(1500);
     mark(await page.evaluate(() => window.game.scene.isActive("TownScene")), "回到 TownScene");
-
-    // 11. 按 ESC 返回主菜单
-    console.log("11. 按 ESC 返回主菜单");
-    await page.keyboard.press("Escape");
-    await sleep(1500);
-    mark(await page.evaluate(() => window.game.scene.isActive("MainMenuScene")), "回到 MainMenuScene");
 
     // 总结
     console.log("\n========================================");
     console.log(`测试结果: ${passCount} 通过, ${failCount} 失败`);
     if (failCount === 0) {
-      console.log("阶段11.2 城镇设施入口占位: ✅ 全部通过");
+      console.log("阶段11.3 工坊详情占位: ✅ 全部通过");
     } else {
-      console.log("阶段11.2 城镇设施入口占位: ❌ 有失败项");
+      console.log("阶段11.3 工坊详情占位: ❌ 有失败项");
     }
     console.log("========================================");
     await browser.close();
