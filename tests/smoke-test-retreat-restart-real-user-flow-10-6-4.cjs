@@ -142,10 +142,10 @@ async function main() {
     // 阶段11.1：主菜单现在进入 TownScene，等待 TownScene ready
     console.log("  [TownScene] 等待 TownScene ready...");
     await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 8000 });
-    // 真实点击 TownScene 的"查看商路"
-    const townBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
-    assert(townBtn !== null, "TownScene 找到'查看商路'按钮");
-    await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 查看商路");
+    // 真实点击 TownScene 的"商路大厅"
+    const townBtn = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
+    assert(townBtn !== null, "TownScene 找到'商路大厅'按钮");
+    await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 商路大厅");
     await sleep(1000);
 
     // 3. 等待 RouteSelectScene ready + 真实点击第一张路线卡
@@ -291,9 +291,9 @@ async function main() {
     const afterReplay = await page.evaluate(() => window.game.scene.scenes.filter(s => s.scene.isActive()).map(s => s.scene.key));
     // 阶段11.1：再来一局现在进入 TownScene，再从 TownScene 进入 RouteSelectScene
     await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 8000 });
-    const townBtn2 = await findInteractiveButtonByText(page, "TownScene", "查看商路");
-    assert(townBtn2 !== null, "再来一局后 TownScene 找到'查看商路'按钮");
-    await clickGamePoint(page, { x: townBtn2.x, y: townBtn2.y }, "再来一局后 TownScene 查看商路");
+    const townBtn2 = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
+    assert(townBtn2 !== null, "再来一局后 TownScene 找到'商路大厅'按钮");
+    await clickGamePoint(page, { x: townBtn2.x, y: townBtn2.y }, "再来一局后 TownScene 商路大厅");
     await sleep(1500);
 
     const afterReplayRouteSelect = await page.evaluate(() => window.game.scene.scenes.filter(s => s.scene.isActive()).map(s => s.scene.key));

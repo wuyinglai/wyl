@@ -112,10 +112,10 @@ async function runTest() {
 
     // 阶段11.1：主菜单现在进入 TownScene
     await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 10000 });
-    const townBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
-    mark(townBtn !== null, "TownScene 找到'查看商路'按钮");
+    const townBtn = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
+    mark(townBtn !== null, "TownScene 找到'商路大厅'按钮");
     if (townBtn) {
-      await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 查看商路");
+      await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 商路大厅");
       await sleep(1000);
     }
 
@@ -213,10 +213,10 @@ async function runTest() {
 
     // 阶段11.1：再来一局现在进入 TownScene
     await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 10000 });
-    const townBtn2 = await findInteractiveButtonByText(page, "TownScene", "查看商路");
-    mark(townBtn2 !== null, "再来一局后 TownScene 找到'查看商路'按钮");
+    const townBtn2 = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
+    mark(townBtn2 !== null, "再来一局后 TownScene 找到'商路大厅'按钮");
     if (townBtn2) {
-      await clickGamePoint(page, { x: townBtn2.x, y: townBtn2.y }, "再来一局后 TownScene 查看商路");
+      await clickGamePoint(page, { x: townBtn2.x, y: townBtn2.y }, "再来一局后 TownScene 商路大厅");
       await sleep(1500);
     }
 

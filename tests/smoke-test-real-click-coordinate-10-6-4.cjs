@@ -80,11 +80,11 @@ async function sleep(ms) {
     const townReady = await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 8000 });
     console.log("  TownScene active: ✓");
 
-    // 真实点击 TownScene 的"查看商路"
-    console.log("\n[4c] 真实点击 TownScene '查看商路'...");
-    const townBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
-    if (!townBtn) throw new Error("TownScene 没有找到'查看商路'按钮");
-    await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 查看商路");
+    // 真实点击 TownScene 的"商路大厅"
+    console.log("\n[4c] 真实点击 TownScene '商路大厅'...");
+    const townBtn = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
+    if (!townBtn) throw new Error("TownScene 没有找到'商路大厅'按钮");
+    await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 商路大厅");
 
     // 5. 等待 RouteSelectScene ready
     console.log("\n[5] 等待 RouteSelectScene ready...");

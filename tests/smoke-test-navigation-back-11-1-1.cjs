@@ -102,12 +102,12 @@ async function runTest() {
     await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 10000 });
     mark(await page.evaluate(() => window.game.scene.isActive("TownScene")), "再次进入 TownScene active");
 
-    // ========== 5. TownScene → 查看商路 → RouteSelectScene ==========
-    console.log("5. TownScene → 查看商路 → RouteSelectScene");
-    const seeRoutesBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
-    mark(seeRoutesBtn !== null, "TownScene 找到'查看商路'按钮");
+    // ========== 5. TownScene → 商路大厅 → RouteSelectScene ==========
+    console.log("5. TownScene → 商路大厅 → RouteSelectScene");
+    const seeRoutesBtn = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
+    mark(seeRoutesBtn !== null, "TownScene 找到'商路大厅'按钮");
     if (seeRoutesBtn) {
-      await clickGamePoint(page, { x: seeRoutesBtn.x, y: seeRoutesBtn.y }, "TownScene 查看商路");
+      await clickGamePoint(page, { x: seeRoutesBtn.x, y: seeRoutesBtn.y }, "TownScene 商路大厅");
     }
     await waitForSceneReady(page, "RouteSelectScene", { requireRouteCards: true, timeoutMs: 10000 });
     mark(await page.evaluate(() => window.game.scene.isActive("RouteSelectScene")), "RouteSelectScene active");
@@ -124,9 +124,9 @@ async function runTest() {
 
     // ========== 7. 再次进入 RouteSelectScene + 选择路线 ==========
     console.log("7. 再次进入 RouteSelectScene + 选择路线");
-    const seeRoutesBtn2 = await findInteractiveButtonByText(page, "TownScene", "查看商路");
+    const seeRoutesBtn2 = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
     if (seeRoutesBtn2) {
-      await clickGamePoint(page, { x: seeRoutesBtn2.x, y: seeRoutesBtn2.y }, "TownScene 查看商路(第2次)");
+      await clickGamePoint(page, { x: seeRoutesBtn2.x, y: seeRoutesBtn2.y }, "TownScene 商路大厅(第2次)");
     }
     await waitForSceneReady(page, "RouteSelectScene", { requireRouteCards: true, timeoutMs: 10000 });
 

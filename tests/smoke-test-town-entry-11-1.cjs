@@ -106,22 +106,22 @@ async function runTest() {
     mark(townContent?.some(t => t.includes("火种") || t.includes("银币") || t.includes("订单") || t.includes("贡献")),
       "TownScene 显示火种/银币/订单/城市贡献信息");
 
-    // ========== 5. TownScene 有按钮 ==========
-    console.log("5. TownScene 有按钮");
-    const seeRoutesBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
-    const acceptOrderBtn = await findInteractiveButtonByText(page, "TownScene", "接取订单");
-    const prepareBtn = await findInteractiveButtonByText(page, "TownScene", "出发准备");
-    mark(seeRoutesBtn !== null, "TownScene 有'查看商路'按钮");
-    mark(acceptOrderBtn !== null, "TownScene 有'接取订单'按钮");
-    mark(prepareBtn !== null, "TownScene 有'出发准备'按钮");
+    // ========== 5. TownScene 有设施按钮 ==========
+    console.log("5. TownScene 有设施按钮");
+    const routeHallBtn = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
+    const workshopBtn = await findInteractiveButtonByText(page, "TownScene", "工坊");
+    const restHouseBtn = await findInteractiveButtonByText(page, "TownScene", "休整所");
+    mark(routeHallBtn !== null, "TownScene 有'商路大厅'按钮");
+    mark(workshopBtn !== null, "TownScene 有'工坊'按钮");
+    mark(restHouseBtn !== null, "TownScene 有'休整所'按钮");
 
-    // ========== 6. 真实点击"查看商路"进入 RouteSelectScene ==========
-    console.log("6. 真实点击'查看商路'进入 RouteSelectScene");
-    if (seeRoutesBtn) {
-      await clickGamePoint(page, { x: seeRoutesBtn.x, y: seeRoutesBtn.y }, "TownScene 查看商路");
+    // ========== 6. 真实点击"商路大厅"进入 RouteSelectScene ==========
+    console.log("6. 真实点击'商路大厅'进入 RouteSelectScene");
+    if (routeHallBtn) {
+      await clickGamePoint(page, { x: routeHallBtn.x, y: routeHallBtn.y }, "TownScene 商路大厅");
     }
     await waitForSceneReady(page, "RouteSelectScene", { requireRouteCards: true, timeoutMs: 10000 });
-    mark(await page.evaluate(() => window.game.scene.isActive("RouteSelectScene")), "点击'查看商路'后 RouteSelectScene active");
+    mark(await page.evaluate(() => window.game.scene.isActive("RouteSelectScene")), "点击'商路大厅'后 RouteSelectScene active");
     mark(await page.evaluate(() => {
       const rs = window.game.scene.getScene("RouteSelectScene");
       return (rs?.routeCards?.length ?? 0) > 0;

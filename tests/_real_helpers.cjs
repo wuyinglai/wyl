@@ -218,22 +218,15 @@ async function startRealExpeditionToMap(page, opts = {}) {
     if (!startBtn) throw new Error("未找到主菜单开始远征按钮");
     await clickGamePoint(page, { x: startBtn.x, y: startBtn.y }, "主菜单开始远征");
 
-    // 阶段11.1：主菜单现在进入 TownScene，等待 TownScene ready
+    // 阶段11.2：主菜单现在进入 TownScene，等待 TownScene ready
     await waitForSceneReady(page, "TownScene", { minChildren: 5, timeoutMs: 10000 });
 
-    // 真实点击 TownScene 的"查看商路"按钮进入 RouteSelectScene
-    const townBtn = await findInteractiveButtonByText(page, "TownScene", "查看商路");
+    // 真实点击 TownScene 的"商路大厅"按钮进入 RouteSelectScene
+    const townBtn = await findInteractiveButtonByText(page, "TownScene", "商路大厅");
     if (!townBtn) {
-      // 降级：如果找不到"查看商路"，尝试"出发准备"
-      const altBtn = await findInteractiveButtonByText(page, "TownScene", "出发准备");
-      if (altBtn) {
-        await clickGamePoint(page, { x: altBtn.x, y: altBtn.y }, "TownScene 出发准备");
-      } else {
-        throw new Error("TownScene 没有找到'查看商路'或'出发准备'按钮");
-      }
-    } else {
-      await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 查看商路");
+      throw new Error("TownScene 没有找到'商路大厅'按钮");
     }
+    await clickGamePoint(page, { x: townBtn.x, y: townBtn.y }, "TownScene 商路大厅");
   }
 
   // 等待 RouteSelectScene ready
