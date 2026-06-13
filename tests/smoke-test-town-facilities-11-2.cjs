@@ -221,8 +221,19 @@ async function runTest() {
     await sleep(500);
     const descAfterWarehouse = await page.evaluate(() => {
       const ts = window.game.scene.getScene("TownScene");
-      if (!ts || !ts.descText) return "";
-      return ts.descText.text;
+      if (!ts) return "";
+      // 仓库/工具使用 storageToolsCards 容器
+      if (ts.storageToolsCards && ts.storageToolsCards.visible) {
+        const texts = [];
+        ts.storageToolsCards.each((child) => {
+          if (child.type === "Text" && child.text) {
+            texts.push(String(child.text));
+          }
+        });
+        return texts.join("\n");
+      }
+      if (ts.descText) return ts.descText.text;
+      return "";
     });
     mark(descAfterWarehouse.includes("仓库") || descAfterWarehouse.includes("工具"), "说明面板显示「仓库」或「工具」");
 

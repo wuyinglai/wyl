@@ -2,11 +2,11 @@ import Phaser from "phaser";
 import { getGameState } from "../systems/GameState";
 
 /**
- * TownScene.ts — 阶段11.5 情报所详情占位 v1
+ * TownScene.ts — 阶段11.6 仓库/工具详情占位 v1
  *
  * 玩家从主菜单进入城镇，作为远征前的整备界面。
- * 本轮新增情报所详情区：商路风险、城市状态、目标情报。
- * 只做 UI 占位，不做真实情报计算、风险生成、怪物巢穴系统。
+ * 本轮新增仓库/工具详情区：货物仓库、远征工具、物资整理。
+ * 只做 UI 占位，不做真实仓库、工具购买、工具携带、货物管理、资源扣除。
  */
 export class TownScene extends Phaser.Scene {
   /** 当前选中的设施 */
@@ -26,6 +26,9 @@ export class TownScene extends Phaser.Scene {
 
   /** 情报所详情卡片容器 */
   private intelOfficeCards: Phaser.GameObjects.Container | null = null;
+
+  /** 仓库/工具详情卡片容器 */
+  private storageToolsCards: Phaser.GameObjects.Container | null = null;
 
   constructor() {
     super({ key: "TownScene" });
@@ -98,7 +101,7 @@ export class TownScene extends Phaser.Scene {
       { id: "workshop", label: "工坊", desc: "工坊：后续可用于修理装备、制作工具、升级商队设备。", action: "workshop" },
       { id: "rest_house", label: "休整所", desc: "休整所：后续可用于恢复角色状态、处理伤病、调整队伍。", action: "rest_house" },
       { id: "intel_office", label: "情报所", desc: "情报所：后续可用于查看商路风险、城市状态、订单情报。", action: "intel_office" },
-      { id: "warehouse", label: "仓库/工具", desc: "仓库/工具：后续可用于管理货物、查看工具、准备远征物资。", action: "panel" },
+      { id: "warehouse", label: "仓库/工具", desc: "仓库/工具：后续可用于管理货物、查看工具、准备远征物资。", action: "storage_tools" },
     ];
 
     this.facilityBtnGraphics = [];
@@ -151,6 +154,9 @@ export class TownScene extends Phaser.Scene {
         } else if (facility.action === "intel_office") {
           // 情报所：显示情报所详情面板
           this.showIntelOfficeDetail();
+        } else if (facility.action === "storage_tools") {
+          // 仓库/工具：显示仓库/工具详情面板
+          this.showStorageToolsDetail();
         } else {
           // 其他设施：更新说明面板
           this.updateDescPanel(facility.label, facility.desc);
@@ -229,7 +235,7 @@ export class TownScene extends Phaser.Scene {
     });
 
     // ========== 底部提示 ==========
-    this.add.text(w / 2, h - 35, "阶段11.5：情报所详情占位 v1，真实情报系统后续开放", {
+    this.add.text(w / 2, h - 35, "阶段11.6：仓库/工具详情占位 v1，真实仓库与工具系统后续开放", {
       fontSize: "14px",
       color: "#555555",
       fontFamily: "monospace",
@@ -281,6 +287,10 @@ export class TownScene extends Phaser.Scene {
     if (this.intelOfficeCards) {
       this.intelOfficeCards.setVisible(false);
     }
+    // 隐藏仓库/工具详情卡片
+    if (this.storageToolsCards) {
+      this.storageToolsCards.setVisible(false);
+    }
     if (!this.descText) return;
     this.descText.setVisible(true);
     this.descText.setText(`${title}\n\n${desc}`);
@@ -301,6 +311,10 @@ export class TownScene extends Phaser.Scene {
     // 隐藏情报所详情卡片
     if (this.intelOfficeCards) {
       this.intelOfficeCards.setVisible(false);
+    }
+    // 隐藏仓库/工具详情卡片
+    if (this.storageToolsCards) {
+      this.storageToolsCards.setVisible(false);
     }
 
     // 如果已有工坊卡片，直接显示
@@ -374,6 +388,10 @@ export class TownScene extends Phaser.Scene {
     if (this.intelOfficeCards) {
       this.intelOfficeCards.setVisible(false);
     }
+    // 隐藏仓库/工具详情卡片
+    if (this.storageToolsCards) {
+      this.storageToolsCards.setVisible(false);
+    }
 
     // 如果已有休整所卡片，直接显示
     if (this.restHouseCards) {
@@ -446,6 +464,10 @@ export class TownScene extends Phaser.Scene {
     if (this.restHouseCards) {
       this.restHouseCards.setVisible(false);
     }
+    // 隐藏仓库/工具详情卡片
+    if (this.storageToolsCards) {
+      this.storageToolsCards.setVisible(false);
+    }
 
     // 如果已有情报所卡片，直接显示
     if (this.intelOfficeCards) {
@@ -503,7 +525,83 @@ export class TownScene extends Phaser.Scene {
   }
 
   /**
-   * 复用方法：添加详情卡片（工坊、休整所和情报所共用）
+   * 显示仓库/工具详情面板
+   */
+  private showStorageToolsDetail(): void {
+    // 隐藏普通说明文本
+    if (this.descText) {
+      this.descText.setVisible(false);
+    }
+    // 隐藏工坊详情卡片
+    if (this.workshopCards) {
+      this.workshopCards.setVisible(false);
+    }
+    // 隐藏休整所详情卡片
+    if (this.restHouseCards) {
+      this.restHouseCards.setVisible(false);
+    }
+    // 隐藏情报所详情卡片
+    if (this.intelOfficeCards) {
+      this.intelOfficeCards.setVisible(false);
+    }
+
+    // 如果已有仓库/工具卡片，直接显示
+    if (this.storageToolsCards) {
+      this.storageToolsCards.setVisible(true);
+      return;
+    }
+
+    // 创建仓库/工具详情卡片容器
+    const panelX = 520;
+    const panelY = 180;
+    const panelW = 400;
+
+    this.storageToolsCards = this.add.container(0, 0);
+
+    // 仓库/工具标题
+    const titleText = this.add.text(panelX + panelW / 2, panelY + 75, "仓库/工具", {
+      fontSize: "22px",
+      color: "#ffcc44",
+      fontFamily: "monospace",
+      fontStyle: "bold",
+    }).setOrigin(0.5);
+    this.storageToolsCards.add(titleText);
+
+    // 仓库/工具副标题
+    const subtitleText = this.add.text(panelX + panelW / 2, panelY + 105, "货物管理、工具查看与远征物资准备将在这里进行。", {
+      fontSize: "14px",
+      color: "#aaaaaa",
+      fontFamily: "monospace",
+      align: "center",
+      wordWrap: { width: panelW - 40 },
+    }).setOrigin(0.5);
+    this.storageToolsCards.add(subtitleText);
+
+    // 详情卡片
+    const cardStartY = panelY + 140;
+    const cardH = 55;
+    const cardGap = 8;
+    const cardW = panelW - 40;
+
+    const cards = [
+      { title: "货物仓库", desc: "后续可查看库存货物、订单货物和可携带物资。" },
+      { title: "远征工具", desc: "后续可查看已拥有工具，并选择本次远征携带的工具。" },
+      { title: "物资整理", desc: "后续可整理补给、工具和特殊货物，为远征做准备。" },
+    ];
+
+    this.addDetailCards(this.storageToolsCards, cardStartY, cardW, cardH, cardGap, cards);
+
+    // 底部提示
+    const hint = this.add.text(panelX + panelW / 2, panelY + 305, "阶段11.6：仓库/工具详情占位，真实仓库与工具系统后续开放。", {
+      fontSize: "12px",
+      color: "#666666",
+      fontFamily: "monospace",
+    }).setOrigin(0.5);
+    this.storageToolsCards.add(hint);
+  }
+
+  /**
+   * 复用方法：添加详情卡片（工坊、休整所、情报所和仓库/工具共用）
    */
   private addDetailCards(
     container: Phaser.GameObjects.Container,

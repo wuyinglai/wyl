@@ -60,6 +60,14 @@ async function getTownPanelTexts(page) {
         }
       });
     }
+    // 检查仓库/工具卡片
+    if (ts.storageToolsCards && ts.storageToolsCards.visible) {
+      ts.storageToolsCards.each((child) => {
+        if (child.type === "Text" && child.text && child.visible) {
+          texts.push(String(child.text));
+        }
+      });
+    }
     return texts;
   });
 }
