@@ -38,6 +38,16 @@ import {
   formatCargo,
 } from "./systems/cargoSystem";
 
+// 远征工具系统（阶段12.1）
+import {
+  getAllTools,
+  getToolById,
+  getToolsByCategory,
+  getToolsByRarity,
+  isKnownToolId,
+  formatToolSummary,
+} from "./systems/toolSystem";
+
 // 全局错误处理
 window.onerror = (message, source, lineno, colno, error) => {
   console.error("[全局错误]", message, source, lineno, colno, error);
@@ -169,6 +179,14 @@ function exposeTestApi(): void {
   w.calculateRetreatSupplyCost = calculateRetreatSupplyCost;
   w.checkRetreatCost = checkRetreatCost;
   w.getRetreatCostText = getRetreatCostText;
+
+  // 远征工具系统（阶段12.1）
+  w.getAllTools = getAllTools;
+  w.getToolById = getToolById;
+  w.getToolsByCategory = getToolsByCategory;
+  w.getToolsByRarity = getToolsByRarity;
+  w.isKnownToolId = isKnownToolId;
+  w.formatToolSummary = formatToolSummary;
 }
 
 // 只在开发/测试模式暴露测试 API
