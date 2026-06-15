@@ -119,6 +119,8 @@ export class MainMenuScene extends Phaser.Scene {
     gs.caravanHp = 45;
     gs.caravanMaxHp = 45;
     gs.gold = 0;
+    // 重置工具选择状态，防止新开局时工具选择残留（阶段12.3）
+    gs.selectedToolId = null;
     // 重置临时测试状态，防止跨局污染
     gs._isAutoMoving = false;
     gs._autoMoveResumeStep = 0;

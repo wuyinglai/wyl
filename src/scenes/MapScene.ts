@@ -34,6 +34,7 @@ import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
 import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "../systems/expeditionResultSystem";
+import { getToolById } from "../systems/toolSystem";
 import { checkRetreatCost, getRetreatCostText, RetreatCostCheck } from "../systems/retreatSystem";
 import { isDevCheatEnabled } from "../systems/devConfig";
 
@@ -235,6 +236,11 @@ export class MapScene extends Phaser.Scene {
     if (gameState.selectedCityId) {
       infoLines.push(formatCityProgress(gameState.selectedCityId, gameState.cityContributions));
     }
+    // 阶段12.3：携带工具显示（只读展示，不产生效果）
+    const carriedToolLine = gameState.selectedToolId
+      ? `携带工具：${getToolById(gameState.selectedToolId)?.name || gameState.selectedToolId}`
+      : "携带工具：无";
+    infoLines.push(carriedToolLine);
 
     if (infoLines.length > 0) {
       const panelPadding = 8;

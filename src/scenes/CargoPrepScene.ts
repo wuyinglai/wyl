@@ -31,6 +31,7 @@ import { GOODS, getGoodById, formatGoodsRequirement } from "../data/goods";
 import { calculateCargoWeight } from "../systems/cargoSystem";
 import { getOrderCargoStatusText } from "../systems/orderCargoSystem";
 import { TooltipManager } from "../systems/tooltipSystem";
+import { getAllTools, formatToolSummary, getToolById } from "../systems/toolSystem";
 
 export class CargoPrepScene extends Scene {
   private tooltipManager: TooltipManager | null = null;
@@ -38,6 +39,7 @@ export class CargoPrepScene extends Scene {
   private silverText: Phaser.GameObjects.Text | null = null;
   private weightText: Phaser.GameObjects.Text | null = null;
   private orderStatusText: Phaser.GameObjects.Text | null = null;
+  private carriedToolText: Phaser.GameObjects.Text | null = null;
   private goodCards: Phaser.GameObjects.Container[] = [];
   // 9.1.7 调试层
   private debugText: Phaser.GameObjects.Text | null = null;
@@ -77,12 +79,12 @@ export class CargoPrepScene extends Scene {
     this.initDebugOverlay();
   }
 
-  /** 9.1.7: 初始化调试覆盖层 */
+  /** 9.1.7: 初始化调试覆盖层（depth=10，不遮挡按钮） */
   private initDebugOverlay(): void {
     const w = this.scale.width;
     const h = this.scale.height;
 
-    // 调试文本（右下角）
+    // 调试文本（右下角，depth=10 不遮挡按钮）
     this.debugText = this.add
       .text(w - 10, h - 10, "", {
         fontSize: "12px",
@@ -93,7 +95,7 @@ export class CargoPrepScene extends Scene {
         wordWrap: { width: 300 },
       })
       .setOrigin(1, 1) // 右下角对齐
-      .setDepth(9999)
+      .setDepth(10)
       .setScrollFactor(0);
 
     // 场景级 pointerdown 监听：检测点击位置和命中情况
@@ -270,6 +272,9 @@ export class CargoPrepScene extends Scene {
       })
       .setOrigin(0, 0);
 
+    // 阶段12.3：远征工具选择区域
+    this.createToolSelectionUI();
+
     // 商品列表
     this.createGoodsList();
 
@@ -277,9 +282,115 @@ export class CargoPrepScene extends Scene {
     this.createBottomButtons();
   }
 
+  /**
+   * 阶段12.3：创建远征工具选择区域
+   * 在 CargoPrepScene 中显示工具列表，允许玩家选择 1 个工具携带
+   */
+  private createToolSelectionUI(): void {
+    const gameState = getGameState();
+    const selectedToolId = gameState.selectedToolId || null;
+
+    // 工具选择区域标题
+    const toolAreaX = 30;
+    const toolAreaY = 235;
+
+    this.add
+      .text(toolAreaX, toolAreaY, "【远征工具】点击选择携带", {
+        fontSize: "14px",
+        color: "#88ccff",
+        fontFamily: "sans-serif",
+      })
+      .setOrigin(0, 0);
+
+    // 当前携带状态行
+    const carriedText = selectedToolId
+      ? `当前携带：${getToolById(selectedToolId)?.name || "未知工具"}`
+      : "当前携带：未选择";
+    this.carriedToolText = this.add
+      .text(toolAreaX, toolAreaY + 20, carriedText, {
+        fontSize: "13px",
+        color: selectedToolId ? "#88ff88" : "#888888",
+        fontFamily: "sans-serif",
+      })
+      .setOrigin(0, 0);
+
+    // 工具列表（横向排列，最多显示 4 个）
+    const tools = getAllTools();
+    const toolBtnW = 150;
+    const toolBtnH = 30;
+    const toolBtnGap = 10;
+    const toolListY = toolAreaY + 45;
+
+    tools.forEach((tool, i) => {
+      const col = i % 4;
+      const row = Math.floor(i / 4);
+      const x = toolAreaX + col * (toolBtnW + toolBtnGap);
+      const y = toolListY + row * (toolBtnH + toolBtnGap);
+
+      const isSelected = tool.id === selectedToolId;
+
+      // 工具按钮背景
+      const btnBg = this.add
+        .rectangle(x + toolBtnW / 2, y + toolBtnH / 2, toolBtnW, toolBtnH, isSelected ? 0x335533 : 0x2a2a3e)
+        .setStrokeStyle(1, isSelected ? 0x88ff88 : 0x444466);
+
+      // 工具名称（简化显示）
+      const toolName = tool.name.length > 8 ? tool.name.substring(0, 8) : tool.name;
+      const toolLabel = this.add
+        .text(x + toolBtnW / 2, y + toolBtnH / 2, toolName, {
+          fontSize: "12px",
+          color: isSelected ? "#ffffff" : "#cccccc",
+          fontFamily: "sans-serif",
+        })
+        .setOrigin(0.5);
+
+      // 点击区域（整个按钮）
+      const hitArea = this.add
+        .rectangle(x + toolBtnW / 2, y + toolBtnH / 2, toolBtnW, toolBtnH, 0x000000, 0)
+        .setInteractive({ useHandCursor: true });
+
+      hitArea.on("pointerover", () => {
+        if (!isSelected) {
+          btnBg.setFillStyle(0x3a3a5e);
+          toolLabel.setColor("#ffffff");
+        }
+      });
+
+      hitArea.on("pointerout", () => {
+        if (!isSelected) {
+          btnBg.setFillStyle(0x2a2a3e);
+          toolLabel.setColor("#cccccc");
+        }
+      });
+
+      hitArea.on("pointerdown", () => {
+        const currentGs = getGameState();
+        if (currentGs.selectedToolId === tool.id) {
+          // 再次点击同一工具则取消选择
+          currentGs.selectedToolId = null;
+          console.log(`[CargoPrepScene] 取消选择工具: ${tool.name}`);
+        } else {
+          currentGs.selectedToolId = tool.id;
+          console.log(`[CargoPrepScene] 选择工具: ${tool.name} (${tool.id})`);
+        }
+        setGameState(currentGs);
+
+        // 更新当前携带状态文本
+        if (this.carriedToolText) {
+          const carriedText = currentGs.selectedToolId
+            ? `当前携带：${getToolById(currentGs.selectedToolId)?.name || "未知工具"}`
+            : "当前携带：未选择";
+          this.carriedToolText.setText(carriedText);
+          this.carriedToolText.setColor(currentGs.selectedToolId ? "#88ff88" : "#888888");
+        }
+      });
+    });
+  }
+
   private createGoodsList(): void {
     const w = this.scale.width;
-    const startY = 250;
+    // 阶段12.3：商品列表起始位置下移，为工具选择区域留出空间
+    const startY = 400;  // 原值 250，工具区域占用约 150px
     const cardHeight = 70;
     const gap = 10;
     const padding = 20;
@@ -341,10 +452,10 @@ export class CargoPrepScene extends Scene {
       minusButton.setData("goodId", goodId);
       minusButton.setData("action", "minus");
 
-      // 9.1.7: 命中区域边框（红色 = minus）
+      // 9.1.7: 命中区域边框（红色 = minus，depth=10 不遮挡按钮）
       const minusHitBorder = this.add.rectangle(w - 120, y + cardHeight / 2, 56, 56, 0x000000, 0)
         .setStrokeStyle(2, 0xff4444)
-        .setDepth(301);
+        .setDepth(10);
       this.debugHitBorders.push(minusHitBorder);
 
       // hover 反馈：变亮
@@ -382,10 +493,10 @@ export class CargoPrepScene extends Scene {
       plusButton.setData("goodId", goodId);
       plusButton.setData("action", "plus");
 
-      // 9.1.7: 命中区域边框（绿色 = plus）
+      // 9.1.7: 命中区域边框（绿色 = plus，depth=10 不遮挡按钮）
       const plusHitBorder = this.add.rectangle(w - 60, y + cardHeight / 2, 56, 56, 0x000000, 0)
         .setStrokeStyle(2, 0x44ff44)
-        .setDepth(301);
+        .setDepth(10);
       this.debugHitBorders.push(plusHitBorder);
 
       // hover 反馈：变亮
@@ -638,6 +749,14 @@ export class CargoPrepScene extends Scene {
     const statusText = getOrderCargoStatusText(order, gameState.cargo);
     if (this.orderStatusText) {
       this.orderStatusText.setText(statusText);
+    }
+
+    // 阶段12.3：更新携带工具显示
+    if (this.carriedToolText) {
+      const carriedText = gameState.selectedToolId
+        ? `当前携带：${getToolById(gameState.selectedToolId)?.name || "未知工具"}`
+        : "当前携带：未选择";
+      this.carriedToolText.setText(carriedText);
     }
 
     // 更新商品数量

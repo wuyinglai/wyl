@@ -125,6 +125,8 @@ export class ExpeditionResultScene extends Phaser.Scene {
     // 重置位置状态，防止再来一局时位置污染
     gs.currentPosition = { x: 0, y: 0 };
     gs.startPosition = { x: 0, y: 0 };
+    // 重置工具选择状态，防止再来一局时工具选择残留（阶段12.3）
+    gs.selectedToolId = null;
     // 重置战斗相关状态，防止BattleScene残留污染
     gs.currentBattleType = null;
     gs.currentBattleNodePosition = null;

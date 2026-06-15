@@ -124,6 +124,9 @@ export interface GameState {
 
   // 远征结算结果（阶段8.7）
     lastExpeditionResult?: ExpeditionResult;
+
+    // 携带工具（阶段12.3）：仅影响本次远征，不进长期存档
+    selectedToolId: string | null;
 }
 
 // 初始游戏状态
@@ -193,6 +196,9 @@ export function createInitialGameState(): GameState {
     _directionalTestStep: 0,
     _directionalTestResumeStep: 0,
     _directionalTestMaxSteps: 0,
+
+    // 携带工具（阶段12.3）
+    selectedToolId: null,
   };
 }
 

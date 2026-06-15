@@ -218,3 +218,36 @@ export function isValidRarity(rarity: string): boolean {
 export function isValidEffectType(effectType: string): boolean {
   return VALID_EFFECTS.includes(effectType as ToolEffectType);
 }
+
+/**
+ * 阶段12.3：获取当前携带的工具摘要
+ * @param toolId 已选择的工具 ID，null 表示未携带
+ * @returns 携带工具的显示文本
+ */
+export function formatCarriedToolText(toolId: string | null): string {
+  if (!toolId) {
+    return "当前携带：无";
+  }
+  const tool = getToolById(toolId);
+  if (!tool) {
+    return "当前携带：无";
+  }
+  return `当前携带：${tool.name}`;
+}
+
+/**
+ * 阶段12.3：获取工具详细显示文本（用于 UI 面板）
+ * @param toolId 已选择的工具 ID，null 表示未携带
+ * @returns 工具详细信息行
+ */
+export function formatToolDisplayLine(toolId: string | null): string {
+  if (!toolId) {
+    return "携带工具：无";
+  }
+  const tool = getToolById(toolId);
+  if (!tool) {
+    return "携带工具：无";
+  }
+  const summary = formatToolSummary(tool);
+  return summary;
+}
