@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { getGameState } from "../systems/GameState";
+import { getAllTools, formatToolSummary } from "../systems/toolSystem";
 
 /**
  * TownScene.ts — 阶段11.6 仓库/工具详情占位 v1
@@ -559,7 +560,7 @@ export class TownScene extends Phaser.Scene {
     this.storageToolsCards = this.add.container(0, 0);
 
     // 仓库/工具标题
-    const titleText = this.add.text(panelX + panelW / 2, panelY + 75, "仓库/工具", {
+    const titleText = this.add.text(panelX + panelW / 2, panelY + 20, "仓库/工具", {
       fontSize: "22px",
       color: "#ffcc44",
       fontFamily: "monospace",
@@ -568,8 +569,8 @@ export class TownScene extends Phaser.Scene {
     this.storageToolsCards.add(titleText);
 
     // 仓库/工具副标题
-    const subtitleText = this.add.text(panelX + panelW / 2, panelY + 105, "货物管理、工具查看与远征物资准备将在这里进行。", {
-      fontSize: "14px",
+    const subtitleText = this.add.text(panelX + panelW / 2, panelY + 50, "查看已知远征工具目录。当前仅展示工具信息，携带和制作功能后续开放。", {
+      fontSize: "12px",
       color: "#aaaaaa",
       fontFamily: "monospace",
       align: "center",
@@ -577,22 +578,33 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.storageToolsCards.add(subtitleText);
 
-    // 详情卡片
-    const cardStartY = panelY + 140;
-    const cardH = 55;
-    const cardGap = 8;
-    const cardW = panelW - 40;
+    // 工具目录区域标题
+    const catalogTitle = this.add.text(panelX + 35, panelY + 80, "【远征工具目录】", {
+      fontSize: "14px",
+      color: "#88ccff",
+      fontFamily: "monospace",
+      fontStyle: "bold",
+    }).setOrigin(0, 0);
+    this.storageToolsCards.add(catalogTitle);
 
-    const cards = [
-      { title: "货物仓库", desc: "后续可查看库存货物、订单货物和可携带物资。" },
-      { title: "远征工具", desc: "后续可查看已拥有工具，并选择本次远征携带的工具。" },
-      { title: "物资整理", desc: "后续可整理补给、工具和特殊货物，为远征做准备。" },
-    ];
+    // 从 toolSystem 获取所有工具并显示摘要
+    const tools = getAllTools();
+    const toolListStartY = panelY + 100;
+    const toolLineH = 22;
 
-    this.addDetailCards(this.storageToolsCards, cardStartY, cardW, cardH, cardGap, cards);
+    tools.forEach((tool, i) => {
+      const summary = formatToolSummary(tool);
+      const toolLine = this.add.text(panelX + 35, toolListStartY + i * toolLineH, summary, {
+        fontSize: "13px",
+        color: "#cccccc",
+        fontFamily: "monospace",
+      }).setOrigin(0, 0);
+      this.storageToolsCards.add(toolLine);
+    });
 
     // 底部提示
-    const hint = this.add.text(panelX + panelW / 2, panelY + 305, "阶段11.6：仓库/工具详情占位，真实仓库与工具系统后续开放。", {
+    const hintY = toolListStartY + tools.length * toolLineH + 15;
+    const hint = this.add.text(panelX + panelW / 2, hintY, "阶段12.2：工具目录只读展示，携带和制作功能后续开放。", {
       fontSize: "12px",
       color: "#666666",
       fontFamily: "monospace",

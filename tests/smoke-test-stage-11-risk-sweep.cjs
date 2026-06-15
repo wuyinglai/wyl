@@ -233,9 +233,9 @@ async function runTest() {
     mark(await page.evaluate(() => window.game.scene.isActive("TownScene")), "点击仓库/工具后仍停留 TownScene");
     const afterWarehouse = await getTownTexts(page);
     mark(afterWarehouse.some(t => t.includes("仓库") || t.includes("工具")), "仓库/工具详情显示");
-    mark(afterWarehouse.some(t => t.includes("货物仓库")), "仓库/工具详情显示「货物仓库」");
+    mark(afterWarehouse.some(t => t.includes("密封货箱")), "仓库/工具详情显示工具目录（密封货箱）");
     mark(afterWarehouse.some(t => t.includes("远征工具")), "仓库/工具详情显示「远征工具」");
-    mark(afterWarehouse.some(t => t.includes("物资整理")), "仓库/工具详情显示「物资整理」");
+    mark(afterWarehouse.some(t => t.includes("效果未接入")), "仓库/工具详情显示「效果未接入」");
     mark(!afterWarehouse.some(t => t.includes("工具图纸")), "仓库/工具详情不残留「工具图纸」");
     mark(!afterWarehouse.some(t => t.includes("队伍休整")), "仓库/工具详情不残留「队伍休整」");
     mark(!afterWarehouse.some(t => t.includes("商路风险")), "仓库/工具详情不残留「商路风险」");

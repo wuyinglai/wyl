@@ -168,10 +168,10 @@ async function runTest() {
     console.log("4. 检查仓库/工具详情内容");
     const storageTexts = await getTownPanelTexts(page);
     mark(storageTexts.some(t => t.includes("仓库") || t.includes("工具")), "说明区显示「仓库」或「工具」");
-    mark(storageTexts.some(t => t.includes("货物仓库")), "说明区显示「货物仓库」");
     mark(storageTexts.some(t => t.includes("远征工具")), "说明区显示「远征工具」");
-    mark(storageTexts.some(t => t.includes("物资整理")), "说明区显示「物资整理」");
-    mark(storageTexts.some(t => t.includes("后续开放") || t.includes("真实仓库与工具系统后续开放")), "说明区显示「后续开放」或「真实仓库与工具系统后续开放」");
+    mark(storageTexts.some(t => t.includes("密封货箱")), "说明区显示工具目录（密封货箱）");
+    mark(storageTexts.some(t => t.includes("效果未接入")), "说明区显示「效果未接入」");
+    mark(storageTexts.some(t => t.includes("后续开放") || t.includes("携带和制作功能后续开放")), "说明区显示「后续开放」");
 
     // 5. 点击工坊，说明区切换
     console.log("5. 点击工坊，说明区切换");
@@ -213,7 +213,7 @@ async function runTest() {
     }
     await sleep(500);
     const storageTextsAgain = await getTownPanelTexts(page);
-    mark(storageTextsAgain.some(t => t.includes("货物仓库")), "说明区重新显示仓库/工具详情");
+    mark(storageTextsAgain.some(t => t.includes("密封货箱")), "说明区重新显示仓库/工具详情（工具目录）");
 
     // 9. 点击商路大厅，进入 RouteSelectScene
     console.log("9. 点击商路大厅");
