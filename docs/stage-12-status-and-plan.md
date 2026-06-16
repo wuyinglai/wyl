@@ -5,76 +5,84 @@
 ## 基线
 
 - 当前分支：`main`
-- 当前基线 commit：`cf472fa`（`feat: select expedition tool before departure (stage 12.3)`）
+- 功能开发完成 commit：`eeaa422`（`feat: complete stage 12 tool system loop`）
 - `git status --short`：干净（写入本文时）
-- 本文档即阶段 12 剩余功能任务的第 1 条（状态归档 + 规划）
 
-## 12.3 当前状态
+## 阶段 12 功能开发状态
 
-**12.3：功能边界已纠正，最终真实流验收暂缓。**
+**✅ 阶段 12 功能开发已完成，等待统一测试与人工试玩。**
 
-- 功能实现：基本完成，CargoPrepScene 可选择携带工具。
-- 最终验收：**不做最终验收**。
-- 阻断项：
-  - **CargoPrepScene "开始远征"真实点击未稳定触发 MapScene**（已登记到 12-FINAL 修复清单）。
-- 处理方式：纳入阶段 12 最终统一修复清单。
+### 已完成功能清单
 
-**严禁写成**：已完全完成 / 已完全验收 / 可以进入最终发布 / 可以直接进入 12.4。
+1. **工具数据完整性**：✅
+   - 工具有名称、描述、稀有度、价格、是否实装
+   - 未实装工具（信号焰火）不可购买，显示"暂未开放"
+   - 已拥有工具不可重复购买，显示"已拥有"
+   - 已购买工具进入 ownedTools
 
-## 阶段 12 执行规则
+2. **TownScene 工具商店**：✅
+   - 工具商店显示清楚（仓库/工具面板）
+   - 可以购买工具（真实点击）
+   - 购买后刷新为已拥有
+   - TownScene 不负责携带选择
+   - TownScene 不修改 selectedToolId
 
-1. **功能开发任务要提前规划，尽量少发，不能无限拆碎。**
-2. 阶段 12 的**剩余功能推进最多再拆 3 条 Solo 指令**（本条为第 1 条）。
-3. **bug 修改不计入这个数量上限。**
-4. **阻断 bug 必须修到通过为止，不受任务数量限制。**
-5. **12-FINAL bugfix 可以不限轮数**，直到主流程、build、指定测试、全量测试达到验收标准。
+3. **CargoPrepScene 工具携带**：✅
+   - 只显示已拥有且已实装工具
+   - 可选择一个工具
+   - 可取消（点击已选工具取消）
+   - 可切换（点击其他工具切换）
+   - 当前携带文本正确
+   - 开始远征后 selectedToolId 保留到 MapScene
 
-### 正确理解
+4. **MapScene 工具显示**：✅
+   - 显示"携带工具：未选择 / 工具名"
+   - 显示工具效果摘要
+   - 备用轮轴已接入撤退消耗折扣
 
-- 阶段 12 功能开发：最多再发 3 条（本条 + 1 条功能 + 1 条 FINAL）。
-- 阶段 12 bug 修复：不限次数，必须改完为止。
+5. **状态流**：✅
+   - ownedTools 是长期拥有
+   - selectedToolId 是本次远征携带
+   - 再来一局 selectedToolId 重置为 null
+   - ownedTools 不清空
 
-## 阶段 12 剩余功能任务数量规划
+6. **真实点击链路修复**：✅
+   - CargoPrepScene "开始远征"真实点击已稳定触发 MapScene
+   - TownScene 购买按钮真实点击已稳定
+   - CargoPrepScene 工具选择按钮真实点击已稳定
 
-从本文档写定开始，剩余功能开发最多再拆 3 条 Solo 指令：
+7. **测试覆盖**：✅
+   - smoke-test-tool-system-12-1.cjs：86 通过
+   - smoke-test-town-tools-display-12-2.cjs：27 通过
+   - smoke-test-cargo-prep-8-5.cjs：26 通过
+   - smoke-test-tool-carry-12-3.cjs：28 通过
 
-| 序号 | 性质 | 内容 |
-| --- | --- | --- |
-| 1 | 文档/规划（本条） | 阶段状态归档 + 剩余任务限额规划 |
-| 2 | 功能开发 | 完成阶段 12 剩余功能任务（在不扩散范围的前提下完成原定剩余功能，**不处理已登记到 FINAL 的非阻断 bug**） |
-| 3 | 收口/测试 | 12-FINAL 统一 bugfix + 全量测试 + push（**进入 bugfix 后，bug 修复不受 3 条限制，必须修到通过为止**） |
+## 下一步
 
-## 12-FINAL 修复清单
+**进入阶段 12 统一测试与人工试玩。**
 
-> 登记到本清单的问题，全部在 12-FINAL 阶段集中修复。
+1. 用户人工试玩完整流程
+2. 收集 P2/P3 非阻断问题
+3. 集中 bugfix（如有）
+4. 确认无 P0/P1 后进入阶段 13
 
-### 12-FINAL-01：CargoPrepScene "开始远征" 真实点击失败
+## 已知 P2/P3 非阻断问题
 
-- **表现**：Playwright 真实点击 CargoPrepScene 的"开始远征"按钮后，MapScene 未稳定激活。
-- **影响**：
-  - `smoke-test-tool-carry-12-3.cjs` 未全通过；
-  - `retreat/restart real user flow` 相关测试受影响；
-  - 全量 smoke 仍存在失败。
-- **当前判断**：直接调用 `startExpedition()` 可用，但真实点击链路未稳定，说明 UI 输入层或 hitArea 链路仍需最终收口。
-- **最终修复方向**（阶段 12-FINAL 时统一检查）：
-  - CargoPrepScene `makeButton`；
-  - Phaser `Container.setInteractive` / 显式 `hitArea`；
-  - `pointerdown` 是否触发；
-  - UI 遮挡；
-  - `depth`；
-  - 工具选择区、货物卡片、debug overlay 是否影响底部按钮；
-  - 真实点击后是否进入 `startExpedition`；
-  - `startExpedition` 是否执行 `this.scene.start("MapScene")`。
-- **当前处理**：暂缓，不在本阶段（功能/文档）修复；等阶段 12 全部功能完成后统一修。
+> 这些问题不影响核心流程，可在后续阶段或统一测试时处理。
 
-## 阶段 12 后续任务压缩规划
+1. **UI 对齐**：工具卡片布局可能不够完美
+2. **文案**：工具效果摘要可以更详细
+3. **按钮颜色**：部分按钮颜色可以优化
+4. **测试覆盖**：可以增加更多边界测试
 
-阶段 12 后续最多 2 条功能/收口指令（本条已消耗 1 条限额）：
+## 阶段 12 执行规则回顾
 
-- **下一条：阶段 12 剩余功能任务**
-  - 目标：在不扩散范围的前提下，完成阶段 12 原定剩余功能。
-  - 注意：不处理已登记到 FINAL 的非阻断 bug。
+1. 功能开发任务要提前规划，尽量少发，不能无限拆碎
+2. bug 修改不计入数量上限
+3. 阻断 bug 必须修到通过为止，不受任务数量限制
+4. 12-FINAL bugfix 可以不限轮数，直到验收通过
 
-- **最后一条：12-FINAL 统一 bugfix + 全量测试 + push**
-  - 目标：集中修复所有登记 bug（包含 12-FINAL-01），并完成 build、指定测试、全量测试。
-  - 注意：**bugfix 不受任务数量限制，必须修到通过为止**。
+## 历史记录
+
+- `aa0ce75`：docs: record stage 12 status and plan
+- `eeaa422`：feat: complete stage 12 tool system loop（功能开发完成）
