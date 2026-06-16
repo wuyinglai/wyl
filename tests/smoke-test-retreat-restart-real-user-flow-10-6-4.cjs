@@ -14,6 +14,8 @@ const { chromium } = require("playwright");
 const assert = require("assert");
 const { clickGamePoint, waitForSceneReady, findInteractiveButtonByText } = require("./_real_helpers.cjs");
 
+const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
+
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function findButtonByText(page, sceneKey, textPattern) {
@@ -115,7 +117,7 @@ async function main() {
   try {
     // 1. 启动游戏
     console.log("\n[1] 启动游戏...");
-    await page.goto("http://localhost:5180/");
+    await page.goto(BASE_URL);
     await page.waitForFunction(() => window.game && window.game.scene);
 
     // 2. 真实点击主菜单"开始远征"

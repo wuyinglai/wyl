@@ -16,7 +16,7 @@
  */
 
 const { chromium } = require("playwright");
-const BASE_URL = "http://localhost:5180";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 

@@ -14,7 +14,7 @@ const { chromium } = require("playwright");
 const { proceedFromCharacterSelectToMap } = require("./helpers/cargo-prep-flow.cjs");
 const path = require("path");
 
-const BASE_URL = "http://localhost:5180";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
 const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/order-delivery");
 const FAILED = [];
 let passed = 0, failed = 0;
