@@ -31,6 +31,12 @@ export class TownScene extends Phaser.Scene {
   /** 仓库/工具详情卡片容器 */
   private storageToolsCards: Phaser.GameObjects.Container | null = null;
 
+  /** 仓库/工具滚动相关 */
+  private storageToolsScrollY: number = 0;
+  private storageToolsListContainer: Phaser.GameObjects.Container | null = null;
+  private storageToolsMask: Phaser.GameObjects.Graphics | null = null;
+  private storageToolsScrollListener: (pointer: Phaser.Input.Pointer, gameObjects: Phaser.GameObjects.GameObject[]) => void | null = null;
+
   constructor() {
     super({ key: "TownScene" });
   }
@@ -276,6 +282,8 @@ export class TownScene extends Phaser.Scene {
    * 更新说明面板内容（普通设施）
    */
   private updateDescPanel(title: string, desc: string): void {
+    // 清理滚动状态
+    this.clearStorageToolsScroll();
     // 隐藏工坊详情卡片
     if (this.workshopCards) {
       this.workshopCards.setVisible(false);
@@ -301,22 +309,16 @@ export class TownScene extends Phaser.Scene {
    * 显示工坊详情面板
    */
   private showWorkshopDetail(): void {
+    // 清理滚动状态
+    this.clearStorageToolsScroll();
     // 隐藏普通说明文本
     if (this.descText) {
       this.descText.setVisible(false);
     }
-    // 隐藏休整所详情卡片
-    if (this.restHouseCards) {
-      this.restHouseCards.setVisible(false);
-    }
-    // 隐藏情报所详情卡片
-    if (this.intelOfficeCards) {
-      this.intelOfficeCards.setVisible(false);
-    }
-    // 隐藏仓库/工具详情卡片
-    if (this.storageToolsCards) {
-      this.storageToolsCards.setVisible(false);
-    }
+    // 隐藏其他详情面板
+    if (this.restHouseCards) this.restHouseCards.setVisible(false);
+    if (this.intelOfficeCards) this.intelOfficeCards.setVisible(false);
+    if (this.storageToolsCards) this.storageToolsCards.setVisible(false);
 
     // 如果已有工坊卡片，直接显示
     if (this.workshopCards) {
@@ -377,22 +379,16 @@ export class TownScene extends Phaser.Scene {
    * 显示休整所详情面板
    */
   private showRestHouseDetail(): void {
+    // 清理滚动状态
+    this.clearStorageToolsScroll();
     // 隐藏普通说明文本
     if (this.descText) {
       this.descText.setVisible(false);
     }
-    // 隐藏工坊详情卡片
-    if (this.workshopCards) {
-      this.workshopCards.setVisible(false);
-    }
-    // 隐藏情报所详情卡片
-    if (this.intelOfficeCards) {
-      this.intelOfficeCards.setVisible(false);
-    }
-    // 隐藏仓库/工具详情卡片
-    if (this.storageToolsCards) {
-      this.storageToolsCards.setVisible(false);
-    }
+    // 隐藏其他详情面板
+    if (this.workshopCards) this.workshopCards.setVisible(false);
+    if (this.intelOfficeCards) this.intelOfficeCards.setVisible(false);
+    if (this.storageToolsCards) this.storageToolsCards.setVisible(false);
 
     // 如果已有休整所卡片，直接显示
     if (this.restHouseCards) {
@@ -453,22 +449,16 @@ export class TownScene extends Phaser.Scene {
    * 显示情报所详情面板
    */
   private showIntelOfficeDetail(): void {
+    // 清理滚动状态
+    this.clearStorageToolsScroll();
     // 隐藏普通说明文本
     if (this.descText) {
       this.descText.setVisible(false);
     }
-    // 隐藏工坊详情卡片
-    if (this.workshopCards) {
-      this.workshopCards.setVisible(false);
-    }
-    // 隐藏休整所详情卡片
-    if (this.restHouseCards) {
-      this.restHouseCards.setVisible(false);
-    }
-    // 隐藏仓库/工具详情卡片
-    if (this.storageToolsCards) {
-      this.storageToolsCards.setVisible(false);
-    }
+    // 隐藏其他详情面板
+    if (this.workshopCards) this.workshopCards.setVisible(false);
+    if (this.restHouseCards) this.restHouseCards.setVisible(false);
+    if (this.storageToolsCards) this.storageToolsCards.setVisible(false);
 
     // 如果已有情报所卡片，直接显示
     if (this.intelOfficeCards) {
@@ -526,7 +516,7 @@ export class TownScene extends Phaser.Scene {
   }
 
   /**
-   * 显示仓库/工具商店面板
+   * 显示仓库/工具商店面板（带鼠标滚轮滚动）
    */
   private showStorageToolsDetail(): void {
     const gs = getGameState();
@@ -535,91 +525,114 @@ export class TownScene extends Phaser.Scene {
     if (this.descText) {
       this.descText.setVisible(false);
     }
-    // 隐藏工坊详情卡片
-    if (this.workshopCards) {
-      this.workshopCards.setVisible(false);
-    }
-    // 隐藏休整所详情卡片
-    if (this.restHouseCards) {
-      this.restHouseCards.setVisible(false);
-    }
-    // 隐藏情报所详情卡片
-    if (this.intelOfficeCards) {
-      this.intelOfficeCards.setVisible(false);
-    }
+    // 隐藏其他详情面板
+    if (this.workshopCards) this.workshopCards.setVisible(false);
+    if (this.restHouseCards) this.restHouseCards.setVisible(false);
+    if (this.intelOfficeCards) this.intelOfficeCards.setVisible(false);
 
-    // 如果已有仓库/工具卡片，刷新显示并显示
+    // 清理旧的滚动状态
+    this.clearStorageToolsScroll();
+
+    // 如果已有仓库/工具卡片，先销毁
     if (this.storageToolsCards) {
       this.storageToolsCards.destroy();
+      this.storageToolsCards = null;
     }
 
-    // 创建仓库/工具详情卡片容器
+    // 面板布局参数
     const panelX = 520;
     const panelY = 180;
     const panelW = 400;
+    const panelH = 420;
+    const headerH = 70;    // 顶部区域高度（标题+银币+说明）
+    const listStartY = panelY + headerH;
+    const listH = panelH - headerH - 10;  // 列表区域高度
 
+    // 创建主容器
     this.storageToolsCards = this.add.container(0, 0);
 
-    // 仓库/工具标题
-    const titleText = this.add.text(panelX + panelW / 2, panelY + 20, "仓库/工具商店", {
-      fontSize: "22px",
+    // 面板背景（整体）
+    const panelBg = this.add.graphics();
+    panelBg.fillStyle(0x0d1b2a, 0.95);
+    panelBg.fillRoundedRect(panelX, panelY, panelW, panelH, 10);
+    panelBg.lineStyle(2, 0x4488ff, 0.5);
+    panelBg.strokeRoundedRect(panelX, panelY, panelW, panelH, 10);
+    this.storageToolsCards.add(panelBg);
+
+    // 标题：仓库 / 远征工具
+    const titleText = this.add.text(panelX + panelW / 2, panelY + 18, "仓库 / 远征工具", {
+      fontSize: "20px",
       color: "#ffcc44",
       fontFamily: "monospace",
       fontStyle: "bold",
     }).setOrigin(0.5);
     this.storageToolsCards.add(titleText);
 
-    // 当前银币显示
-    const silverText = this.add.text(panelX + panelW - 20, panelY + 22, `银币: ${gs.silver}`, {
-      fontSize: "14px",
+    // 银币显示
+    const silverText = this.add.text(panelX + panelW - 15, panelY + 18, `银币: ${gs.silver}`, {
+      fontSize: "13px",
       color: "#ffd700",
       fontFamily: "monospace",
-    }).setOrigin(1, 0);
+    }).setOrigin(1, 0.5);
     this.storageToolsCards.add(silverText);
 
-    // 工具目录区域标题
-    const catalogTitle = this.add.text(panelX + 35, panelY + 55, "【远征工具】", {
-      fontSize: "14px",
-      color: "#88ccff",
-      fontFamily: "monospace",
-      fontStyle: "bold",
-    }).setOrigin(0, 0);
-    this.storageToolsCards.add(catalogTitle);
-
-    // 工具目录副标题（只读提示）
-    const catalogSubtitle = this.add.text(panelX + 35, panelY + 75, "查看已知远征工具目录", {
-      fontSize: "12px",
+    // 副标题
+    const subtitleText = this.add.text(panelX + 20, panelY + 42, "鼠标滚轮可滚动查看更多工具", {
+      fontSize: "11px",
       color: "#6688aa",
       fontFamily: "monospace",
-    }).setOrigin(0, 0);
-    this.storageToolsCards.add(catalogSubtitle);
+    }).setOrigin(0, 0.5);
+    this.storageToolsCards.add(subtitleText);
 
-    // 从 toolSystem 获取所有工具并显示
-    const tools = getAllTools();
-    const toolCardStartY = panelY + 80;
+    // 列表区域背景
+    const listBg = this.add.graphics();
+    listBg.fillStyle(0x0a1520, 0.8);
+    listBg.fillRect(panelX + 10, listStartY, panelW - 20, listH);
+    this.storageToolsCards.add(listBg);
+
+    // 创建列表容器（用于滚动）
+    this.storageToolsListContainer = this.add.container(0, 0);
+    this.storageToolsCards.add(this.storageToolsListContainer);
+
+    // 创建 mask 用于裁剪列表区域
+    this.storageToolsMask = this.add.graphics();
+    this.storageToolsMask.fillStyle(0xffffff);
+    this.storageToolsMask.fillRect(panelX + 10, listStartY, panelW - 20, listH);
+    const maskObj = this.storageToolsMask.createGeometryMask();
+    this.storageToolsListContainer.setMask(maskObj);
+    this.storageToolsCards.add(this.storageToolsMask);
+
+    // 工具列表参数
+    const toolCardW = panelW - 40;
     const toolCardH = 65;
-    const toolCardGap = 10;
+    const toolCardGap = 8;
+    const tools = getAllTools();
+    const totalContentH = tools.length * (toolCardH + toolCardGap);
+    const maxScroll = Math.max(0, totalContentH - listH);
 
+    // 初始化滚动位置
+    this.storageToolsScrollY = 0;
+
+    // 创建工具卡片
     tools.forEach((tool, i) => {
-      const cardY = toolCardStartY + i * (toolCardH + toolCardGap);
+      const cardY = listStartY + i * (toolCardH + toolCardGap);
 
       // 卡片背景
       const cardBg = this.add.graphics();
-      const cardW = panelW - 40;
       cardBg.fillStyle(0x1a2a3a, 0.9);
-      cardBg.fillRoundedRect(panelX + 20, cardY, cardW, toolCardH, 6);
+      cardBg.fillRoundedRect(panelX + 20, cardY, toolCardW, toolCardH, 6);
       cardBg.lineStyle(1, 0x4488ff, 0.3);
-      cardBg.strokeRoundedRect(panelX + 20, cardY, cardW, toolCardH, 6);
-      this.storageToolsCards.add(cardBg);
+      cardBg.strokeRoundedRect(panelX + 20, cardY, toolCardW, toolCardH, 6);
+      this.storageToolsListContainer!.add(cardBg);
 
       // 工具名称
       const nameText = this.add.text(panelX + 35, cardY + 10, tool.name, {
-        fontSize: "16px",
+        fontSize: "15px",
         color: "#ffffff",
         fontFamily: "monospace",
         fontStyle: "bold",
       }).setOrigin(0, 0);
-      this.storageToolsCards.add(nameText);
+      this.storageToolsListContainer!.add(nameText);
 
       // 稀有度和价格
       const rarity = getRarityLabel(tool.rarity);
@@ -628,21 +641,20 @@ export class TownScene extends Phaser.Scene {
         color: tool.rarity === "rare" ? "#ff6b6b" : tool.rarity === "uncommon" ? "#4ecdc4" : "#888888",
         fontFamily: "monospace",
       }).setOrigin(0, 0);
-      this.storageToolsCards.add(priceText);
+      this.storageToolsListContainer!.add(priceText);
 
       // 描述
       const descText = this.add.text(panelX + 35, cardY + 48, tool.description, {
         fontSize: "11px",
         color: "#888888",
         fontFamily: "monospace",
-        wordWrap: { width: cardW - 100 },
+        wordWrap: { width: toolCardW - 110 },
       }).setOrigin(0, 0);
-      this.storageToolsCards.add(descText);
+      this.storageToolsListContainer!.add(descText);
 
-      // 状态标签和购买按钮区域（使用 Container 模式，显式 hitArea，支持 findInteractiveButtonByText）
-      const btnW = 100;
-      const btnH = 28;
-      // Container 中心（statusX - btnW/2 = panelX + panelW - 20 - 50 = 850）
+      // 状态按钮
+      const btnW = 90;
+      const btnH = 26;
       const btnCenterX = panelX + panelW - 20 - btnW / 2;
       const btnCenterY = cardY + toolCardH / 2;
 
@@ -662,7 +674,7 @@ export class TownScene extends Phaser.Scene {
         btnColor = 0x4a8c4a;
         btnInteractive = false;
       } else if (!canAfford) {
-        btnText = `缺银`;
+        btnText = "缺银";
         btnColor = 0x8b4513;
         btnInteractive = false;
       } else {
@@ -671,12 +683,12 @@ export class TownScene extends Phaser.Scene {
         btnInteractive = true;
       }
 
-      // Container 模式：bg Rectangle + Text，Container 自身 setInteractive + 显式 hitArea
+      // Container 模式按钮
       const btnContainer = this.add.container(btnCenterX, btnCenterY);
       const bgRect = this.add.rectangle(0, 0, btnW, btnH, btnColor);
       bgRect.setStrokeStyle(1, btnColor);
       const textEl = this.add.text(0, 0, btnText, {
-        fontSize: "12px",
+        fontSize: "11px",
         color: "#ffffff",
         fontFamily: "monospace",
       }).setOrigin(0.5);
@@ -703,21 +715,58 @@ export class TownScene extends Phaser.Scene {
             currentGs.silver = result.newSilver!;
             setGameState(currentGs);
             console.log(`[商店] 购买工具: ${tool.name}，剩余银币: ${currentGs.silver}`);
+            // 刷新UI，滚动位置保持或回到顶部
+            this.storageToolsScrollY = 0;
             this.showStorageToolsDetail();
           }
         });
       }
-      this.storageToolsCards.add(btnContainer);
+      this.storageToolsListContainer!.add(btnContainer);
     });
 
     // 底部提示
-    const hintY = toolCardStartY + tools.length * (toolCardH + toolCardGap) + 15;
-    const hint = this.add.text(panelX + panelW / 2, hintY, "购买后请在远征准备界面选择携带工具", {
-      fontSize: "12px",
+    const hintY = listStartY + tools.length * (toolCardH + toolCardGap) + 10;
+    const hint = this.add.text(panelX + panelW / 2, hintY, "购买后请在远征准备界面选择携带", {
+      fontSize: "11px",
       color: "#666666",
       fontFamily: "monospace",
     }).setOrigin(0.5);
-    this.storageToolsCards.add(hint);
+    this.storageToolsListContainer!.add(hint);
+
+    // 滚轮事件监听（仅在仓库/工具面板显示时生效）
+    this.storageToolsScrollListener = (pointer: Phaser.Input.Pointer) => {
+      // 检查指针是否在面板列表区域内
+      const listLeft = panelX + 10;
+      const listRight = panelX + panelW - 10;
+      const listTop = listStartY;
+      const listBottom = listStartY + listH;
+
+      if (pointer.x >= listLeft && pointer.x <= listRight &&
+          pointer.y >= listTop && pointer.y <= listBottom) {
+        // 滚动列表
+        this.storageToolsScrollY = Phaser.Math.Clamp(
+          this.storageToolsScrollY + pointer.deltaY * 0.5,
+          0,
+          maxScroll
+        );
+        this.storageToolsListContainer!.setY(-this.storageToolsScrollY);
+      }
+    };
+
+    this.input.on("wheel", this.storageToolsScrollListener!);
+  }
+
+  /**
+   * 清理仓库/工具滚动相关状态
+   */
+  private clearStorageToolsScroll(): void {
+    if (this.storageToolsScrollListener) {
+      this.input.off("wheel", this.storageToolsScrollListener);
+      this.storageToolsScrollListener = null;
+    }
+    this.storageToolsScrollY = 0;
+    this.storageToolsListContainer = null;
+    this.storageToolsMask = null;
   }
 
   /**
@@ -767,5 +816,6 @@ export class TownScene extends Phaser.Scene {
 
   shutdown(): void {
     this.input.keyboard?.off("keydown-ESC");
+    this.clearStorageToolsScroll();
   }
 }
