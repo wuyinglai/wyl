@@ -1,4 +1,4 @@
-﻿/**
+/**
  * smoke-test-cargo-state-8-2.cjs
  * 阶段8.2：商队货物栏接入 GameState
  *
@@ -16,7 +16,7 @@ const { chromium } = require("playwright");
 const { proceedFromCharacterSelectToMap } = require("./helpers/cargo-prep-flow.cjs");
 const path = require("path");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5180";
 const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/cargo-state");
 const PASSED = [], FAILED = [];
 let passed = 0, failed = 0;

@@ -1,4 +1,4 @@
-﻿/**
+/**
  * smoke-test-battle-not-stuck-9-1-3.cjs
  * 阶段9.1.3：战斗不卡死真实流程测试
  *
@@ -16,7 +16,7 @@
  */
 
 const { chromium } = require("playwright");
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5180";
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 

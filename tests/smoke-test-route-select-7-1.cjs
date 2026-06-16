@@ -1,4 +1,4 @@
-﻿/**
+/**
  * smoke-test-route-select-7-1.cjs
  * 阶段7.1 商路与目标城市选择系统冒烟测试（严格版）
  *
@@ -17,7 +17,7 @@
  */
 const { chromium } = require("playwright");
 const { proceedFromCharacterSelectToMap } = require("./helpers/cargo-prep-flow.cjs");
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5180";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 let passed = 0;

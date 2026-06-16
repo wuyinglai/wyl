@@ -4,7 +4,7 @@
  */
 const { chromium } = require("playwright");
 
-const BASE_URL = "http://localhost:5175";
+const BASE_URL = "http://localhost:5180";
 
 let passCount = 0;
 let failCount = 0;

@@ -115,7 +115,7 @@ async function main() {
   try {
     // 1. 启动游戏
     console.log("\n[1] 启动游戏...");
-    await page.goto("http://localhost:5173/");
+    await page.goto("http://localhost:5180/");
     await page.waitForFunction(() => window.game && window.game.scene);
 
     // 2. 真实点击主菜单"开始远征"

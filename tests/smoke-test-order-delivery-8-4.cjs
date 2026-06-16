@@ -1,4 +1,4 @@
-﻿/**
+/**
  * smoke-test-order-delivery-8-4.cjs
  * 阶段8.4：订单交付系统 v1
  *
@@ -14,7 +14,7 @@ const { chromium } = require("playwright");
 const { proceedFromCharacterSelectToMap } = require("./helpers/cargo-prep-flow.cjs");
 const path = require("path");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5180";
 const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/order-delivery");
 const FAILED = [];
 let passed = 0, failed = 0;
