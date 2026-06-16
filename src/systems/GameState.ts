@@ -127,6 +127,9 @@ export interface GameState {
 
     // 携带工具（阶段12.3）：仅影响本次远征，不进长期存档
     selectedToolId: string | null;
+
+    // 已拥有工具（阶段12）：长期购买的工具，持久化存档
+    ownedTools: string[];
 }
 
 // 初始游戏状态
@@ -199,6 +202,9 @@ export function createInitialGameState(): GameState {
 
     // 携带工具（阶段12.3）
     selectedToolId: null,
+
+    // 已拥有工具（阶段12）
+    ownedTools: [],
   };
 }
 

@@ -476,6 +476,9 @@ export class CharacterSelectScene extends Phaser.Scene {
         color: "#ffffff",
         backgroundColor: "#2a8a4a",
       });
+
+      // 先移除旧的 interactive，再重新设置
+      this.confirmBtn.disableInteractive();
       this.confirmBtn.setInteractive({ useHandCursor: true });
 
       this.confirmBtn.off("pointerover");

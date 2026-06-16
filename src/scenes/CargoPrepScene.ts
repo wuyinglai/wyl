@@ -6,7 +6,7 @@
  * 允许玩家调整 cargo（买卖货物），然后点击"开始远征"进入地图。
  */
 
-import { Scene } from "phaser";
+import Phaser, { Scene } from "phaser";
 import {
   getGameState,
   setGameState,
@@ -31,7 +31,7 @@ import { GOODS, getGoodById, formatGoodsRequirement } from "../data/goods";
 import { calculateCargoWeight } from "../systems/cargoSystem";
 import { getOrderCargoStatusText } from "../systems/orderCargoSystem";
 import { TooltipManager } from "../systems/tooltipSystem";
-import { getAllTools, formatToolSummary, getToolById } from "../systems/toolSystem";
+import { getAllTools, formatToolSummary, getToolById, isToolOwned } from "../systems/toolSystem";
 
 export class CargoPrepScene extends Scene {
   private tooltipManager: TooltipManager | null = null;
@@ -41,6 +41,7 @@ export class CargoPrepScene extends Scene {
   private orderStatusText: Phaser.GameObjects.Text | null = null;
   private carriedToolText: Phaser.GameObjects.Text | null = null;
   private goodCards: Phaser.GameObjects.Container[] = [];
+  private toolButtons: { container: Phaser.GameObjects.Container; bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text; toolId: string }[] = [];
   // 9.1.7 调试层
   private debugText: Phaser.GameObjects.Text | null = null;
   private debugHitBorders: Phaser.GameObjects.Rectangle[] = [];
@@ -283,8 +284,8 @@ export class CargoPrepScene extends Scene {
   }
 
   /**
-   * 阶段12.3：创建远征工具选择区域
-   * 在 CargoPrepScene 中显示工具列表，允许玩家选择 1 个工具携带
+   * 阶段12：创建远征工具选择区域（使用 Container 模式确保真实点击有效
+   * 在 CargoPrepScene 中显示已拥有的工具列表，允许玩家选择 1 个工具携带
    */
   private createToolSelectionUI(): void {
     const gameState = getGameState();
@@ -314,65 +315,91 @@ export class CargoPrepScene extends Scene {
       })
       .setOrigin(0, 0);
 
+    // 筛选已拥有且已实装的工具
+    const ownedTools = getAllTools().filter(t => isToolOwned(gameState.ownedTools, t.id) && t.isImplemented);
+
+    if (ownedTools.length === 0) {
+      // 没有可携带的工具
+      this.add
+        .text(toolAreaX, toolAreaY + 45, "当前没有可携带工具", {
+          fontSize: "13px",
+          color: "#ff8888",
+          fontFamily: "sans-serif",
+        })
+        .setOrigin(0, 0);
+      this.add
+        .text(toolAreaX, toolAreaY + 65, "请先在城镇仓库/工具商店购买", {
+          fontSize: "12px",
+          color: "#888888",
+          fontFamily: "sans-serif",
+        })
+        .setOrigin(0, 0);
+      return;
+    }
+
     // 工具列表（横向排列，最多显示 4 个）
-    const tools = getAllTools();
     const toolBtnW = 150;
     const toolBtnH = 30;
     const toolBtnGap = 10;
     const toolListY = toolAreaY + 45;
 
-    tools.forEach((tool, i) => {
+    this.toolButtons = [];
+
+    ownedTools.forEach((tool, i) => {
       const col = i % 4;
       const row = Math.floor(i / 4);
-      const x = toolAreaX + col * (toolBtnW + toolBtnGap);
-      const y = toolListY + row * (toolBtnH + toolBtnGap);
+      const x = toolAreaX + col * (toolBtnW + toolBtnGap) + toolBtnW / 2;
+      const y = toolListY + row * (toolBtnH + toolBtnGap) + toolBtnH / 2;
 
+      // 使用 Container 模式创建工具按钮（与底部按钮一致）
+      const btnContainer = this.add.container(x, y);
       const isSelected = tool.id === selectedToolId;
 
-      // 工具按钮背景
-      const btnBg = this.add
-        .rectangle(x + toolBtnW / 2, y + toolBtnH / 2, toolBtnW, toolBtnH, isSelected ? 0x335533 : 0x2a2a3e)
-        .setStrokeStyle(1, isSelected ? 0x88ff88 : 0x444466);
+      const bg = this.add.rectangle(0, 0, toolBtnW, toolBtnH, isSelected ? 0x335533 : 0x2a2a3e);
+      bg.setStrokeStyle(1, isSelected ? 0x88ff88 : 0x444466);
 
-      // 工具名称（简化显示）
       const toolName = tool.name.length > 8 ? tool.name.substring(0, 8) : tool.name;
-      const toolLabel = this.add
-        .text(x + toolBtnW / 2, y + toolBtnH / 2, toolName, {
-          fontSize: "12px",
-          color: isSelected ? "#ffffff" : "#cccccc",
-          fontFamily: "sans-serif",
-        })
-        .setOrigin(0.5);
+      const label = this.add.text(0, 0, toolName, {
+        fontSize: "12px",
+        color: isSelected ? "#ffffff" : "#cccccc",
+        fontFamily: "sans-serif",
+      }).setOrigin(0.5);
 
-      // 点击区域（整个按钮）
-      const hitArea = this.add
-        .rectangle(x + toolBtnW / 2, y + toolBtnH / 2, toolBtnW, toolBtnH, 0x000000, 0)
-        .setInteractive({ useHandCursor: true });
+      btnContainer.add([bg, label]);
+      btnContainer.setSize(toolBtnW, toolBtnH);
+      btnContainer.setInteractive(new Phaser.Geom.Rectangle(-toolBtnW / 2, -toolBtnH / 2, toolBtnW, toolBtnH), Phaser.Geom.Rectangle.Contains);
+      btnContainer.setDepth(300);
 
-      hitArea.on("pointerover", () => {
-        if (!isSelected) {
-          btnBg.setFillStyle(0x3a3a5e);
-          toolLabel.setColor("#ffffff");
+      btnContainer.on("pointerover", () => {
+        const gs = getGameState();
+        if (gs.selectedToolId !== tool.id) {
+          bg.setFillStyle(0x3a3a5e);
+          label.setColor("#ffffff");
         }
       });
 
-      hitArea.on("pointerout", () => {
-        if (!isSelected) {
-          btnBg.setFillStyle(0x2a2a3e);
-          toolLabel.setColor("#cccccc");
+      btnContainer.on("pointerout", () => {
+        const gs = getGameState();
+        if (gs.selectedToolId !== tool.id) {
+          bg.setFillStyle(0x2a2a3e);
+          label.setColor("#cccccc");
         }
       });
 
-      hitArea.on("pointerdown", () => {
+      btnContainer.on("pointerdown", () => {
         const currentGs = getGameState();
-        if (currentGs.selectedToolId === tool.id) {
+        const wasSelected = currentGs.selectedToolId === tool.id;
+
+        if (wasSelected) {
           // 再次点击同一工具则取消选择
           currentGs.selectedToolId = null;
           console.log(`[CargoPrepScene] 取消选择工具: ${tool.name}`);
         } else {
+          // 切换工具时，旧工具自动取消
           currentGs.selectedToolId = tool.id;
           console.log(`[CargoPrepScene] 选择工具: ${tool.name} (${tool.id})`);
         }
+
         setGameState(currentGs);
 
         // 更新当前携带状态文本
@@ -383,8 +410,28 @@ export class CargoPrepScene extends Scene {
           this.carriedToolText.setText(carriedText);
           this.carriedToolText.setColor(currentGs.selectedToolId ? "#88ff88" : "#888888");
         }
+
+        // 更新所有工具按钮的选中状态
+        this.updateToolButtonStyles();
       });
+
+      // 保存引用以支持更新
+      this.toolButtons.push({ container: btnContainer, bg, label, toolId: tool.id });
     });
+  }
+
+  /**
+   * 更新所有工具按钮的选中/未选中样式
+   * 根据当前 selectedToolId 更新每个按钮的视觉状态
+   */
+  private updateToolButtonStyles(): void {
+    const gs = getGameState();
+    for (const btn of this.toolButtons) {
+      const isSelected = gs.selectedToolId === btn.toolId;
+      btn.bg.setFillStyle(isSelected ? 0x335533 : 0x2a2a3e);
+      btn.bg.setStrokeStyle(1, isSelected ? 0x88ff88 : 0x444466);
+      btn.label.setColor(isSelected ? "#ffffff" : "#cccccc");
+    }
   }
 
   private createGoodsList(): void {
@@ -577,7 +624,8 @@ export class CargoPrepScene extends Scene {
       }).setOrigin(0.5);
       btn.add([bg, txt]);
       btn.setSize(bw, bh);
-      btn.setInteractive({ useHandCursor: true });
+      btn.setInteractive(new Phaser.Geom.Rectangle(-bw / 2, -bh / 2, bw, bh), Phaser.Geom.Rectangle.Contains);
+      btn.setDepth(500);
       btn.on("pointerdown", handler);
       return btn;
     };

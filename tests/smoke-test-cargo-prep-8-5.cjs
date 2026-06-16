@@ -1,4 +1,4 @@
-﻿/**
+/**
  * smoke-test-cargo-prep-8-5.cjs
  * 阶段8.5：出发前货物准备系统 v1
  *
@@ -18,7 +18,7 @@
 const { chromium } = require("playwright");
 const path = require("path");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5175";
 const ARTIFACT_DIR = path.join(__dirname, "../test-artifacts/cargo-prep");
 const FAILED = [];
 let passed = 0, failed = 0;

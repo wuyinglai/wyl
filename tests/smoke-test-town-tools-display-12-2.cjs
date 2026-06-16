@@ -5,7 +5,7 @@
 const { chromium } = require("playwright");
 const { clickGamePoint, waitForSceneReady, findInteractiveButtonByText, sleep } = require("./_real_helpers.cjs");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5175";
 
 let passCount = 0;
 let failCount = 0;
@@ -25,20 +25,32 @@ async function getTownTexts(page) {
     const ts = window.game.scene.getScene("TownScene");
     if (!ts) return [];
     const texts = [];
+
+    // 递归遍历 Container 内的 Text
+    function collectTextsFromContainer(container) {
+      if (!container || !container.visible) return;
+      container.each((child) => {
+        if (child.type === "Text" && child.text && child.visible) {
+          texts.push(String(child.text));
+        } else if (child.type === "Container") {
+          collectTextsFromContainer(child);
+        }
+      });
+    }
+
+    // 遍历场景直接子对象
     ts.children.each((child) => {
       if (child.type === "Text" && child.text && child.visible) {
         texts.push(String(child.text));
+      } else if (child.type === "Container") {
+        collectTextsFromContainer(child);
       }
     });
+
+    // 遍历特定 container
     ["workshopCards", "restHouseCards", "intelOfficeCards", "storageToolsCards"].forEach((key) => {
       const container = ts[key];
-      if (container && container.visible) {
-        container.each((child) => {
-          if (child.type === "Text" && child.text && child.visible) {
-            texts.push(String(child.text));
-          }
-        });
-      }
+      collectTextsFromContainer(container);
     });
     return texts;
   });
@@ -128,13 +140,20 @@ async function runTest() {
     mark(texts.some(t => t.includes("信号焰火")), "显示「信号焰火」");
     mark(texts.some(t => t.includes("加固护板")), "显示「加固护板」");
 
-    // 效果状态
-    mark(texts.some(t => t.includes("效果未接入")), "显示「效果未接入」");
+    // 效果状态（只有信号焰火未实装，显示"暂未开放"）
+    mark(texts.some(t => t.includes("暂未开放")), "显示「暂未开放」（信号焰火）");
 
-    // 不显示购买/制作/携带按钮
-    mark(!texts.some(t => t.includes("购买")), "不显示「购买」");
+    // 显示购买按钮（阶段12商店功能）
+    mark(texts.some(t => t.includes("购买")), "显示「购买」按钮");
+
+    // 显示银币数量
+    mark(texts.some(t => t.includes("银币")), "显示银币数量");
+
+    // 不显示制作按钮（尚未实现）
     mark(!texts.some(t => t.includes("制作") && !t.includes("后续")), "不显示「制作」按钮");
-    mark(!texts.some(t => t.includes("携带") && !t.includes("后续")), "不显示「携带」按钮");
+
+    // TownScene 不显示携带按钮（携带在 CargoPrepScene）
+    mark(!texts.some(t => t.includes("携带") && !t.includes("购买后请在")), "TownScene 不显示「携带」按钮");
 
     // 7. 点击工坊后不再显示密封货箱
     console.log("7. 点击工坊后检查残留");

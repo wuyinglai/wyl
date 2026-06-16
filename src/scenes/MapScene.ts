@@ -34,7 +34,7 @@ import { deliverOrder } from "../systems/orderDeliverySystem";
 import { TooltipManager } from "../systems/tooltipSystem";
 import { formatCityProgress } from "../systems/cityProgressSystem";
 import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "../systems/expeditionResultSystem";
-import { getToolById } from "../systems/toolSystem";
+import { getToolById, getActiveToolEffectSummary, applyRetreatCostDiscount, ToolEffectContext } from "../systems/toolSystem";
 import { checkRetreatCost, getRetreatCostText, RetreatCostCheck } from "../systems/retreatSystem";
 import { isDevCheatEnabled } from "../systems/devConfig";
 
@@ -236,11 +236,17 @@ export class MapScene extends Phaser.Scene {
     if (gameState.selectedCityId) {
       infoLines.push(formatCityProgress(gameState.selectedCityId, gameState.cityContributions));
     }
-    // 阶段12.3：携带工具显示（只读展示，不产生效果）
+    // 阶段12：携带工具显示和效果摘要
     const carriedToolLine = gameState.selectedToolId
       ? `携带工具：${getToolById(gameState.selectedToolId)?.name || gameState.selectedToolId}`
-      : "携带工具：无";
+      : "携带工具：未选择";
     infoLines.push(carriedToolLine);
+
+    // 工具效果摘要
+    if (gameState.selectedToolId) {
+      const effectSummary = getActiveToolEffectSummary(gameState.selectedToolId);
+      infoLines.push(`工具效果：${effectSummary}`);
+    }
 
     if (infoLines.length > 0) {
       const panelPadding = 8;
@@ -3821,16 +3827,23 @@ export class MapScene extends Phaser.Scene {
   }
 
   /**
-   * 处理撤退（阶段8.9/10.1）
+   * 处理撤退（阶段8.9/10.1/12）
    */
   private handleRetreat(): void {
     const gs = getGameState();
     
-    // 计算撤退成本
+    // 计算工具效果折扣（备用轮轴）
+    const toolContext: ToolEffectContext = {
+      selectedToolId: gs.selectedToolId
+    };
+    const costDiscount = applyRetreatCostDiscount(toolContext);
+
+    // 计算撤退成本（应用工具折扣）
     const retreatCheck = checkRetreatCost(
       gs.currentPosition,
       gs.startPosition,
-      gs.food // 使用food作为补给
+      gs.food, // 使用food作为补给
+      { costDiscount }
     );
 
     // 获取撤退文本提示

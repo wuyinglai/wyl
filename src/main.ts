@@ -38,7 +38,7 @@ import {
   formatCargo,
 } from "./systems/cargoSystem";
 
-// 远征工具系统（阶段12.1）
+// 远征工具系统（阶段12）
 import {
   getAllTools,
   getToolById,
@@ -46,6 +46,16 @@ import {
   getToolsByRarity,
   isKnownToolId,
   formatToolSummary,
+  isToolOwned,
+  tryBuyTool,
+  formatToolCardSummary,
+  formatBuyResultMessage,
+  getActiveToolEffectSummary,
+  applyCargoProtection,
+  applyRetreatCostDiscount,
+  applyEncounterReduction,
+  applyWeatherResistance,
+  applyCaravanProtection,
 } from "./systems/toolSystem";
 
 // 全局错误处理
@@ -180,13 +190,23 @@ function exposeTestApi(): void {
   w.checkRetreatCost = checkRetreatCost;
   w.getRetreatCostText = getRetreatCostText;
 
-  // 远征工具系统（阶段12.1）
+  // 远征工具系统（阶段12）
   w.getAllTools = getAllTools;
   w.getToolById = getToolById;
   w.getToolsByCategory = getToolsByCategory;
   w.getToolsByRarity = getToolsByRarity;
   w.isKnownToolId = isKnownToolId;
   w.formatToolSummary = formatToolSummary;
+  w.isToolOwned = isToolOwned;
+  w.tryBuyTool = tryBuyTool;
+  w.formatToolCardSummary = formatToolCardSummary;
+  w.formatBuyResultMessage = formatBuyResultMessage;
+  w.getActiveToolEffectSummary = getActiveToolEffectSummary;
+  w.applyCargoProtection = applyCargoProtection;
+  w.applyRetreatCostDiscount = applyRetreatCostDiscount;
+  w.applyEncounterReduction = applyEncounterReduction;
+  w.applyWeatherResistance = applyWeatherResistance;
+  w.applyCaravanProtection = applyCaravanProtection;
 }
 
 // 只在开发/测试模式暴露测试 API

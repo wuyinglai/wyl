@@ -1,6 +1,6 @@
 import Phaser from "phaser";
-import { getGameState } from "../systems/GameState";
-import { getAllTools, formatToolSummary } from "../systems/toolSystem";
+import { getGameState, setGameState } from "../systems/GameState";
+import { getAllTools, formatToolSummary, isToolOwned, tryBuyTool, getRarityLabel } from "../systems/toolSystem";
 
 /**
  * TownScene.ts — 阶段11.6 仓库/工具详情占位 v1
@@ -526,9 +526,11 @@ export class TownScene extends Phaser.Scene {
   }
 
   /**
-   * 显示仓库/工具详情面板
+   * 显示仓库/工具商店面板
    */
   private showStorageToolsDetail(): void {
+    const gs = getGameState();
+
     // 隐藏普通说明文本
     if (this.descText) {
       this.descText.setVisible(false);
@@ -546,10 +548,9 @@ export class TownScene extends Phaser.Scene {
       this.intelOfficeCards.setVisible(false);
     }
 
-    // 如果已有仓库/工具卡片，直接显示
+    // 如果已有仓库/工具卡片，刷新显示并显示
     if (this.storageToolsCards) {
-      this.storageToolsCards.setVisible(true);
-      return;
+      this.storageToolsCards.destroy();
     }
 
     // 创建仓库/工具详情卡片容器
@@ -560,7 +561,7 @@ export class TownScene extends Phaser.Scene {
     this.storageToolsCards = this.add.container(0, 0);
 
     // 仓库/工具标题
-    const titleText = this.add.text(panelX + panelW / 2, panelY + 20, "仓库/工具", {
+    const titleText = this.add.text(panelX + panelW / 2, panelY + 20, "仓库/工具商店", {
       fontSize: "22px",
       color: "#ffcc44",
       fontFamily: "monospace",
@@ -568,18 +569,16 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.storageToolsCards.add(titleText);
 
-    // 仓库/工具副标题
-    const subtitleText = this.add.text(panelX + panelW / 2, panelY + 50, "查看已知远征工具目录。当前仅展示工具信息，携带和制作功能后续开放。", {
-      fontSize: "12px",
-      color: "#aaaaaa",
+    // 当前银币显示
+    const silverText = this.add.text(panelX + panelW - 20, panelY + 22, `银币: ${gs.silver}`, {
+      fontSize: "14px",
+      color: "#ffd700",
       fontFamily: "monospace",
-      align: "center",
-      wordWrap: { width: panelW - 40 },
-    }).setOrigin(0.5);
-    this.storageToolsCards.add(subtitleText);
+    }).setOrigin(1, 0);
+    this.storageToolsCards.add(silverText);
 
     // 工具目录区域标题
-    const catalogTitle = this.add.text(panelX + 35, panelY + 80, "【远征工具目录】", {
+    const catalogTitle = this.add.text(panelX + 35, panelY + 55, "【远征工具】", {
       fontSize: "14px",
       color: "#88ccff",
       fontFamily: "monospace",
@@ -587,24 +586,133 @@ export class TownScene extends Phaser.Scene {
     }).setOrigin(0, 0);
     this.storageToolsCards.add(catalogTitle);
 
-    // 从 toolSystem 获取所有工具并显示摘要
+    // 工具目录副标题（只读提示）
+    const catalogSubtitle = this.add.text(panelX + 35, panelY + 75, "查看已知远征工具目录", {
+      fontSize: "12px",
+      color: "#6688aa",
+      fontFamily: "monospace",
+    }).setOrigin(0, 0);
+    this.storageToolsCards.add(catalogSubtitle);
+
+    // 从 toolSystem 获取所有工具并显示
     const tools = getAllTools();
-    const toolListStartY = panelY + 100;
-    const toolLineH = 22;
+    const toolCardStartY = panelY + 80;
+    const toolCardH = 65;
+    const toolCardGap = 10;
 
     tools.forEach((tool, i) => {
-      const summary = formatToolSummary(tool);
-      const toolLine = this.add.text(panelX + 35, toolListStartY + i * toolLineH, summary, {
-        fontSize: "13px",
-        color: "#cccccc",
+      const cardY = toolCardStartY + i * (toolCardH + toolCardGap);
+
+      // 卡片背景
+      const cardBg = this.add.graphics();
+      const cardW = panelW - 40;
+      cardBg.fillStyle(0x1a2a3a, 0.9);
+      cardBg.fillRoundedRect(panelX + 20, cardY, cardW, toolCardH, 6);
+      cardBg.lineStyle(1, 0x4488ff, 0.3);
+      cardBg.strokeRoundedRect(panelX + 20, cardY, cardW, toolCardH, 6);
+      this.storageToolsCards.add(cardBg);
+
+      // 工具名称
+      const nameText = this.add.text(panelX + 35, cardY + 10, tool.name, {
+        fontSize: "16px",
+        color: "#ffffff",
+        fontFamily: "monospace",
+        fontStyle: "bold",
+      }).setOrigin(0, 0);
+      this.storageToolsCards.add(nameText);
+
+      // 稀有度和价格
+      const rarity = getRarityLabel(tool.rarity);
+      const priceText = this.add.text(panelX + 35, cardY + 32, `${rarity} · ${tool.price}银`, {
+        fontSize: "12px",
+        color: tool.rarity === "rare" ? "#ff6b6b" : tool.rarity === "uncommon" ? "#4ecdc4" : "#888888",
         fontFamily: "monospace",
       }).setOrigin(0, 0);
-      this.storageToolsCards.add(toolLine);
+      this.storageToolsCards.add(priceText);
+
+      // 描述
+      const descText = this.add.text(panelX + 35, cardY + 48, tool.description, {
+        fontSize: "11px",
+        color: "#888888",
+        fontFamily: "monospace",
+        wordWrap: { width: cardW - 100 },
+      }).setOrigin(0, 0);
+      this.storageToolsCards.add(descText);
+
+      // 状态标签和购买按钮区域（使用 Container 模式，显式 hitArea，支持 findInteractiveButtonByText）
+      const btnW = 100;
+      const btnH = 28;
+      // Container 中心（statusX - btnW/2 = panelX + panelW - 20 - 50 = 850）
+      const btnCenterX = panelX + panelW - 20 - btnW / 2;
+      const btnCenterY = cardY + toolCardH / 2;
+
+      const owned = isToolOwned(gs.ownedTools, tool.id);
+      const canAfford = gs.silver >= tool.price;
+
+      let btnText: string;
+      let btnColor: number;
+      let btnInteractive: boolean;
+
+      if (!tool.isImplemented) {
+        btnText = "暂未开放";
+        btnColor = 0x555555;
+        btnInteractive = false;
+      } else if (owned) {
+        btnText = "已拥有";
+        btnColor = 0x4a8c4a;
+        btnInteractive = false;
+      } else if (!canAfford) {
+        btnText = `缺银`;
+        btnColor = 0x8b4513;
+        btnInteractive = false;
+      } else {
+        btnText = `购买 ${tool.price}银`;
+        btnColor = 0x4a6fa5;
+        btnInteractive = true;
+      }
+
+      // Container 模式：bg Rectangle + Text，Container 自身 setInteractive + 显式 hitArea
+      const btnContainer = this.add.container(btnCenterX, btnCenterY);
+      const bgRect = this.add.rectangle(0, 0, btnW, btnH, btnColor);
+      bgRect.setStrokeStyle(1, btnColor);
+      const textEl = this.add.text(0, 0, btnText, {
+        fontSize: "12px",
+        color: "#ffffff",
+        fontFamily: "monospace",
+      }).setOrigin(0.5);
+      btnContainer.add([bgRect, textEl]);
+
+      if (btnInteractive) {
+        btnContainer.setSize(btnW, btnH);
+        btnContainer.setInteractive(
+          new Phaser.Geom.Rectangle(-btnW / 2, -btnH / 2, btnW, btnH),
+          Phaser.Geom.Rectangle.Contains
+        );
+
+        btnContainer.on("pointerover", () => {
+          bgRect.setFillStyle(0x5a8fd5);
+        });
+        btnContainer.on("pointerout", () => {
+          bgRect.setFillStyle(btnColor);
+        });
+        btnContainer.on("pointerdown", () => {
+          const currentGs = getGameState();
+          const result = tryBuyTool(currentGs.ownedTools, currentGs.silver, tool.id);
+          if (result.success) {
+            currentGs.ownedTools = result.newOwned!;
+            currentGs.silver = result.newSilver!;
+            setGameState(currentGs);
+            console.log(`[商店] 购买工具: ${tool.name}，剩余银币: ${currentGs.silver}`);
+            this.showStorageToolsDetail();
+          }
+        });
+      }
+      this.storageToolsCards.add(btnContainer);
     });
 
     // 底部提示
-    const hintY = toolListStartY + tools.length * toolLineH + 15;
-    const hint = this.add.text(panelX + panelW / 2, hintY, "阶段12.2：工具目录只读展示，携带和制作功能后续开放。", {
+    const hintY = toolCardStartY + tools.length * (toolCardH + toolCardGap) + 15;
+    const hint = this.add.text(panelX + panelW / 2, hintY, "购买后请在远征准备界面选择携带工具", {
       fontSize: "12px",
       color: "#666666",
       fontFamily: "monospace",

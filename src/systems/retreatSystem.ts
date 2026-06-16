@@ -20,27 +20,42 @@ export interface RetreatCostCheck {
 /**
  * 计算撤退所需补给
  * 使用曼哈顿距离（当前位置到起点的距离）
+ * @param currentPosition 当前位置
+ * @param startPosition 起点位置
+ * @param options.costDiscount 成本折扣（0-1，默认为1，即无折扣）
  */
 export function calculateRetreatSupplyCost(
   currentPosition: { x: number; y: number },
-  startPosition: { x: number; y: number }
+  startPosition: { x: number; y: number },
+  options?: { costDiscount?: number }
 ): number {
   const distance =
     Math.abs(currentPosition.x - startPosition.x) +
     Math.abs(currentPosition.y - startPosition.y);
-  // 为了游戏性考虑，限制一下距离太长的情况，最大不超过15
-  return Math.min(distance, 15);
+  let cost = Math.min(distance, 15);
+
+  // 应用折扣（如果提供）
+  if (options?.costDiscount !== undefined && options.costDiscount > 0) {
+    cost = Math.max(1, Math.ceil(cost * options.costDiscount));
+  }
+
+  return cost;
 }
 
 /**
  * 检查撤退成本
+ * @param currentPosition 当前位置
+ * @param startPosition 起点位置
+ * @param currentSupply 当前补给
+ * @param options.costDiscount 成本折扣（0-1，默认为1，即无折扣）
  */
 export function checkRetreatCost(
   currentPosition: { x: number; y: number },
   startPosition: { x: number; y: number },
-  currentSupply: number
+  currentSupply: number,
+  options?: { costDiscount?: number }
 ): RetreatCostCheck {
-  const retreatSupplyCost = calculateRetreatSupplyCost(currentPosition, startPosition);
+  const retreatSupplyCost = calculateRetreatSupplyCost(currentPosition, startPosition, options);
   const canRetreatSafely = currentSupply >= retreatSupplyCost;
   const shortage = Math.max(0, retreatSupplyCost - currentSupply);
   const resultType: RetreatResultType = canRetreatSafely ? "safe_retreat" : "failed_retreat";

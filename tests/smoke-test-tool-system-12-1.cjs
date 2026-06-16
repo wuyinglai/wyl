@@ -4,7 +4,7 @@
  */
 const { chromium } = require("playwright");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = "http://localhost:5175";
 
 let passCount = 0;
 let failCount = 0;
@@ -58,6 +58,9 @@ async function runTest() {
       "reduce_encounter_risk", "weather_resistance", "combat_support", "none"
     ];
 
+    // 已实装工具列表（阶段12要求）
+    const implementedTools = ["sealed_crate", "spare_axle", "range_scope", "camouflage_cloth", "waterproof_tarp", "sand_mask", "reinforced_shield"];
+
     for (const tool of allTools) {
       mark(tool.id && tool.id.length > 0, `工具 id 非空: ${tool.id}`);
       mark(tool.name && tool.name.length > 0, `工具 name 非空: ${tool.name}`);
@@ -65,7 +68,10 @@ async function runTest() {
       mark(validCategories.includes(tool.category), `工具 category 合法: ${tool.category}`);
       mark(validRarities.includes(tool.rarity), `工具 rarity 合法: ${tool.rarity}`);
       mark(validEffects.includes(tool.effectType), `工具 effectType 合法: ${tool.effectType}`);
-      mark(tool.isImplemented === false, `工具 isImplemented = false: ${tool.id}`);
+      mark(tool.price !== undefined && tool.price > 0, `工具价格 > 0: ${tool.id} = ${tool.price}银`);
+      // 信号焰火未实装，其他工具已实装
+      const expectedImplemented = implementedTools.includes(tool.id);
+      mark(tool.isImplemented === expectedImplemented, `工具 isImplemented 正确: ${tool.id} = ${tool.isImplemented}`);
     }
 
     // 5. getToolById 检查
@@ -107,7 +113,16 @@ async function runTest() {
       return window.formatToolSummary(tool);
     });
     mark(summary.includes("密封货箱"), `formatToolSummary 包含工具名（实际: ${summary}）`);
-    mark(summary.includes("效果未接入"), `formatToolSummary 包含效果状态（实际: ${summary}）`);
+    // 已实装工具不应包含"效果未接入"
+    mark(!summary.includes("效果未接入"), `formatToolSummary 已实装工具不含效果未接入（实际: ${summary}）`);
+
+    // 测试未实装工具的 formatToolSummary
+    const signalFlareSummary = await page.evaluate(() => {
+      const tool = window.getToolById("signal_flare");
+      return window.formatToolSummary(tool);
+    });
+    mark(signalFlareSummary.includes("信号焰火"), `未实装工具 formatToolSummary 包含工具名（实际: ${signalFlareSummary}）`);
+    mark(signalFlareSummary.includes("效果未接入"), `未实装工具 formatToolSummary 包含效果未接入（实际: ${signalFlareSummary}）`);
 
     // 10. 副本不污染测试
     console.log("10. 副本不污染测试");

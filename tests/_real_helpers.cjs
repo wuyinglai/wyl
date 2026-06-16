@@ -111,7 +111,10 @@ async function sleep(ms) {
 }
 
 /**
- * 查找 scene 中匹配文本的可交互按钮（Text 自身 interactive 或 Rectangle 旁边 Text）
+ * 查找 scene 中匹配文本的可交互按钮，支持三种形态：
+ * 1. Text 自身 interactive
+ * 2. Rectangle hitArea + 附近 Text（graphics + text + transparent rectangle 模式）
+ * 3. Container 按钮（Container interactive，内有匹配 Text）
  * 返回 { x, y }，用于 clickGamePoint
  */
 async function findInteractiveButtonByText(page, sceneKey, textPattern) {
@@ -119,60 +122,150 @@ async function findInteractiveButtonByText(page, sceneKey, textPattern) {
     const scene = window.game.scene.getScene(key);
     if (!scene) return null;
     const pat = new RegExp(patStr);
-    let result = null;
+    const results = [];
 
-    // 1. Text 自身 interactive
-    scene.children?.each?.((child) => {
-      if (result) return;
-      if (child.type === "Text" && child.input && child.input.enabled) {
-        if (child.text && pat.test(child.text)) {
-          result = { x: child.x, y: child.y };
-        }
+    // 递归遍历 children
+    function traverse(parentObj, offsetX, offsetY) {
+      // 获取子对象列表
+      let childrenList = null;
+      if (parentObj === scene) {
+        // Scene 的 children
+        childrenList = scene.children;
+      } else if (parentObj.list) {
+        // Container 的 list
+        childrenList = parentObj.list;
       }
-    });
+      if (!childrenList) return;
 
-    // 2. Rectangle + 旁边 Text（例如 MapScene 撤退按钮、CargoPrepScene 的按钮）
-    if (!result) {
-      const rects = [];
-      const texts = [];
-      scene.children?.each?.((child) => {
-        if (child.type === "Rectangle" && child.input && child.input.enabled) {
-          rects.push({ x: child.x, y: child.y });
-        }
+      // 转为数组
+      const items = [];
+      if (typeof childrenList.each === "function") {
+        childrenList.each((c) => items.push(c));
+      } else if (childrenList.list) {
+        items.push(...childrenList.list);
+      } else if (Array.isArray(childrenList)) {
+        items.push(...childrenList);
+      }
+
+      for (const child of items) {
+        if (!child) continue;
+        const childX = offsetX + (child.x || 0);
+        const childY = offsetY + (child.y || 0);
+
+        // 形态 1: Text 自身 interactive
         if (child.type === "Text" && child.text && pat.test(child.text)) {
-          texts.push({ x: child.x, y: child.y, text: child.text });
-        }
-      });
-      // 找最接近的 rectangle-text 对
-      let bestDist = 999999;
-      let bestRect = null;
-      for (const r of rects) {
-        for (const t of texts) {
-          const d = Math.abs(r.x - t.x) + Math.abs(r.y - t.y);
-          if (d < 50 && d < bestDist) {
-            bestDist = d;
-            bestRect = r;
+          if (child.input && child.input.enabled) {
+            results.push({ x: childX, y: childY, type: "text_interactive", text: child.text });
           }
         }
-      }
-      if (bestRect) result = { x: bestRect.x, y: bestRect.y };
-    }
 
-    // 3. Container（按钮容器，子元素含 Text）
-    if (!result) {
-      scene.children?.each?.((child) => {
-        if (result) return;
-        if (child.type !== "Text" && child.type !== "Rectangle" && child.input && child.input.enabled && child.list) {
-          for (const sub of child.list) {
-            if (sub.type === "Text" && sub.text && pat.test(sub.text)) {
-              result = { x: child.x, y: child.y };
-              break;
+        // 形态 2: Rectangle interactive（用于 graphics + text + transparent rectangle）
+        if (child.type === "Rectangle" && child.input && child.input.enabled) {
+          // 记录 interactive Rectangle，稍后与 Text 匹配
+          results.push({ x: childX, y: childY, type: "rect_interactive", width: child.width, height: child.height });
+        }
+
+        // 形态 3: Container interactive，检查内部是否有匹配 Text
+        if (child.type === "Container" && child.input && child.input.enabled) {
+          let hasMatchingText = false;
+          let matchedText = "";
+          if (child.list) {
+            for (const sub of child.list) {
+              if (sub.type === "Text" && sub.text && pat.test(sub.text)) {
+                hasMatchingText = true;
+                matchedText = sub.text;
+                break;
+              }
             }
           }
+          if (hasMatchingText) {
+            results.push({ x: childX, y: childY, type: "container_interactive", text: matchedText });
+          }
         }
-      });
+
+        // 递归进入 Container（无论是否 interactive）
+        if (child.type === "Container" && child.list && child.list.length > 0) {
+          traverse(child, childX, childY);
+        }
+      }
     }
-    return result;
+
+    traverse(scene, 0, 0);
+
+    // 优先级排序
+    // 1. Container interactive（最优先）
+    const containerHits = results.filter(r => r.type === "container_interactive");
+    if (containerHits.length > 0) {
+      return { x: containerHits[0].x, y: containerHits[0].y };
+    }
+
+    // 2. Text 自身 interactive
+    const textHits = results.filter(r => r.type === "text_interactive");
+    if (textHits.length > 0) {
+      return { x: textHits[0].x, y: textHits[0].y };
+    }
+
+    // 3. Rectangle interactive + 附近匹配 Text（需要二次查找）
+    // 收集所有 Text（包括非 interactive）
+    const allTexts = [];
+    function collectTexts(parentObj, offsetX, offsetY) {
+      let childrenList = null;
+      if (parentObj === scene) {
+        childrenList = scene.children;
+      } else if (parentObj.list) {
+        childrenList = parentObj.list;
+      }
+      if (!childrenList) return;
+
+      const items = [];
+      if (typeof childrenList.each === "function") {
+        childrenList.each((c) => items.push(c));
+      } else if (childrenList.list) {
+        items.push(...childrenList.list);
+      } else if (Array.isArray(childrenList)) {
+        items.push(...childrenList);
+      }
+
+      for (const child of items) {
+        if (!child) continue;
+        const childX = offsetX + (child.x || 0);
+        const childY = offsetY + (child.y || 0);
+        if (child.type === "Text" && child.text) {
+          allTexts.push({ x: childX, y: childY, text: child.text });
+        }
+        if (child.type === "Container" && child.list) {
+          collectTexts(child, childX, childY);
+        }
+      }
+    }
+    collectTexts(scene, 0, 0);
+
+    const rectHits = results.filter(r => r.type === "rect_interactive");
+    if (rectHits.length > 0 && allTexts.length > 0) {
+      // 先找匹配 pattern 的 Text，然后找最近的 Rectangle
+      for (const txt of allTexts) {
+        if (pat.test(txt.text)) {
+          // 找最近的 Rectangle（确保是同一按钮组）
+          let bestDist = 999999;
+          let bestRect = null;
+          for (const rect of rectHits) {
+            const dx = rect.x - txt.x;
+            const dy = rect.y - txt.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist < bestDist) {
+              bestDist = dist;
+              bestRect = rect;
+            }
+          }
+          // 距离阈值：Rectangle 和 Text 通常在同一按钮组内，距离 < 按钮高度
+          if (bestRect && bestDist < 50) {
+            return { x: bestRect.x, y: bestRect.y };
+          }
+        }
+      }
+    }
+
+    return null;
   }, [sceneKey, textPattern]);
 }
 
