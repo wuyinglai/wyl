@@ -191,3 +191,111 @@ export function getCityRevivalDetailLines(state: CityRevivalState): string[] {
   lines.push(`当前状态：${formatCityRevivalBrief(state)}`);
   return lines;
 }
+
+// ==================== 订单联动：城市复兴加速（阶段13.2） ====================
+
+/**
+ * 根据订单难度计算复兴贡献值
+ * 规则：
+ * - low / low_medium：+3 progress
+ * - medium：+5 progress
+ * - high / critical：+8 progress
+ *
+ * @param orderDifficulty 订单难度字符串（如 "low", "medium", "high"）
+ * @returns 复兴进度增量
+ */
+export function calculateOrderRevivalGain(orderDifficulty: string | undefined): number {
+  if (!orderDifficulty) return 3; // 默认值
+  switch (orderDifficulty.toLowerCase()) {
+    case "low":
+    case "low_medium":
+      return 3;
+    case "medium":
+      return 5;
+    case "high":
+    case "critical":
+      return 8;
+    default:
+      return 3; // 默认 +3
+  }
+}
+
+/**
+ * 检查某个订单是否已经应用过城市复兴加成
+ *
+ * @param orderId 订单ID
+ * @param appliedOrderIds 已应用订单ID列表
+ * @returns 是否已应用
+ */
+export function hasOrderRevivalApplied(
+  orderId: string,
+  appliedOrderIds: string[] | undefined,
+): boolean {
+  if (!appliedOrderIds) return false;
+  return appliedOrderIds.includes(orderId);
+}
+
+/**
+ * 对指定城市应用订单完成带来的复兴加成
+ *
+ * 规则：
+ * - 目标城市 progress +gain（clamp 到 100）
+ * - level 自动重新计算
+ * - 记录已应用订单ID
+ *
+ * 注意：
+ * - 只对有 cityId 的订单生效
+ * - 同一订单不能重复加
+ * - 非目标城市不受影响
+ *
+ * @param revivalStates 当前城市复兴状态
+ * @param orderId 订单ID
+ * @param targetCityId 目标城市ID
+ * @param gain 复兴增量（由 calculateOrderRevivalGain 计算）
+ * @param appliedOrderIds 已应用订单ID列表
+ * @returns 更新后的状态和新增加的已应用订单ID列表
+ */
+export function applyOrderCityRevival(
+  revivalStates: Record<string, CityRevivalState>,
+  orderId: string,
+  targetCityId: string,
+  gain: number,
+  appliedOrderIds: string[],
+): {
+  updatedStates: Record<string, CityRevivalState>;
+  updatedAppliedOrderIds: string[];
+} {
+  // 防重：已应用过的不再处理
+  if (appliedOrderIds.includes(orderId)) {
+    return { updatedStates: revivalStates, updatedAppliedOrderIds: appliedOrderIds };
+  }
+
+  const existing = revivalStates[targetCityId];
+  if (!existing) {
+    // 目标城市不在状态中，防御性跳过
+    return { updatedStates: revivalStates, updatedAppliedOrderIds: appliedOrderIds };
+  }
+
+  // 计算新的 progress（clamp 到 100）
+  const newProgress = Math.min(100, existing.progress + gain);
+  const newLevel = calculateCityRevivalLevel(newProgress);
+
+  // 克隆并更新状态
+  const updatedStates: Record<string, CityRevivalState> = {
+    ...revivalStates,
+    [targetCityId]: {
+      ...existing,
+      progress: newProgress,
+      level: newLevel,
+    },
+  };
+
+  // 记录该订单已应用
+  const updatedAppliedOrderIds = [...appliedOrderIds, orderId];
+
+  console.log(
+    `[城市复兴] 订单 ${orderId} 完成，${getCityDisplayName(targetCityId)} 复兴 +${gain}（${existing.progress}% → ${newProgress}%，Lv.${newLevel}）`,
+  );
+
+  return { updatedStates, updatedAppliedOrderIds };
+}

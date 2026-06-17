@@ -139,6 +139,8 @@ export interface GameState {
     cityRevivalStates: Record<string, CityRevivalState>;
     /** 远征轮次计数器，每次"开始新远征"时+1，用于城市被动自建防重 */
     expeditionCycle: number;
+    /** 已应用过订单复兴加成的订单ID列表，防止同一订单重复加复兴（阶段13.2） */
+    cityRevivalAppliedOrderIds: string[];
 }
 
 // 初始游戏状态
@@ -218,6 +220,7 @@ export function createInitialGameState(): GameState {
     // 城市复兴系统（阶段13.1）
     cityRevivalStates: initializeCityRevivalStates(),
     expeditionCycle: 0,
+    cityRevivalAppliedOrderIds: [],
   };
 }
 
@@ -866,13 +869,20 @@ export function setGameState(state: GameState): void {
 
 export function resetGameState(): void {
   // 保留城市复兴状态（阶段13.1）：跨局持久化，不因 reset 清空
+  // 注意：必须在 createInitialGameState() 之前保存 oldRevival，
+  // 因为 createInitialGameState() 会创建新的 cityRevivalStates，
+  // 之后 restore 的 oldRevival 指向的仍是 create 之前的老引用
   const oldRevival = globalGameState?.cityRevivalStates;
   const oldCycle = globalGameState?.expeditionCycle ?? 0;
+  const oldAppliedOrderIds = globalGameState?.cityRevivalAppliedOrderIds ?? [];
   globalGameState = createInitialGameState();
+  // 此时 globalGameState.cityRevivalStates 是 createInitialGameState() 创建的新城市对象
+  // 需要用旧引用覆盖，以保留旧的 progress/level/passiveGrowthCount
   if (oldRevival) {
     globalGameState.cityRevivalStates = oldRevival;
   }
   globalGameState.expeditionCycle = oldCycle;
+  globalGameState.cityRevivalAppliedOrderIds = oldAppliedOrderIds;
 }
 
 /**

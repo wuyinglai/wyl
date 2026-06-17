@@ -127,6 +127,9 @@ import {
   formatCityRevivalBrief,
   getCityDisplayName,
   getCityRevivalLevelLabel,
+  applyOrderCityRevival,
+  calculateOrderRevivalGain,
+  hasOrderRevivalApplied,
 } from "./systems/cityRevivalSystem";
 
 // 测试 API（仅开发/测试模式暴露）
@@ -227,6 +230,10 @@ function exposeTestApi(): void {
   w.formatCityRevivalBrief = formatCityRevivalBrief;
   w.getCityDisplayName = getCityDisplayName;
   w.getCityRevivalLevelLabel = getCityRevivalLevelLabel;
+  // 城市复兴系统（阶段13.2）：订单联动
+  w.applyOrderCityRevival = applyOrderCityRevival;
+  w.calculateOrderRevivalGain = calculateOrderRevivalGain;
+  w.hasOrderRevivalApplied = hasOrderRevivalApplied;
 }
 
 // 只在开发/测试模式暴露测试 API

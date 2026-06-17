@@ -37,6 +37,7 @@ import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "
 import { getToolById, getActiveToolEffectSummary, applyRetreatCostDiscount, ToolEffectContext } from "../systems/toolSystem";
 import { checkRetreatCost, getRetreatCostText, RetreatCostCheck } from "../systems/retreatSystem";
 import { isDevCheatEnabled } from "../systems/devConfig";
+import { applyOrderCityRevival, calculateOrderRevivalGain } from "../systems/cityRevivalSystem";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -1476,6 +1477,18 @@ export class MapScene extends Phaser.Scene {
       markOrderCompleted(order!.id);
       // 阶段10.3：从未完成订单列表移除
       removeUnfinishedOrder(order!.id);
+
+      // 阶段13.2：应用城市复兴加成（仅成功交付时触发）
+      const gain = calculateOrderRevivalGain(order!.difficulty);
+      const { updatedStates, updatedAppliedOrderIds } = applyOrderCityRevival(
+        gameState.cityRevivalStates,
+        order!.id,
+        order!.cityId,
+        gain,
+        gameState.cityRevivalAppliedOrderIds,
+      );
+      gameState.cityRevivalStates = updatedStates;
+      gameState.cityRevivalAppliedOrderIds = updatedAppliedOrderIds;
 
       // 生成远征结算结果（阶段8.7）
       const route = gameState.selectedRouteId ? getRouteById(gameState.selectedRouteId) : undefined;
