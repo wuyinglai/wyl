@@ -18,6 +18,15 @@ dist-ssr
 /test-caravan-parts-*.cjs
 /screenshot-*.cjs
 
+# Debug / manual / temporary scripts - NEVER commit these
+_debug_*.cjs
+_manual_*.cjs
+check-scroll-ui.cjs
+_fix_ports.cjs
+
+# Debug screenshots
+_screenshot_*.png
+
 # But keep tests/ directory tracked
 !tests/
 

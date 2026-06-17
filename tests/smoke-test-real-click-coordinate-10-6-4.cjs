@@ -12,6 +12,8 @@ const { chromium } = require("playwright");
 const assert = require("assert");
 const { clickGamePoint, waitForSceneReady, gameToScreen, findInteractiveButtonByText } = require("./_real_helpers.cjs");
 
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
+
 async function sleep(ms) {
   return new Promise((r) => setTimeout(r, ms));
 }
@@ -27,7 +29,7 @@ async function sleep(ms) {
   try {
     // 1. 打开游戏
     console.log("\n[1] 打开游戏...");
-    await page.goto("http://localhost:5173/");
+    await page.goto(BASE_URL, { waitUntil: "networkidle" });
     await page.waitForFunction(() => window.game && window.game.scene);
     console.log("  window.game 存在 ✓");
 

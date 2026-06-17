@@ -14,7 +14,7 @@
  * 7. 未解锁路线不能被 selectRoute 写入 GameState
  */
 const { chromium } = require("playwright");
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 let passed = 0;

@@ -22,7 +22,7 @@
  * 15. formatCargo({ grain: 5, medicine: 2 }) 使用中文名
  */
 const { chromium } = require("playwright");
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 let passed = 0;

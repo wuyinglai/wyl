@@ -15,6 +15,8 @@ const {
   sleep,
 } = require("./_real_helpers.cjs");
 
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
+
 let passCount = 0;
 let failCount = 0;
 function mark(pass, msg) {
@@ -38,7 +40,7 @@ async function run() {
 
   try {
     console.log("\n[1] 打开游戏...");
-    await page.goto("http://localhost:5173/");
+    await page.goto(BASE_URL, { waitUntil: "networkidle" });
     await page.waitForFunction(() => window.game && window.game.scene);
     console.log("  ✓ window.game 存在");
 

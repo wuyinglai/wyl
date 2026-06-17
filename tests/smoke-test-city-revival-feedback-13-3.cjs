@@ -22,7 +22,7 @@
 const { chromium } = require("playwright");
 const assert = require("node:assert");
 
-const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 
 (async () => {
   let browser;
@@ -31,7 +31,7 @@ const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
     const context = await browser.newContext();
     const page = await context.newPage();
 
-    const url = process.env.BASE_URL || "http://localhost:5173/";
+    const url = process.env.BASE_URL || "http://localhost:5180";
     console.log("[smoke] 打开页面: " + url);
 
     await page.goto(url, { waitUntil: "networkidle" });

@@ -23,7 +23,7 @@ const {
   sleep,
 } = require("./_real_helpers.cjs");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 
 let passCount = 0;
 let failCount = 0;

@@ -19,7 +19,7 @@
  * 12. 额外验证：失败路径，节点不被清理
  */
 const { chromium } = require("playwright");
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 let passed = 0;

@@ -14,6 +14,8 @@ const {
   sleep,
 } = require("./_real_helpers.cjs");
 
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
+
 async function findCardIndex(page, sceneKey, cardField, index = 0) {
   return page.evaluate(([sceneKey, cardField, index]) => {
     const scene = window.game.scene.getScene(sceneKey);
@@ -84,7 +86,7 @@ async function runTest() {
   try {
     // ===== 1. 启动游戏 =====
     console.log("\n[1] 启动游戏...");
-    await page.goto("http://localhost:5173", { waitUntil: "networkidle", timeout: 30000 });
+    await page.goto(BASE_URL, { waitUntil: "networkidle" });
     await sleep(3000);
     await page.waitForFunction(() => window.game && window.game.scene, { timeout: 30000 });
 

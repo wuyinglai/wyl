@@ -14,7 +14,7 @@ const { chromium } = require("playwright");
 const assert = require("assert");
 const { clickGamePoint, waitForSceneReady, findInteractiveButtonByText } = require("./_real_helpers.cjs");
 
-const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 

@@ -22,7 +22,7 @@
 
 const { chromium } = require("playwright");
 
-const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 let passed = 0, failed = 0;
 
 function assert(condition, msg) {

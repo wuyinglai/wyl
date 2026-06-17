@@ -3,7 +3,7 @@
  * 阶段4.2 人工冒烟测试 8 项自动化验证
  */
 const { chromium } = require("playwright");
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 
 async function runTest() {

@@ -22,7 +22,7 @@ const helpersPath = path.join(__dirname, "_real_helpers.cjs");
 const helpersCode = fs.readFileSync(helpersPath, "utf-8");
 eval(helpersCode);
 
-const BASE_URL = process.env.BASE_URL || "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 
 let passed = 0;
 let failed = 0;

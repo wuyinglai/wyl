@@ -8,13 +8,15 @@
 const { chromium } = require("playwright");
 const assert = require("assert");
 
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
+
 (async () => {
   let browser;
   try {
     browser = await chromium.launch({ headless: true });
     const context = await browser.newContext();
     const page = await context.newPage();
-    await page.goto("http://localhost:5173");
+    await page.goto(BASE_URL, { waitUntil: "networkidle" });
 
     // 等待测试 API 就绪
     await page.evaluate(async () => {

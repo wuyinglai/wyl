@@ -38,7 +38,7 @@ const {
   startRealExpeditionToMap,
 } = require("./_real_helpers.cjs");
 
-const BASE_URL = "http://localhost:5173";
+const BASE_URL = process.env.BASE_URL || "http://localhost:5180";
 
 let passed = 0;
 let failed = 0;
