@@ -13,6 +13,17 @@ import {
   DemoWorldMapState,
 } from "./demoWorldMapSystem";
 
+// C2：Demo 主线状态
+// 类型来自 demoMainQuest.ts，系统函数来自 demoMainQuestSystem.ts
+import {
+  EmberCoreStatus,
+  DemoMainQuestStage,
+} from "../data/demoMainQuest";
+import {
+  createInitialDemoMainQuestState,
+  DemoMainQuestState,
+} from "./demoMainQuestSystem";
+
 // 地图格子类型
 export type CellType =
   | "obstacle"
@@ -157,6 +168,16 @@ export interface GameState {
     unlockedDemoWorldRouteIds: string[];
     /** 已知的传闻节点 ID（信息边界） */
     knownDemoWorldRumorIds: string[];
+
+    // C2：Demo 主线状态（跨局保留，不影响 C1 / 城市复兴 / 工具系统 / 订单系统）
+    /** 余烬核心状态：已携带 / 已送达大安 / 已启动网络激活 */
+    emberCoreStatus: EmberCoreStatus;
+    /** 当前 Demo 主线阶段 */
+    demoMainQuestStage: DemoMainQuestStage;
+    /** 当前激活的主线订单 ID */
+    activeMainQuestOrderId: string;
+    /** 已完成的主线订单 ID 列表 */
+    completedMainQuestOrderIds: string[];
 }
 
 // 初始游戏状态
@@ -240,6 +261,9 @@ export function createInitialGameState(): GameState {
 
     // C1：Demo 中型地图底座
     ...createInitialDemoWorldMapState(),
+
+    // C2：Demo 主线状态
+    ...createInitialDemoMainQuestState(),
   };
 }
 
@@ -898,6 +922,14 @@ export function resetGameState(): void {
   const oldDemoUnlockedRoutes = globalGameState?.unlockedDemoWorldRouteIds;
   const oldDemoKnownRumors = globalGameState?.knownDemoWorldRumorIds;
 
+  // C2：保留 Demo 主线状态（同样的跨局保留策略，不回退主线进度）
+  // 注意：这是 Demo 进度状态，不等于"新开游戏"。
+  // 如需彻底重置，可另做 hard reset。
+  const oldEmberCoreStatus = globalGameState?.emberCoreStatus;
+  const oldDemoMainStage = globalGameState?.demoMainQuestStage;
+  const oldActiveMainQuest = globalGameState?.activeMainQuestOrderId;
+  const oldCompletedMainQuestIds = globalGameState?.completedMainQuestOrderIds;
+
   globalGameState = createInitialGameState();
 
   // 恢复城市复兴状态
@@ -919,6 +951,20 @@ export function resetGameState(): void {
   }
   if (oldDemoKnownRumors) {
     globalGameState.knownDemoWorldRumorIds = oldDemoKnownRumors;
+  }
+
+  // C2：恢复 Demo 主线状态
+  if (oldEmberCoreStatus) {
+    globalGameState.emberCoreStatus = oldEmberCoreStatus;
+  }
+  if (oldDemoMainStage) {
+    globalGameState.demoMainQuestStage = oldDemoMainStage;
+  }
+  if (oldActiveMainQuest) {
+    globalGameState.activeMainQuestOrderId = oldActiveMainQuest;
+  }
+  if (oldCompletedMainQuestIds) {
+    globalGameState.completedMainQuestOrderIds = oldCompletedMainQuestIds;
   }
 }
 

@@ -163,6 +163,31 @@ import {
   getRouteInitialStatus,
 } from "./systems/demoWorldMapSystem";
 
+// C2：Demo 主线状态
+import {
+  DEMO_MAIN_QUEST_ORDER,
+  DEMO_MAIN_QUEST_OBJECTIVE_TEXT,
+} from "./data/demoMainQuest";
+import {
+  createInitialDemoMainQuestState,
+  getCurrentDemoMainQuestStage,
+  getCurrentEmberCoreStatus,
+  getCurrentMainQuestObjective,
+  getCurrentMainQuestTitle,
+  getCurrentMainQuestOrder,
+  isEmberCoreCarried,
+  isMainQuestTargetNode,
+  isCurrentStepTargetNode,
+  isFinalTargetNode,
+  advanceDemoMainQuestStage,
+  setEmberCoreStatus,
+  markActiveMainQuestCompleted,
+  advanceOnFirstOutpost,
+  advanceOnDaanActivated,
+  advanceOnSecondCityHint,
+  advanceOnSecondCityActivated,
+} from "./systems/demoMainQuestSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -293,6 +318,27 @@ function exposeTestApi(): void {
   w.getNodeInitialStatus = getNodeInitialStatus;
   w.getRouteInitialStatus = getRouteInitialStatus;
   w.createInitialDemoWorldMapState = createInitialDemoWorldMapState;
+
+  // C2：Demo 主线状态
+  w.DEMO_MAIN_QUEST_ORDER = DEMO_MAIN_QUEST_ORDER;
+  w.DEMO_MAIN_QUEST_OBJECTIVE_TEXT = DEMO_MAIN_QUEST_OBJECTIVE_TEXT;
+  w.createInitialDemoMainQuestState = createInitialDemoMainQuestState;
+  w.getCurrentDemoMainQuestStage = (s: any) => getCurrentDemoMainQuestStage(s);
+  w.getCurrentEmberCoreStatus = (s: any) => getCurrentEmberCoreStatus(s);
+  w.getCurrentMainQuestObjective = (s: any) => getCurrentMainQuestObjective(s);
+  w.getCurrentMainQuestTitle = (s: any) => getCurrentMainQuestTitle(s);
+  w.getCurrentMainQuestOrder = getCurrentMainQuestOrder;
+  w.isEmberCoreCarried = (s: any) => isEmberCoreCarried(s);
+  w.isMainQuestTargetNode = (s: any, nodeId: string) => isMainQuestTargetNode(s, nodeId);
+  w.isCurrentStepTargetNode = (s: any, nodeId: string) => isCurrentStepTargetNode(s, nodeId);
+  w.isFinalTargetNode = (s: any, nodeId: string) => isFinalTargetNode(s, nodeId);
+  w.advanceDemoMainQuestStage = (s: any, next: any) => advanceDemoMainQuestStage(s, next);
+  w.setEmberCoreStatus = (s: any, next: any) => setEmberCoreStatus(s, next);
+  w.markActiveMainQuestCompleted = (s: any) => markActiveMainQuestCompleted(s);
+  w.advanceOnFirstOutpost = (s: any) => advanceOnFirstOutpost(s);
+  w.advanceOnDaanActivated = (s: any) => advanceOnDaanActivated(s);
+  w.advanceOnSecondCityHint = (s: any) => advanceOnSecondCityHint(s);
+  w.advanceOnSecondCityActivated = (s: any) => advanceOnSecondCityActivated(s);
 }
 
 // 只在开发/测试模式暴露测试 API
