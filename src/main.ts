@@ -219,6 +219,21 @@ import {
   isTutorialEventResolved,
 } from "./systems/tutorialEventSystem";
 
+// C3c：N3.1 普通战斗（胜利结算；不实现失败、不大改 BattleScene）
+import {
+  getN31TutorialBattles,
+  getTutorialBattleByNodeId,
+  getTutorialBattleById,
+  isTutorialBattleNode,
+} from "./data/tutorialBattlesN31";
+import {
+  canResolveTutorialBattle,
+  resolveTutorialBattleVictory,
+  isTutorialBattleResolved,
+  getTutorialBattleEnemies,
+  getTutorialBattleReward,
+} from "./systems/tutorialBattleSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -394,6 +409,18 @@ function exposeTestApi(): void {
   w.resolveTutorialEventChoice = (s: any, eventId: string, choiceId: string) =>
     resolveTutorialEventChoice(s, eventId, choiceId);
   w.isTutorialEventResolved = (s: any, eventId: string) => isTutorialEventResolved(s, eventId);
+
+  // C3c：N3.1 普通战斗（不包含 Boss / 劫匪特殊战 / 灰烬母巢精英）
+  w.getN31TutorialBattles = getN31TutorialBattles;
+  w.getTutorialBattleByNodeId = (nodeId: string) => getTutorialBattleByNodeId(nodeId);
+  w.getTutorialBattleById = (battleId: string) => getTutorialBattleById(battleId);
+  w.isTutorialBattleNode = (nodeId: string) => isTutorialBattleNode(nodeId);
+  w.getTutorialBattleEnemies = (battleId: string) => getTutorialBattleEnemies(battleId);
+  w.getTutorialBattleReward = (battleId: string) => getTutorialBattleReward(battleId);
+  w.canResolveTutorialBattle = (s: any, battleId: string) => canResolveTutorialBattle(s, battleId);
+  w.resolveTutorialBattleVictory = (s: any, battleId: string) =>
+    resolveTutorialBattleVictory(s, battleId);
+  w.isTutorialBattleResolved = (s: any, battleId: string) => isTutorialBattleResolved(s, battleId);
 }
 
 // 只在开发/测试模式暴露测试 API

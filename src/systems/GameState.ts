@@ -36,6 +36,12 @@ import {
   TutorialEventProgressState,
 } from "./tutorialEventSystem";
 
+// C3c：N3.1 普通战斗系统（胜利结算；不实现失败、不大改 BattleScene）
+import {
+  createInitialTutorialBattleState,
+  TutorialBattleProgressState,
+} from "./tutorialBattleSystem";
+
 // 地图格子类型
 export type CellType =
   | "obstacle"
@@ -202,6 +208,11 @@ export interface GameState {
     // 零件相关效果暂只用 tutorialEventFlags 表示，不新增 parts:number 字段
     resolvedTutorialEventIds: string[];
     tutorialEventFlags: string[];
+
+    // C3c：N3.1 普通战斗结算状态（跨局保留，不影响其他系统）
+    // 仅记录胜利结算；不包含 Boss / 劫匪特殊战 / 灰烬母巢精英
+    resolvedTutorialBattleIds: string[];
+    tutorialBattleFlags: string[];
 }
 
 // 初始游戏状态
@@ -294,6 +305,9 @@ export function createInitialGameState(): GameState {
 
     // C3b：N3.1 教学事件（初始为空列表，结算事件后写入）
     ...createInitialTutorialEventState(),
+
+    // C3c：N3.1 普通战斗（初始为空列表，胜利结算后写入；不包含 Boss / 劫匪 / 母巢）
+    ...createInitialTutorialBattleState(),
   };
 }
 
@@ -1026,6 +1040,16 @@ export function resetGameState(): void {
   }
   if (oldEventFlags) {
     globalGameState.tutorialEventFlags = oldEventFlags;
+  }
+
+  // C3c：保留 N3.1 普通战斗胜利进度（与 Demo 主线一致的跨局保留策略）
+  const oldResolvedBattleIds = globalGameState?.resolvedTutorialBattleIds;
+  const oldBattleFlags = globalGameState?.tutorialBattleFlags;
+  if (oldResolvedBattleIds) {
+    globalGameState.resolvedTutorialBattleIds = oldResolvedBattleIds;
+  }
+  if (oldBattleFlags) {
+    globalGameState.tutorialBattleFlags = oldBattleFlags;
   }
 }
 
