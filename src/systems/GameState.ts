@@ -7,6 +7,12 @@ import {
   initializeCityRevivalStates,
 } from "./cityRevivalSystem";
 
+// C1：Demo 中型地图底座
+import {
+  createInitialDemoWorldMapState,
+  DemoWorldMapState,
+} from "./demoWorldMapSystem";
+
 // 地图格子类型
 export type CellType =
   | "obstacle"
@@ -141,6 +147,16 @@ export interface GameState {
     expeditionCycle: number;
     /** 已应用过订单复兴加成的订单ID列表，防止同一订单重复加复兴（阶段13.2） */
     cityRevivalAppliedOrderIds: string[];
+
+    // C1：Demo 中型地图底座（跨局保留，不影响城市复兴和工具系统）
+    /** 当前所在 Demo 世界地图节点 ID，起点默认 greybridge（灰桥镇） */
+    currentDemoWorldNodeId: string;
+    /** 已解锁的 Demo 世界节点 ID 列表 */
+    unlockedDemoWorldNodeIds: string[];
+    /** 已解锁的 Demo 路线段 ID 列表 */
+    unlockedDemoWorldRouteIds: string[];
+    /** 已知的传闻节点 ID（信息边界） */
+    knownDemoWorldRumorIds: string[];
 }
 
 // 初始游戏状态
@@ -221,6 +237,9 @@ export function createInitialGameState(): GameState {
     cityRevivalStates: initializeCityRevivalStates(),
     expeditionCycle: 0,
     cityRevivalAppliedOrderIds: [],
+
+    // C1：Demo 中型地图底座
+    ...createInitialDemoWorldMapState(),
   };
 }
 
@@ -869,20 +888,38 @@ export function setGameState(state: GameState): void {
 
 export function resetGameState(): void {
   // 保留城市复兴状态（阶段13.1）：跨局持久化，不因 reset 清空
-  // 注意：必须在 createInitialGameState() 之前保存 oldRevival，
-  // 因为 createInitialGameState() 会创建新的 cityRevivalStates，
-  // 之后 restore 的 oldRevival 指向的仍是 create 之前的老引用
   const oldRevival = globalGameState?.cityRevivalStates;
   const oldCycle = globalGameState?.expeditionCycle ?? 0;
   const oldAppliedOrderIds = globalGameState?.cityRevivalAppliedOrderIds ?? [];
+
+  // C1：保留 Demo 地图状态（与城市复兴一致的跨局保留策略）
+  const oldDemoNode = globalGameState?.currentDemoWorldNodeId;
+  const oldDemoUnlockedNodes = globalGameState?.unlockedDemoWorldNodeIds;
+  const oldDemoUnlockedRoutes = globalGameState?.unlockedDemoWorldRouteIds;
+  const oldDemoKnownRumors = globalGameState?.knownDemoWorldRumorIds;
+
   globalGameState = createInitialGameState();
-  // 此时 globalGameState.cityRevivalStates 是 createInitialGameState() 创建的新城市对象
-  // 需要用旧引用覆盖，以保留旧的 progress/level/passiveGrowthCount
+
+  // 恢复城市复兴状态
   if (oldRevival) {
     globalGameState.cityRevivalStates = oldRevival;
   }
   globalGameState.expeditionCycle = oldCycle;
   globalGameState.cityRevivalAppliedOrderIds = oldAppliedOrderIds;
+
+  // C1：恢复 Demo 地图状态
+  if (oldDemoNode) {
+    globalGameState.currentDemoWorldNodeId = oldDemoNode;
+  }
+  if (oldDemoUnlockedNodes) {
+    globalGameState.unlockedDemoWorldNodeIds = oldDemoUnlockedNodes;
+  }
+  if (oldDemoUnlockedRoutes) {
+    globalGameState.unlockedDemoWorldRouteIds = oldDemoUnlockedRoutes;
+  }
+  if (oldDemoKnownRumors) {
+    globalGameState.knownDemoWorldRumorIds = oldDemoKnownRumors;
+  }
 }
 
 /**

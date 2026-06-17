@@ -136,6 +136,33 @@ import {
   formatCityRevivalStatus,
 } from "./systems/cityRevivalSystem";
 
+// C1：Demo 中型地图底座
+import {
+  DEMO_WORLD_NODES,
+  DEMO_ROUTE_SEGMENTS,
+  getDemoWorldNodeById,
+  getDemoWorldRouteById,
+  getDemoWorldNodes,
+  getDemoWorldRoutes,
+} from "./data/demoWorldMap";
+import {
+  createInitialDemoWorldMapState,
+  getAllDemoWorldNodes,
+  getAllDemoWorldRoutes,
+  getDemoWorldNode,
+  getDemoWorldRoute,
+  getUnlockedDemoWorldNodes,
+  getUnlockedDemoWorldRoutes,
+  unlockDemoWorldNode,
+  unlockDemoWorldRoute,
+  isDemoWorldNodeUnlocked,
+  isDemoWorldRouteUnlocked,
+  setCurrentDemoWorldNode,
+  addKnownDemoWorldRumor,
+  getNodeInitialStatus,
+  getRouteInitialStatus,
+} from "./systems/demoWorldMapSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -243,6 +270,29 @@ function exposeTestApi(): void {
   w.calculateCityRevivalBonusSilver = calculateCityRevivalBonusSilver;
   w.formatCityRevivalBonusText = formatCityRevivalBonusText;
   w.formatCityRevivalStatus = formatCityRevivalStatus;
+
+  // C1：Demo 中型地图底座
+  w.DEMO_WORLD_NODES = DEMO_WORLD_NODES;
+  w.DEMO_ROUTE_SEGMENTS = DEMO_ROUTE_SEGMENTS;
+  w.getDemoWorldNodes = getDemoWorldNodes;
+  w.getDemoWorldRoutes = getDemoWorldRoutes;
+  w.getDemoWorldNodeById = getDemoWorldNodeById;
+  w.getDemoWorldRouteById = getDemoWorldRouteById;
+  w.getAllDemoWorldNodes = getAllDemoWorldNodes;
+  w.getAllDemoWorldRoutes = getAllDemoWorldRoutes;
+  w.getDemoWorldNode = getDemoWorldNode;
+  w.getDemoWorldRoute = getDemoWorldRoute;
+  w.getUnlockedDemoWorldNodes = (state: any) => getUnlockedDemoWorldNodes(state);
+  w.getUnlockedDemoWorldRoutes = (state: any) => getUnlockedDemoWorldRoutes(state);
+  w.unlockDemoWorldNode = (state: any, nodeId: string) => unlockDemoWorldNode(state, nodeId);
+  w.unlockDemoWorldRoute = (state: any, routeId: string) => unlockDemoWorldRoute(state, routeId);
+  w.isDemoWorldNodeUnlocked = (state: any, nodeId: string) => isDemoWorldNodeUnlocked(state, nodeId);
+  w.isDemoWorldRouteUnlocked = (state: any, routeId: string) => isDemoWorldRouteUnlocked(state, routeId);
+  w.setCurrentDemoWorldNode = (state: any, nodeId: string) => setCurrentDemoWorldNode(state, nodeId);
+  w.addKnownDemoWorldRumor = (state: any, rumorNodeId: string) => addKnownDemoWorldRumor(state, rumorNodeId);
+  w.getNodeInitialStatus = getNodeInitialStatus;
+  w.getRouteInitialStatus = getRouteInitialStatus;
+  w.createInitialDemoWorldMapState = createInitialDemoWorldMapState;
 }
 
 // 只在开发/测试模式暴露测试 API
