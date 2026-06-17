@@ -299,3 +299,71 @@ export function applyOrderCityRevival(
 
   return { updatedStates, updatedAppliedOrderIds };
 }
+
+// ==================== 城市复兴等级反馈（阶段13.3） ====================
+
+/**
+ * 获取城市复兴奖励加成百分比
+ * 规则：
+ *  - Lv.0：+0%
+ *  - Lv.1：+5%
+ *  - Lv.2：+10%
+ *  - Lv.3：+15%
+ *
+ * @param level 城市复兴等级（0-3）
+ * @returns 奖励加成百分比（0/5/10/15）
+ */
+export function getCityRevivalRewardBonus(level: number): number {
+  switch (level) {
+    case 1: return 5;
+    case 2: return 10;
+    case 3: return 15;
+    default: return 0;
+  }
+}
+
+/**
+ * 根据奖励加成百分比计算实际额外银币奖励（向下取整）
+ *
+ * @param baseRewardSilver 基础银币奖励
+ * @param bonusPercent 奖励加成百分比
+ * @returns 额外增加的银币数量
+ */
+export function calculateCityRevivalBonusSilver(
+  baseRewardSilver: number,
+  bonusPercent: number,
+): number {
+  if (bonusPercent <= 0) return 0;
+  return Math.floor(baseRewardSilver * bonusPercent / 100);
+}
+
+/**
+ * 格式化城市复兴简短状态文案（用于 UI 轻量显示）
+ * 例如："灰烬驿城 · 复兴 Lv.1 重建中 · 28%"
+ */
+export function formatCityRevivalStatus(
+  cityId: string,
+  revivalStates: Record<string, CityRevivalState> | undefined,
+): string {
+  if (!revivalStates) return "";
+  const state = revivalStates[cityId];
+  if (!state) return "";
+  const label = getCityRevivalLevelLabel(state.level);
+  return `${getCityDisplayName(cityId)} · 复兴 Lv.${state.level} ${label} · ${state.progress}%`;
+}
+
+/**
+ * 格式化订单复兴结果的轻量文案
+ * 例如："城市复兴加成 +5%（灰烬驿城 Lv.1）"
+ */
+export function formatCityRevivalBonusText(
+  cityId: string,
+  level: number,
+  bonusSilver: number,
+): string {
+  const bonusPercent = getCityRevivalRewardBonus(level);
+  if (bonusPercent <= 0 || bonusSilver <= 0) {
+    return "";
+  }
+  return `城市复兴加成 +${bonusPercent}%（${getCityDisplayName(cityId)} Lv.${level}，额外 +${bonusSilver} 银币）`;
+}

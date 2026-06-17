@@ -37,7 +37,13 @@ import { createSuccessExpeditionResult, createRetreatedExpeditionResult } from "
 import { getToolById, getActiveToolEffectSummary, applyRetreatCostDiscount, ToolEffectContext } from "../systems/toolSystem";
 import { checkRetreatCost, getRetreatCostText, RetreatCostCheck } from "../systems/retreatSystem";
 import { isDevCheatEnabled } from "../systems/devConfig";
-import { applyOrderCityRevival, calculateOrderRevivalGain } from "../systems/cityRevivalSystem";
+import {
+  applyOrderCityRevival,
+  calculateOrderRevivalGain,
+  getCityRevivalRewardBonus,
+  calculateCityRevivalBonusSilver,
+  formatCityRevivalBonusText,
+} from "../systems/cityRevivalSystem";
 
 /**
  * MapScene - 地图探索场景（V2 稳定重构版）
@@ -1472,6 +1478,18 @@ export class MapScene extends Phaser.Scene {
         gameState.cityContributions[order!.cityId] = 0;
       }
       gameState.cityContributions[order!.cityId] += result.cityContribution;
+
+      // 阶段13.3：根据"交付前"目标城市 level 计算奖励加成
+      // 注意：必须在 13.2 progress gain 之前读取 level，避免本单升级后用新等级重复加成
+      const cityStateBeforeRevival = gameState.cityRevivalStates[order!.cityId];
+      const levelBeforeRevival = cityStateBeforeRevival ? cityStateBeforeRevival.level : 0;
+      const bonusPercent = getCityRevivalRewardBonus(levelBeforeRevival);
+      const bonusSilver = calculateCityRevivalBonusSilver(result.rewardSilver, bonusPercent);
+      if (bonusSilver > 0) {
+        gameState.silver += bonusSilver;
+        const bonusText = formatCityRevivalBonusText(order!.cityId, levelBeforeRevival, bonusSilver);
+        console.log(`[城市复兴] 订单 ${order!.id} 交付成功：${bonusText}`);
+      }
 
       // 阶段10.2：标记订单完成
       markOrderCompleted(order!.id);

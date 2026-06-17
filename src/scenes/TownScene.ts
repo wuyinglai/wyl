@@ -1,5 +1,11 @@
 import Phaser from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
+import {
+  getAllCityRevivalStates,
+  getCityRevivalLevelLabel,
+  getCityDisplayName,
+  calculateCityRevivalLevel,
+} from "../systems/cityRevivalSystem";
 import { getAllTools, formatToolSummary, isToolOwned, tryBuyTool, getRarityLabel } from "../systems/toolSystem";
 
 /**
@@ -104,6 +110,26 @@ export class TownScene extends Phaser.Scene {
     const infoBox = this.add.graphics();
     infoBox.lineStyle(1, 0x4488ff, 0.3);
     infoBox.strokeRect(infoX - 15, infoStartY - 18, 200, infoValues.length * infoLineH + 24);
+
+    // ========== 阶段13.3：城市复兴轻量显示（不挡按钮、不做复杂UI） ==========
+    const revivalStartY = infoStartY + infoValues.length * infoLineH + 32;
+    const revivalLabelStyle = { fontSize: "14px", color: "#88ccff", fontFamily: "monospace" };
+    const revivalTextStyle = { fontSize: "12px", color: "#aacccc", fontFamily: "monospace" };
+    this.add.text(infoX - 15, revivalStartY - 2, "城市复兴", revivalLabelStyle).setOrigin(0, 0.5);
+    const allRevival = getAllCityRevivalStates(gs.cityRevivalStates);
+    if (allRevival.length > 0) {
+      allRevival.forEach((cs, idx) => {
+        const cityName = getCityDisplayName(cs.cityId);
+        const label = getCityRevivalLevelLabel(cs.level);
+        const y = revivalStartY + 20 + idx * 22;
+        this.add.text(
+          infoX - 15,
+          y,
+          `${cityName} · Lv.${cs.level} ${label} · ${cs.progress}%`,
+          revivalTextStyle
+        ).setOrigin(0, 0.5);
+      });
+    }
 
     // ========== 中间：设施按钮区 ==========
     const facilityX = 280;

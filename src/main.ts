@@ -130,6 +130,10 @@ import {
   applyOrderCityRevival,
   calculateOrderRevivalGain,
   hasOrderRevivalApplied,
+  getCityRevivalRewardBonus,
+  calculateCityRevivalBonusSilver,
+  formatCityRevivalBonusText,
+  formatCityRevivalStatus,
 } from "./systems/cityRevivalSystem";
 
 // 测试 API（仅开发/测试模式暴露）
@@ -234,6 +238,11 @@ function exposeTestApi(): void {
   w.applyOrderCityRevival = applyOrderCityRevival;
   w.calculateOrderRevivalGain = calculateOrderRevivalGain;
   w.hasOrderRevivalApplied = hasOrderRevivalApplied;
+  // 城市复兴系统（阶段13.3）：等级反馈 + 奖励加成
+  w.getCityRevivalRewardBonus = getCityRevivalRewardBonus;
+  w.calculateCityRevivalBonusSilver = calculateCityRevivalBonusSilver;
+  w.formatCityRevivalBonusText = formatCityRevivalBonusText;
+  w.formatCityRevivalStatus = formatCityRevivalStatus;
 }
 
 // 只在开发/测试模式暴露测试 API
