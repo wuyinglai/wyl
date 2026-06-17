@@ -30,6 +30,12 @@ import {
   TutorialRouteProgressState,
 } from "./tutorialRouteSystem";
 
+// C3b：N3.1 教学事件系统（零件暂时用 flag 表示，不新增 parts:number）
+import {
+  createInitialTutorialEventState,
+  TutorialEventProgressState,
+} from "./tutorialEventSystem";
+
 // 地图格子类型
 export type CellType =
   | "obstacle"
@@ -191,6 +197,11 @@ export interface GameState {
     currentTutorialNodeId: string | null;
     completedTutorialNodeIds: string[];
     skippedOptionalTutorialNodeIds: string[];
+
+    // C3b：N3.1 教学事件结算状态（跨局保留，不影响 C1 / C2 / C3a / 城市复兴 / 工具系统 / 订单系统）
+    // 零件相关效果暂只用 tutorialEventFlags 表示，不新增 parts:number 字段
+    resolvedTutorialEventIds: string[];
+    tutorialEventFlags: string[];
 }
 
 // 初始游戏状态
@@ -280,6 +291,9 @@ export function createInitialGameState(): GameState {
 
     // C3a：N3.1 固定教学路线（不自动启动，由外部调用 startN31TutorialRoute 后设置）
     ...createInitialTutorialRouteProgressState(),
+
+    // C3b：N3.1 教学事件（初始为空列表，结算事件后写入）
+    ...createInitialTutorialEventState(),
   };
 }
 
@@ -990,7 +1004,7 @@ export function resetGameState(): void {
     globalGameState.completedMainQuestOrderIds = oldCompletedMainQuestIds;
   }
 
-  // C3a：恢复 N3.1 教学路线进度（null 则保留新初始化的 null）
+  // C3a：保留 N3.1 教学路线进度（null 则保留新初始化的 null）
   if (oldTutorialRouteId !== undefined) {
     globalGameState.activeTutorialRouteId = oldTutorialRouteId;
   }
@@ -1002,6 +1016,16 @@ export function resetGameState(): void {
   }
   if (oldTutorialSkippedIds) {
     globalGameState.skippedOptionalTutorialNodeIds = oldTutorialSkippedIds;
+  }
+
+  // C3b：保留 N3.1 教学事件进度（与 Demo 主线一致的跨局保留策略）
+  const oldResolvedEventIds = globalGameState?.resolvedTutorialEventIds;
+  const oldEventFlags = globalGameState?.tutorialEventFlags;
+  if (oldResolvedEventIds) {
+    globalGameState.resolvedTutorialEventIds = oldResolvedEventIds;
+  }
+  if (oldEventFlags) {
+    globalGameState.tutorialEventFlags = oldEventFlags;
   }
 }
 

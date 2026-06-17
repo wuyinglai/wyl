@@ -207,6 +207,18 @@ import {
   getAvailableNextTutorialNodes,
 } from "./systems/tutorialRouteSystem";
 
+// C3b：N3.1 教学事件
+import {
+  getN31TutorialEvents,
+  getTutorialEventByNodeId,
+  getTutorialEventById,
+} from "./data/tutorialEventsN31";
+import {
+  canResolveTutorialEvent,
+  resolveTutorialEventChoice,
+  isTutorialEventResolved,
+} from "./systems/tutorialEventSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -373,6 +385,15 @@ function exposeTestApi(): void {
   w.isTutorialNodeCompleted = (s: any, nodeId: string) => isTutorialNodeCompleted(s, nodeId);
   w.isTutorialRouteCompleted = (s: any) => isTutorialRouteCompleted(s);
   w.getAvailableNextTutorialNodes = (s: any) => getAvailableNextTutorialNodes(s);
+
+  // C3b：N3.1 教学事件
+  w.getN31TutorialEvents = getN31TutorialEvents;
+  w.getTutorialEventByNodeId = (nodeId: string) => getTutorialEventByNodeId(nodeId);
+  w.getTutorialEventById = (eventId: string) => getTutorialEventById(eventId);
+  w.canResolveTutorialEvent = (s: any, eventId: string) => canResolveTutorialEvent(s, eventId);
+  w.resolveTutorialEventChoice = (s: any, eventId: string, choiceId: string) =>
+    resolveTutorialEventChoice(s, eventId, choiceId);
+  w.isTutorialEventResolved = (s: any, eventId: string) => isTutorialEventResolved(s, eventId);
 }
 
 // 只在开发/测试模式暴露测试 API
