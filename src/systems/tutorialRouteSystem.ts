@@ -1,7 +1,9 @@
-// C3a：N3.1 固定教学路线系统函数
+// C3a.1：N3.1 固定教学路线系统函数（适配 20 天固定旅程 + 7 个平静日）
+// 平静日是固定节点，不是随机事件；不要新增 quietTravelChance / shouldAllowQuietTravel
 import {
   N31_TUTORIAL_ROUTE_NODES,
   N31_TUTORIAL_ROUTE_ID,
+  N31_STANDARD_ROUTE_DAYS,
   getN31TutorialRouteNodeById,
   TutorialRouteNode,
 } from "../data/tutorialRouteN31";
@@ -163,4 +165,47 @@ export function getAvailableNextTutorialNodes(
     }
   }
   return result;
+}
+
+// ========== 新增的日期/平静日查询函数（C3a.1） ==========
+
+/**
+ * 返回 N3.1 标准路线的固定天数（20 天）
+ */
+export function getN31StandardRouteDays(): number {
+  return N31_STANDARD_ROUTE_DAYS;
+}
+
+/**
+ * 返回 N3.1 所有平静日节点（peaceful_day）
+ */
+export function getN31PeacefulDayNodes(): TutorialRouteNode[] {
+  return N31_TUTORIAL_ROUTE_NODES.filter((n) => n.type === "peaceful_day");
+}
+
+/**
+ * 判断给定 nodeId 是否是平静日节点
+ */
+export function isPeacefulDayNode(nodeId: string): boolean {
+  const node = N31_TUTORIAL_ROUTE_NODES.find((n) => n.id === nodeId);
+  return node !== undefined && node.type === "peaceful_day";
+}
+
+/**
+ * 根据天数获取对应的路线节点（day 范围 1..20）
+ */
+export function getN31RouteNodeByDay(
+  day: number,
+): TutorialRouteNode | undefined {
+  return N31_TUTORIAL_ROUTE_NODES.find((n) => n.day === day);
+}
+
+/**
+ * 返回整条 N3.1 路线的总时间成本（每个节点 timeCostDays 之和）
+ */
+export function getN31TotalTimeCostDays(): number {
+  return N31_TUTORIAL_ROUTE_NODES.reduce(
+    (sum, node) => sum + (typeof node.timeCostDays === "number" ? node.timeCostDays : 1),
+    0,
+  );
 }

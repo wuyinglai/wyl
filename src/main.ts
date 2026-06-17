@@ -205,6 +205,11 @@ import {
   isTutorialNodeCompleted,
   isTutorialRouteCompleted,
   getAvailableNextTutorialNodes,
+  getN31StandardRouteDays,
+  getN31PeacefulDayNodes,
+  isPeacefulDayNode,
+  getN31RouteNodeByDay,
+  getN31TotalTimeCostDays,
 } from "./systems/tutorialRouteSystem";
 
 // C3b：N3.1 教学事件
@@ -418,6 +423,13 @@ function exposeTestApi(): void {
   w.isTutorialNodeCompleted = (s: any, nodeId: string) => isTutorialNodeCompleted(s, nodeId);
   w.isTutorialRouteCompleted = (s: any) => isTutorialRouteCompleted(s);
   w.getAvailableNextTutorialNodes = (s: any) => getAvailableNextTutorialNodes(s);
+
+  // C3a.1：N3.1 20 天固定旅程 + 平静日查询
+  w.getN31StandardRouteDays = getN31StandardRouteDays;
+  w.getN31PeacefulDayNodes = getN31PeacefulDayNodes;
+  w.isPeacefulDayNode = (nodeId: string) => isPeacefulDayNode(nodeId);
+  w.getN31RouteNodeByDay = (day: number) => getN31RouteNodeByDay(day);
+  w.getN31TotalTimeCostDays = getN31TotalTimeCostDays;
 
   // C3b：N3.1 教学事件
   w.getN31TutorialEvents = getN31TutorialEvents;
