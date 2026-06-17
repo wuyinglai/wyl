@@ -188,6 +188,25 @@ import {
   advanceOnSecondCityActivated,
 } from "./systems/demoMainQuestSystem";
 
+// C3a：N3.1 固定教学路线
+import {
+  getN31TutorialRouteNodes,
+  getN31TutorialRouteNodeById,
+  getFirstN31TutorialRouteNode,
+  getLastN31TutorialRouteNode,
+} from "./data/tutorialRouteN31";
+import {
+  createInitialTutorialRouteProgressState,
+  startN31TutorialRoute,
+  getCurrentTutorialRouteNode,
+  completeTutorialNode,
+  skipOptionalTutorialNode,
+  advanceToNextTutorialNode,
+  isTutorialNodeCompleted,
+  isTutorialRouteCompleted,
+  getAvailableNextTutorialNodes,
+} from "./systems/tutorialRouteSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -339,6 +358,21 @@ function exposeTestApi(): void {
   w.advanceOnDaanActivated = (s: any) => advanceOnDaanActivated(s);
   w.advanceOnSecondCityHint = (s: any) => advanceOnSecondCityHint(s);
   w.advanceOnSecondCityActivated = (s: any) => advanceOnSecondCityActivated(s);
+
+  // C3a：N3.1 固定教学路线
+  w.getN31TutorialRouteNodes = getN31TutorialRouteNodes;
+  w.getN31TutorialRouteNodeById = getN31TutorialRouteNodeById;
+  w.getFirstN31TutorialRouteNode = getFirstN31TutorialRouteNode;
+  w.getLastN31TutorialRouteNode = getLastN31TutorialRouteNode;
+  w.createInitialTutorialRouteProgressState = createInitialTutorialRouteProgressState;
+  w.startN31TutorialRoute = (s: any) => startN31TutorialRoute(s);
+  w.getCurrentTutorialRouteNode = (s: any) => getCurrentTutorialRouteNode(s);
+  w.completeTutorialNode = (s: any, nodeId: string) => completeTutorialNode(s, nodeId);
+  w.skipOptionalTutorialNode = (s: any, nodeId: string) => skipOptionalTutorialNode(s, nodeId);
+  w.advanceToNextTutorialNode = (s: any) => advanceToNextTutorialNode(s);
+  w.isTutorialNodeCompleted = (s: any, nodeId: string) => isTutorialNodeCompleted(s, nodeId);
+  w.isTutorialRouteCompleted = (s: any) => isTutorialRouteCompleted(s);
+  w.getAvailableNextTutorialNodes = (s: any) => getAvailableNextTutorialNodes(s);
 }
 
 // 只在开发/测试模式暴露测试 API

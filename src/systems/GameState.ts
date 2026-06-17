@@ -24,6 +24,12 @@ import {
   DemoMainQuestState,
 } from "./demoMainQuestSystem";
 
+// C3a：N3.1 固定教学路线系统
+import {
+  createInitialTutorialRouteProgressState,
+  TutorialRouteProgressState,
+} from "./tutorialRouteSystem";
+
 // 地图格子类型
 export type CellType =
   | "obstacle"
@@ -178,6 +184,13 @@ export interface GameState {
     activeMainQuestOrderId: string;
     /** 已完成的主线订单 ID 列表 */
     completedMainQuestOrderIds: string[];
+
+    // C3a：N3.1 固定教学路线进度（跨局保留，不影响 C1 / C2 / 城市复兴 / 工具系统 / 订单系统）
+    // 初始为 null，由外部调用 startN31TutorialRoute 后才设置，不在 createInitialGameState 自动启动
+    activeTutorialRouteId: string | null;
+    currentTutorialNodeId: string | null;
+    completedTutorialNodeIds: string[];
+    skippedOptionalTutorialNodeIds: string[];
 }
 
 // 初始游戏状态
@@ -264,6 +277,9 @@ export function createInitialGameState(): GameState {
 
     // C2：Demo 主线状态
     ...createInitialDemoMainQuestState(),
+
+    // C3a：N3.1 固定教学路线（不自动启动，由外部调用 startN31TutorialRoute 后设置）
+    ...createInitialTutorialRouteProgressState(),
   };
 }
 
@@ -930,6 +946,13 @@ export function resetGameState(): void {
   const oldActiveMainQuest = globalGameState?.activeMainQuestOrderId;
   const oldCompletedMainQuestIds = globalGameState?.completedMainQuestOrderIds;
 
+  // C3a：保留 N3.1 教学路线进度（同样的跨局保留策略，不回退路线进度）
+  // 初始为 null，不会自动开始路线。
+  const oldTutorialRouteId = globalGameState?.activeTutorialRouteId;
+  const oldTutorialNodeId = globalGameState?.currentTutorialNodeId;
+  const oldTutorialCompletedIds = globalGameState?.completedTutorialNodeIds;
+  const oldTutorialSkippedIds = globalGameState?.skippedOptionalTutorialNodeIds;
+
   globalGameState = createInitialGameState();
 
   // 恢复城市复兴状态
@@ -965,6 +988,20 @@ export function resetGameState(): void {
   }
   if (oldCompletedMainQuestIds) {
     globalGameState.completedMainQuestOrderIds = oldCompletedMainQuestIds;
+  }
+
+  // C3a：恢复 N3.1 教学路线进度（null 则保留新初始化的 null）
+  if (oldTutorialRouteId !== undefined) {
+    globalGameState.activeTutorialRouteId = oldTutorialRouteId;
+  }
+  if (oldTutorialNodeId !== undefined) {
+    globalGameState.currentTutorialNodeId = oldTutorialNodeId;
+  }
+  if (oldTutorialCompletedIds) {
+    globalGameState.completedTutorialNodeIds = oldTutorialCompletedIds;
+  }
+  if (oldTutorialSkippedIds) {
+    globalGameState.skippedOptionalTutorialNodeIds = oldTutorialSkippedIds;
   }
 }
 
