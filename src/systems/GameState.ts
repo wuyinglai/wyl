@@ -2,6 +2,10 @@ import { CharacterId, createCharacterState } from "../data/characters";
 import { CharacterState } from "../data/types";
 import { CaravanPart } from "../data/caravanParts";
 import { ExpeditionResult } from "./expeditionResultSystem";
+import {
+  CityRevivalState,
+  initializeCityRevivalStates,
+} from "./cityRevivalSystem";
 
 // 地图格子类型
 export type CellType =
@@ -130,6 +134,11 @@ export interface GameState {
 
     // 已拥有工具（阶段12）：长期购买的工具，持久化存档
     ownedTools: string[];
+
+    // 城市复兴系统（阶段13.1）：跨局保留，城市被动自建进度
+    cityRevivalStates: Record<string, CityRevivalState>;
+    /** 远征轮次计数器，每次"开始新远征"时+1，用于城市被动自建防重 */
+    expeditionCycle: number;
 }
 
 // 初始游戏状态
@@ -205,6 +214,10 @@ export function createInitialGameState(): GameState {
 
     // 已拥有工具（阶段12）
     ownedTools: [],
+
+    // 城市复兴系统（阶段13.1）
+    cityRevivalStates: initializeCityRevivalStates(),
+    expeditionCycle: 0,
   };
 }
 
@@ -852,7 +865,14 @@ export function setGameState(state: GameState): void {
 }
 
 export function resetGameState(): void {
+  // 保留城市复兴状态（阶段13.1）：跨局持久化，不因 reset 清空
+  const oldRevival = globalGameState?.cityRevivalStates;
+  const oldCycle = globalGameState?.expeditionCycle ?? 0;
   globalGameState = createInitialGameState();
+  if (oldRevival) {
+    globalGameState.cityRevivalStates = oldRevival;
+  }
+  globalGameState.expeditionCycle = oldCycle;
 }
 
 /**

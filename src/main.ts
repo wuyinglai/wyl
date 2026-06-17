@@ -118,6 +118,17 @@ import {
   getRetreatCostText,
 } from "./systems/retreatSystem";
 
+// 城市复兴系统（阶段13.1）
+import {
+  applyPassiveCityRevival,
+  getCityRevivalState,
+  getAllCityRevivalStates,
+  calculateCityRevivalLevel,
+  formatCityRevivalBrief,
+  getCityDisplayName,
+  getCityRevivalLevelLabel,
+} from "./systems/cityRevivalSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -207,6 +218,15 @@ function exposeTestApi(): void {
   w.applyEncounterReduction = applyEncounterReduction;
   w.applyWeatherResistance = applyWeatherResistance;
   w.applyCaravanProtection = applyCaravanProtection;
+
+  // 城市复兴系统（阶段13.1）
+  w.applyPassiveCityRevival = applyPassiveCityRevival;
+  w.getCityRevivalState = getCityRevivalState;
+  w.getAllCityRevivalStates = getAllCityRevivalStates;
+  w.calculateCityRevivalLevel = calculateCityRevivalLevel;
+  w.formatCityRevivalBrief = formatCityRevivalBrief;
+  w.getCityDisplayName = getCityDisplayName;
+  w.getCityRevivalLevelLabel = getCityRevivalLevelLabel;
 }
 
 // 只在开发/测试模式暴露测试 API

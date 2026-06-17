@@ -1,5 +1,6 @@
 import Phaser from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
+import { applyPassiveCityRevival } from "../systems/cityRevivalSystem";
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -96,6 +97,11 @@ export class MainMenuScene extends Phaser.Scene {
     const completedOrderIds = gs.completedOrderIds;
     const cityContributions = gs.cityContributions;
     const embers = gs.embers;
+    // 城市复兴状态（阶段13.1）：跨局保留，先递增轮次再触发被动自建
+    const cityRevivalStates = gs.cityRevivalStates;
+    gs.expeditionCycle += 1;
+    const runId = String(gs.expeditionCycle);
+    gs.cityRevivalStates = applyPassiveCityRevival(cityRevivalStates, runId);
     // 清空每局临时状态
     gs.cargo = {};
     gs.silver = 50;

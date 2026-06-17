@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
 import { formatExpeditionResult } from "../systems/expeditionResultSystem";
+import { applyPassiveCityRevival } from "../systems/cityRevivalSystem";
 
 /**
  * ExpeditionResultScene.ts
@@ -117,6 +118,11 @@ export class ExpeditionResultScene extends Phaser.Scene {
    */
   private clearResultState(): void {
     const gs = getGameState();
+    // 城市复兴被动自建（阶段13.1）：每次"再来一局"触发一次
+    gs.expeditionCycle += 1;
+    const runId = String(gs.expeditionCycle);
+    gs.cityRevivalStates = applyPassiveCityRevival(gs.cityRevivalStates, runId);
+    // 清理远征相关状态
     gs.lastExpeditionResult = null;
     gs.selectedOrderId = null;
     // 重置角色选择状态，防止再来一局时角色选择判定残留
