@@ -40,7 +40,17 @@ export class CargoPrepScene extends Scene {
   private weightText: Phaser.GameObjects.Text | null = null;
   private orderStatusText: Phaser.GameObjects.Text | null = null;
   private carriedToolText: Phaser.GameObjects.Text | null = null;
-  private goodCards: Phaser.GameObjects.Container[] = [];
+
+  // 货物列表：虚拟滚动（只渲染可见项）
+  private goodCardsViewport: Phaser.GameObjects.Container | null = null;
+  private goodsScrollIndex: number = 0;
+  private goodsVisibleCount: number = 4;
+  private goodsCardHeight: number = 70;
+  private goodsCardGap: number = 10;
+  private goodsWheelHandler: ((pointer: Phaser.Input.Pointer) => void) | null = null;
+  private _windowWheelHandler: ((evt: WheelEvent) => void) | null = null;
+
+  // 工具按钮
   private toolButtons: { container: Phaser.GameObjects.Container; bg: Phaser.GameObjects.Rectangle; label: Phaser.GameObjects.Text; toolId: string }[] = [];
   // 9.1.7 调试层
   private debugText: Phaser.GameObjects.Text | null = null;
@@ -434,82 +444,190 @@ export class CargoPrepScene extends Scene {
     }
   }
 
+  /**
+   * 创建货物列表（虚拟滚动 + 明确滚动框）
+   *
+   * 布局分区（相对分辨率 1280x720）：
+   *   顶部信息区 y = 0 - 280（标题、订单、银币、工具选择）
+   *   中间货物列表区 y = 290 - 610（滚动框 + 可见卡）
+   *   底部操作区 y = 610 - 720（按钮，固定，不允许覆盖）
+   *
+   * 滚动框内：
+   *   位置：x=20, y=290, w=1240, h=320
+   *   可见卡片数：4 张（每张 70px + 10px gap）
+   *   滚动框外不创建隐藏按钮 / 隐藏 hitArea
+   */
   private createGoodsList(): void {
     const w = this.scale.width;
-    // 阶段12.3：商品列表起始位置下移，为工具选择区域留出空间
-    const startY = 400;  // 原值 250，工具区域占用约 150px
-    const cardHeight = 70;
-    const gap = 10;
-    const padding = 20;
+    const h = this.scale.height;
 
-    // 商品 ID 列表
-    const goodIds = ["grain", "medicine", "iron", "parts"];
+    // --- 明确滚动框（固定尺寸，不会溢出到按钮区域）
+    const boxX = 20;
+    const boxY = 290;
+    const boxW = w - 40;
+    const boxH = 320;
 
-    goodIds.forEach((goodId, index) => {
+    // 滚动框背景（带圆角边框，视觉上明确这是一个可滚动区域）
+    const boxBg = this.add.graphics();
+    boxBg.fillStyle(0x1a100a, 1);
+    boxBg.fillRoundedRect(boxX, boxY, boxW, boxH, 8);
+    boxBg.lineStyle(2, 0x554433, 0.6);
+    boxBg.strokeRoundedRect(boxX, boxY, boxW, boxH, 8);
+
+    // 滚动框标题（仅视觉提示）
+    const boxTitle = this.add.text(boxX + 20, boxY + 12, "货物交易（4 种）", {
+      fontSize: "13px",
+      color: "#aaaacc",
+      fontFamily: "sans-serif",
+    }).setOrigin(0, 0);
+
+    // viewport container：专门放卡片
+    this.goodCardsViewport = this.add.container(0, 0);
+    this.goodsScrollIndex = 0;
+
+    // 首次渲染
+    this.renderVisibleGoodCards();
+
+    // 滚轮监听：只有指针在滚动框区域内响应
+    // 注意：Phaser 的 input.on("wheel") 在 canvas dispatchEvent 不可靠，
+    // 这里改用 window 原生 wheel 事件。
+    this._windowWheelHandler = (evt: WheelEvent) => {
+      const canvas = this.game.canvas as HTMLCanvasElement;
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = this.scale.width / rect.width;
+      const scaleY = this.scale.height / rect.height;
+      // 将 DOM 坐标 → 游戏内部坐标
+      const px = (evt.clientX - rect.left) * scaleX;
+      const py = (evt.clientY - rect.top) * scaleY;
+
+      const inBox =
+        px >= boxX &&
+        px <= boxX + boxW &&
+        py >= boxY &&
+        py <= boxY + boxH;
+      if (!inBox) return;
+
+      const total = this.getAllGoodIdsList().length;
+      const currentMax = Math.max(0, total - this.goodsVisibleCount);
+      if (evt.deltaY > 0) {
+        this.goodsScrollIndex = Math.min(currentMax, this.goodsScrollIndex + 1);
+      } else if (evt.deltaY < 0) {
+        this.goodsScrollIndex = Math.max(0, this.goodsScrollIndex - 1);
+      }
+      this.renderVisibleGoodCards();
+    };
+    window.addEventListener("wheel", this._windowWheelHandler);
+  }
+
+  /** 获取货物 ID 列表（单独方法便于扩展） */
+  private getAllGoodIdsList(): string[] {
+    return ["grain", "medicine", "iron", "parts"];
+  }
+
+  /**
+   * 渲染当前可见货物卡
+   * 清空 viewport，只渲染 scrollIndex 起始的 visibleCount 张卡片
+   * 卡片只在滚动框区域内（y=290 到 y=610）
+   * 每张卡：左侧卡片背景 + 名称 + 单价重量 + 数量；右侧 [-] [+] Container 按钮
+   */
+  private renderVisibleGoodCards(): void {
+    const w = this.scale.width;
+    const boxY = 290;
+    // 卡片高度、间距：确保 4 张卡不超过 y=610
+    // innerStartY = boxY + 22 = 312
+    // 312 + 4 * 66 + 3 * 8 = 312 + 264 + 24 = 600 < 610 ✓
+    const cardH = 66;
+    const cardGap = 8;
+    const visibleCount = this.goodsVisibleCount;
+
+    const goodIds = this.getAllGoodIdsList();
+    const totalCount = goodIds.length;
+    this.goodsScrollIndex = Phaser.Math.Clamp(
+      this.goodsScrollIndex, 0, Math.max(0, totalCount - visibleCount)
+    );
+
+    if (!this.goodCardsViewport) return;
+
+    // 清空 viewport：销毁所有子元素（卡片/按钮/hitArea）
+    this.goodCardsViewport.removeAll(true);
+
+    const startIdx = this.goodsScrollIndex;
+    const endIdx = Math.min(startIdx + visibleCount, totalCount);
+    const visibleIds = goodIds.slice(startIdx, endIdx);
+
+    // 卡片布局：保证 4 张卡全部在 y=290~610 内
+    // 起始 y = 290 + 22 = 312
+    // cardH = 66, cardGap = 8
+    //   第 1 张：312~378
+    //   第 2 张：386~452
+    //   第 3 张：460~526
+    //   第 4 张：534~600  ← bottom=600 < 610 ✓
+    const innerStartY = boxY + 22;
+
+    for (let i = 0; i < visibleIds.length; i++) {
+      const goodId = visibleIds[i];
       const good = getGoodById(goodId);
-      if (!good) return;
+      if (!good) continue;
 
-      const y = startY + index * (cardHeight + gap);
+      const cardY = innerStartY + i * (cardH + cardGap);
 
-      // 卡片背景（仅视觉，不设 interactive）
+      // --- 卡片视觉部分（仅视觉，不设 interactive）
+      const cardW = w - 40 - 40; // 左右各 20px 边距
       const bg = this.add
-        .rectangle(w / 2, y + cardHeight / 2, w - 40, cardHeight, 0x2a1a0e)
+        .rectangle(w / 2, cardY + cardH / 2, cardW, cardH, 0x2a1a0e)
         .setStrokeStyle(1, 0x554433);
+      this.goodCardsViewport.add(bg);
 
-      // 商品名称
       const nameText = this.add
-        .text(padding, y + 10, good.name, {
+        .text(40, cardY + 10, good.name, {
           fontSize: "16px",
           color: "#d4a574",
           fontFamily: "sans-serif",
         })
         .setOrigin(0, 0);
+      this.goodCardsViewport.add(nameText);
 
-      // 单价和重量
       const infoText = this.add
-        .text(padding, y + 35, `单价：${good.basePrice}银币  重量：${good.weight}`, {
+        .text(40, cardY + 35, `单价：${good.basePrice}银币  重量：${good.weight}`, {
           fontSize: "12px",
           color: "#888888",
           fontFamily: "sans-serif",
         })
         .setOrigin(0, 0);
+      this.goodCardsViewport.add(infoText);
 
-      // 数量显示
+      const gs = getGameState();
       const countText = this.add
-        .text(w / 2, y + cardHeight / 2, "0", {
+        .text(w / 2, cardY + cardH / 2, `${gs.cargo[goodId] || 0}`, {
           fontSize: "20px",
           color: "#ffffff",
           fontFamily: "monospace",
         })
         .setOrigin(0.5);
+      this.goodCardsViewport.add(countText);
 
-      // [-] 按钮：独立 Container，直接添加到 Scene（不在 cardContainer 内）
-      // 这样按钮不受 cardContainer 内部 list 顺序和 depth 限制影响
-      // 点击区域 56x56（大于视觉 44x44），确保容易点击
-      const minusButton = this.add.container(w - 120, y + cardHeight / 2);
+      // --- [-] 按钮：Container 坐标 = 按钮视觉中心；hitArea Rectangle(-22,-22,44,44)
+      const minusX = w - 120;
+      const minusY = cardY + cardH / 2;
+      const minusButton = this.add.container(minusX, minusY);
       const minusBg = this.add.rectangle(0, 0, 44, 44, 0x554433);
       const minusLabel = this.add.text(0, 0, "-", {
         fontSize: "20px",
         color: "#ffffff",
       }).setOrigin(0.5);
       minusButton.add([minusBg, minusLabel]);
-      minusButton.setSize(56, 56);
-      minusButton.setInteractive({ useHandCursor: true });
-      minusButton.setDepth(300);
-      minusButton.setData("goodId", goodId);
+      minusButton.setSize(44, 44);
+      // 设置 data，供测试脚本查找
       minusButton.setData("action", "minus");
-
-      // 9.1.7: 命中区域边框（红色 = minus，depth=10 不遮挡按钮）
-      const minusHitBorder = this.add.rectangle(w - 120, y + cardHeight / 2, 56, 56, 0x000000, 0)
-        .setStrokeStyle(2, 0xff4444)
-        .setDepth(10);
-      this.debugHitBorders.push(minusHitBorder);
-
-      // hover 反馈：变亮
+      minusButton.setData("goodId", goodId);
+      minusButton.setInteractive(
+        new Phaser.Geom.Rectangle(-22, -22, 44, 44),
+        Phaser.Geom.Rectangle.Contains
+      );
+      minusButton.setDepth(300);
       minusButton.on("pointerover", () => {
         minusBg.setFillStyle(0x776655);
         this.lastHitTarget = `minus ${goodId}`;
-        console.log(`[CargoPrepDebug] hover minus ${goodId}`);
         this.updateDebugText();
       });
       minusButton.on("pointerout", () => {
@@ -518,39 +636,32 @@ export class CargoPrepScene extends Scene {
         this.updateDebugText();
       });
       minusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-        const logMsg = `[CargoPrepDebug] click minus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`;
-        console.log(logMsg);
-        this.debugClickLog.push(logMsg);
         this.lastHitTarget = `minus ${goodId}`;
         this.changeCargo(goodId, -1);
         this.updateDebugText(pointer);
       });
 
-      // [+] 按钮：独立 Container，直接添加到 Scene
-      const plusButton = this.add.container(w - 60, y + cardHeight / 2);
+      // --- [+] 按钮（同样的 Container 模式）
+      const plusX = w - 60;
+      const plusY = cardY + cardH / 2;
+      const plusButton = this.add.container(plusX, plusY);
       const plusBg = this.add.rectangle(0, 0, 44, 44, 0x885533);
       const plusLabel = this.add.text(0, 0, "+", {
         fontSize: "20px",
         color: "#ffffff",
       }).setOrigin(0.5);
       plusButton.add([plusBg, plusLabel]);
-      plusButton.setSize(56, 56);
-      plusButton.setInteractive({ useHandCursor: true });
-      plusButton.setDepth(300);
-      plusButton.setData("goodId", goodId);
+      plusButton.setSize(44, 44);
       plusButton.setData("action", "plus");
-
-      // 9.1.7: 命中区域边框（绿色 = plus，depth=10 不遮挡按钮）
-      const plusHitBorder = this.add.rectangle(w - 60, y + cardHeight / 2, 56, 56, 0x000000, 0)
-        .setStrokeStyle(2, 0x44ff44)
-        .setDepth(10);
-      this.debugHitBorders.push(plusHitBorder);
-
-      // hover 反馈：变亮
+      plusButton.setData("goodId", goodId);
+      plusButton.setInteractive(
+        new Phaser.Geom.Rectangle(-22, -22, 44, 44),
+        Phaser.Geom.Rectangle.Contains
+      );
+      plusButton.setDepth(300);
       plusButton.on("pointerover", () => {
         plusBg.setFillStyle(0xaa7744);
         this.lastHitTarget = `plus ${goodId}`;
-        console.log(`[CargoPrepDebug] hover plus ${goodId}`);
         this.updateDebugText();
       });
       plusButton.on("pointerout", () => {
@@ -559,95 +670,81 @@ export class CargoPrepScene extends Scene {
         this.updateDebugText();
       });
       plusButton.on("pointerdown", (pointer: Phaser.Input.Pointer) => {
-        const logMsg = `[CargoPrepDebug] click plus ${goodId} at pointer=(${pointer.x}, ${pointer.y})`;
-        console.log(logMsg);
-        this.debugClickLog.push(logMsg);
         this.lastHitTarget = `plus ${goodId}`;
         this.changeCargo(goodId, 1);
         this.updateDebugText(pointer);
       });
 
-      // Tooltip：绑定到卡片背景上（仅非按钮区域）
-      // 使用 nameText 作为 tooltip 触发区域，避免遮挡按钮
+      // --- Tooltip：绑定到 nameText（仅卡片文本，不遮挡按钮
       nameText.setInteractive();
       nameText.on("pointerover", () => {
         if (this.tooltipManager) {
-          this.tooltipManager.show(
-            {
-              title: good.name,
-              lines: [
-                good.description,
-                `单价：${good.basePrice}银币`,
-                `重量：${good.weight}`,
-                `标签：${good.tags.join(", ")}`,
-              ],
-            },
-            w / 2,
-            y
-          );
+          this.tooltipManager.show({
+            title: good.name,
+            lines: [
+              good.description,
+              `单价：${good.basePrice}银币`,
+              `重量：${good.weight}`,
+              `标签：${good.tags.join(", ")}`,
+            ],
+          }, w / 2, cardY);
         }
       });
-
       nameText.on("pointerout", () => {
-        if (this.tooltipManager) {
-          this.tooltipManager.hide();
-        }
+        if (this.tooltipManager) this.tooltipManager.hide();
       });
-
-      // 保存引用以便更新（只保存视觉元素到 cardContainer）
-      const cardContainer = this.add.container(0, 0);
-      cardContainer.add([bg, nameText, infoText, countText]);
-      this.goodCards.push(cardContainer);
-
-      // 保存 countText 引用
-      (this.goodCards[index] as any).countText = countText;
-      (this.goodCards[index] as any).goodId = goodId;
-    });
+    }
   }
 
   private createBottomButtons(): void {
     const w = this.scale.width;
     const h = this.scale.height;
-    const btnY = h - 50;
+    // 底部操作区：预留 y=610 到 y=720 约 110px，保证不与货物卡片重叠
+    const btnAreaY = 610;
+    const btnHeight = 44;
 
-    // 辅助函数：创建按钮 Container（bg + label 合为一体，避免 Text 拦截点击）
+    // 辅助：创建按钮 Container（bg + label）
     const makeButton = (
       x: number, y: number, bw: number, bh: number, color: number,
-      label: string, fontSize: string, fontColor: string, handler: () => void,
+      label: string, handler: () => void,
     ): Phaser.GameObjects.Container => {
       const btn = this.add.container(x, y);
       const bg = this.add.rectangle(0, 0, bw, bh, color);
       const txt = this.add.text(0, 0, label, {
-        fontSize,
-        color: fontColor,
+        fontSize: "14px",
+        color: "#ffffff",
+        fontFamily: "sans-serif",
         fontStyle: label === "开始远征" ? "bold" : undefined,
       }).setOrigin(0.5);
       btn.add([bg, txt]);
       btn.setSize(bw, bh);
-      btn.setInteractive(new Phaser.Geom.Rectangle(-bw / 2, -bh / 2, bw, bh), Phaser.Geom.Rectangle.Contains);
+      btn.setInteractive(
+        new Phaser.Geom.Rectangle(-bw / 2, -bh / 2, bw, bh),
+        Phaser.Geom.Rectangle.Contains
+      );
       btn.setDepth(500);
       btn.on("pointerdown", handler);
       return btn;
     };
 
-    // 一键装载
-    makeButton(80, btnY, 140, 40, 0x4a7c59, "一键装载订单", "14px", "#ffffff", () => {
+    // 一键装载订单（左下）
+    makeButton(100, btnAreaY + btnHeight / 2, 160, btnHeight, 0x4a7c59, "一键装载订单", () => {
       this.loadOrderRequirements();
     });
 
-    // 清空
-    makeButton(230, btnY, 80, 40, 0x7c4a4a, "清空", "14px", "#ffffff", () => {
+    // 清空（左）
+    makeButton(260, btnAreaY + btnHeight / 2, 80, btnHeight, 0x7c4a4a, "清空", () => {
       this.clearCargo();
     });
 
-    // 开始远征
-    makeButton(w - 100, btnY, 140, 40, 0x885533, "开始远征", "16px", "#ffffff", () => {
-      this.startExpedition();
+    // 返回角色选择（右二）
+    makeButton(w - 240, btnAreaY + btnHeight / 2, 120, btnHeight, 0x555555, "返回角色选择", () => {
+      this.scene.start("CharacterSelectScene");
     });
 
-    // 返回角色选择
-    makeButton(w - 260, btnY, 120, 40, 0x555555, "返回角色选择", "14px", "#aaaaaa", () => {
-      this.scene.start("CharacterSelectScene");
+    // 开始远征（右下）
+    makeButton(w - 80, btnAreaY + btnHeight / 2, 140, btnHeight, 0x885533, "开始远征", () => {
+      this.startExpedition();
     });
 
     // ESC 返回角色选择
@@ -807,15 +904,8 @@ export class CargoPrepScene extends Scene {
       this.carriedToolText.setText(carriedText);
     }
 
-    // 更新商品数量
-    for (const card of this.goodCards) {
-      const goodId = (card as any).goodId;
-      const countText = (card as any).countText;
-      if (goodId && countText) {
-        const count = gameState.cargo[goodId] || 0;
-        countText.setText(count.toString());
-      }
-    }
+    // 重新渲染货物卡片（数量、按钮均从当前状态重建）
+    this.renderVisibleGoodCards();
   }
 
   private startExpedition(): void {
@@ -871,6 +961,26 @@ export class CargoPrepScene extends Scene {
 
   shutdown(): void {
     this.input.keyboard?.off("keydown-ESC");
+    // 移除货物列表的滚轮事件（旧的 Phaser input 绑定）
+    if (this.goodsWheelHandler) {
+      this.input.off("wheel", this.goodsWheelHandler);
+      this.goodsWheelHandler = null;
+    }
+    // 移除 window wheel 监听器
+    if (this._windowWheelHandler) {
+      window.removeEventListener("wheel", this._windowWheelHandler);
+      this._windowWheelHandler = null;
+    }
+    // 销毁 viewport（卡片、按钮、hitArea 一并清除）
+    if (this.goodCardsViewport) {
+      this.goodCardsViewport.destroy();
+      this.goodCardsViewport = null;
+    }
+    // 工具按钮也清理
+    for (const btn of this.toolButtons) {
+      if (btn.container && btn.container.active) btn.container.destroy();
+    }
+    this.toolButtons = [];
     if (this.tooltipManager) {
       this.tooltipManager.hide();
     }
