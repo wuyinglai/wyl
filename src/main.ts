@@ -234,6 +234,24 @@ import {
   getTutorialBattleReward,
 } from "./systems/tutorialBattleSystem";
 
+// C3d：N3.1 特殊战斗（劫匪抢货战；protect_cargo + cargoIntegrity）
+import {
+  getN31TutorialSpecialBattles,
+  getTutorialSpecialBattleByNodeId,
+  getTutorialSpecialBattleById,
+  isTutorialSpecialBattleNode,
+} from "./data/tutorialSpecialBattlesN31";
+import {
+  getTutorialSpecialBattleObjectives,
+  getTutorialSpecialBattleEnemies,
+  getTutorialSpecialBattleReward,
+  createInitialSpecialBattleObjectiveState,
+  canResolveTutorialSpecialBattle,
+  resolveTutorialSpecialBattleVictory,
+  resolveTutorialSpecialBattleCargoLoss,
+  isTutorialSpecialBattleResolved,
+} from "./systems/tutorialSpecialBattleSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -421,6 +439,30 @@ function exposeTestApi(): void {
   w.resolveTutorialBattleVictory = (s: any, battleId: string) =>
     resolveTutorialBattleVictory(s, battleId);
   w.isTutorialBattleResolved = (s: any, battleId: string) => isTutorialBattleResolved(s, battleId);
+
+  // C3d：N3.1 特殊战斗（劫匪抢货战：protect_cargo + cargoIntegrity）
+  w.getN31TutorialSpecialBattles = getN31TutorialSpecialBattles;
+  w.getTutorialSpecialBattleByNodeId = (nodeId: string) =>
+    getTutorialSpecialBattleByNodeId(nodeId);
+  w.getTutorialSpecialBattleById = (specialBattleId: string) =>
+    getTutorialSpecialBattleById(specialBattleId);
+  w.isTutorialSpecialBattleNode = (nodeId: string) => isTutorialSpecialBattleNode(nodeId);
+  w.getTutorialSpecialBattleObjectives = (specialBattleId: string) =>
+    getTutorialSpecialBattleObjectives(specialBattleId);
+  w.getTutorialSpecialBattleEnemies = (specialBattleId: string) =>
+    getTutorialSpecialBattleEnemies(specialBattleId);
+  w.getTutorialSpecialBattleReward = (specialBattleId: string) =>
+    getTutorialSpecialBattleReward(specialBattleId);
+  w.createInitialSpecialBattleObjectiveState = (specialBattleId: string) =>
+    createInitialSpecialBattleObjectiveState(specialBattleId);
+  w.canResolveTutorialSpecialBattle = (s: any, specialBattleId: string) =>
+    canResolveTutorialSpecialBattle(s, specialBattleId);
+  w.resolveTutorialSpecialBattleVictory = (s: any, specialBattleId: string) =>
+    resolveTutorialSpecialBattleVictory(s, specialBattleId);
+  w.resolveTutorialSpecialBattleCargoLoss = (s: any, specialBattleId: string, loss: number) =>
+    resolveTutorialSpecialBattleCargoLoss(s, specialBattleId, loss);
+  w.isTutorialSpecialBattleResolved = (s: any, specialBattleId: string) =>
+    isTutorialSpecialBattleResolved(s, specialBattleId);
 }
 
 // 只在开发/测试模式暴露测试 API

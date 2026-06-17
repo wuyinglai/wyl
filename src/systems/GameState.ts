@@ -213,6 +213,12 @@ export interface GameState {
     // 仅记录胜利结算；不包含 Boss / 劫匪特殊战 / 灰烬母巢精英
     resolvedTutorialBattleIds: string[];
     tutorialBattleFlags: string[];
+
+    // C3d：N3.1 特殊战斗结算状态（劫匪抢货战），保护货物目标
+    // 不属于普通战斗 / 不属于 Boss / 不属于灰烬母巢；跨局保留，不影响其他系统
+    resolvedTutorialSpecialBattleIds: string[];
+    tutorialSpecialBattleFlags: string[];
+    tutorialSpecialBattleCargoIntegrityById: Record<string, number>;
 }
 
 // 初始游戏状态
@@ -308,6 +314,11 @@ export function createInitialGameState(): GameState {
 
     // C3c：N3.1 普通战斗（初始为空列表，胜利结算后写入；不包含 Boss / 劫匪 / 母巢）
     ...createInitialTutorialBattleState(),
+
+    // C3d：N3.1 特殊战斗（劫匪抢货战；protect_cargo 目标 + 货物完整度）
+    resolvedTutorialSpecialBattleIds: [],
+    tutorialSpecialBattleFlags: [],
+    tutorialSpecialBattleCargoIntegrityById: {},
   };
 }
 
@@ -1050,6 +1061,20 @@ export function resetGameState(): void {
   }
   if (oldBattleFlags) {
     globalGameState.tutorialBattleFlags = oldBattleFlags;
+  }
+
+  // C3d：保留 N3.1 特殊战斗（劫匪抢货战）进度与货物完整度
+  const oldResolvedSpecialIds = globalGameState?.resolvedTutorialSpecialBattleIds;
+  const oldSpecialFlags = globalGameState?.tutorialSpecialBattleFlags;
+  const oldCargoIntegrity = globalGameState?.tutorialSpecialBattleCargoIntegrityById;
+  if (oldResolvedSpecialIds) {
+    globalGameState.resolvedTutorialSpecialBattleIds = oldResolvedSpecialIds;
+  }
+  if (oldSpecialFlags) {
+    globalGameState.tutorialSpecialBattleFlags = oldSpecialFlags;
+  }
+  if (oldCargoIntegrity) {
+    globalGameState.tutorialSpecialBattleCargoIntegrityById = oldCargoIntegrity;
   }
 }
 
