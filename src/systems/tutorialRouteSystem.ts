@@ -209,3 +209,88 @@ export function getN31TotalTimeCostDays(): number {
     0,
   );
 }
+
+// ========== C3f.2：N3.1 路线测试重置函数 ==========
+
+/**
+ * 重置 N3.1 教学路线所有相关字段（测试用）
+ * 不影响工具系统、城市复兴、CargoPrep、订单系统等其他模块
+ */
+export interface N31TutorialRouteResetState {
+  // 路线状态
+  activeTutorialRouteId?: string | null;
+  currentTutorialNodeId?: string | null;
+  completedTutorialNodeIds?: string[];
+  skippedOptionalTutorialNodeIds?: string[];
+  // 事件状态
+  resolvedTutorialEventIds?: string[];
+  tutorialEventFlags?: string[];
+  // 战斗状态
+  resolvedTutorialBattleIds?: string[];
+  tutorialBattleFlags?: string[];
+  // 特殊战斗状态
+  resolvedTutorialSpecialBattleIds?: string[];
+  tutorialSpecialBattleFlags?: string[];
+  tutorialSpecialBattleCargoIntegrityById?: Record<string, number>;
+  // 精英战状态
+  resolvedTutorialEliteBattleIds?: string[];
+  tutorialEliteBattleFlags?: string[];
+  // 资源字段（N3.1 路线专用）
+  day?: number;
+  food?: number;
+  spareParts?: number;
+  silver?: number;
+  morale?: number;
+  caravanHp?: number;
+  caravanMaxHp?: number;
+  mainOrderDeadlineDays?: number;
+  emberSeeds?: number;
+  ancientMemoryFragments?: number;
+  ashMaterials?: number;
+  enemyIntel?: number;
+}
+
+export function resetN31TutorialRouteForTest(
+  state: N31TutorialRouteResetState,
+): N31TutorialRouteResetState {
+  const next: N31TutorialRouteResetState = { ...state };
+
+  // 重置路线状态
+  next.activeTutorialRouteId = null;
+  next.currentTutorialNodeId = null;
+  next.completedTutorialNodeIds = [];
+  next.skippedOptionalTutorialNodeIds = [];
+
+  // 重置事件状态
+  next.resolvedTutorialEventIds = [];
+  next.tutorialEventFlags = [];
+
+  // 重置战斗状态
+  next.resolvedTutorialBattleIds = [];
+  next.tutorialBattleFlags = [];
+
+  // 重置特殊战斗状态
+  next.resolvedTutorialSpecialBattleIds = [];
+  next.tutorialSpecialBattleFlags = [];
+  next.tutorialSpecialBattleCargoIntegrityById = {};
+
+  // 重置精英战状态
+  next.resolvedTutorialEliteBattleIds = [];
+  next.tutorialEliteBattleFlags = [];
+
+  // 重置资源字段为 N3.1 初始值
+  next.day = 1;
+  next.food = 22;
+  next.spareParts = 3;
+  next.silver = 35;
+  next.morale = 6;
+  next.caravanHp = 100;
+  next.caravanMaxHp = 100;
+  next.mainOrderDeadlineDays = 30;
+  next.emberSeeds = 0;
+  next.ancientMemoryFragments = 0;
+  next.ashMaterials = 0;
+  next.enemyIntel = 0;
+
+  return next;
+}

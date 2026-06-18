@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { getGameState, setGameState } from "../systems/GameState";
 import { applyPassiveCityRevival } from "../systems/cityRevivalSystem";
+import { resetN31TutorialRouteForTest } from "../systems/tutorialRouteSystem";
 
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
@@ -87,7 +88,10 @@ export class MainMenuScene extends Phaser.Scene {
     });
 
     tutorialBtn.on("pointerdown", () => {
-      this.resetGameStateForNewRun();
+      const gs = getGameState();
+      const resetState = resetN31TutorialRouteForTest(gs);
+      Object.assign(gs, resetState);
+      setGameState(gs);
       this.scene.start("TutorialRouteScene");
     });
 

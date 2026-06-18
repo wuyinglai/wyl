@@ -211,6 +211,7 @@ import {
   isPeacefulDayNode,
   getN31RouteNodeByDay,
   getN31TotalTimeCostDays,
+  resetN31TutorialRouteForTest,
 } from "./systems/tutorialRouteSystem";
 
 // C3b：N3.1 教学事件
@@ -449,6 +450,9 @@ function exposeTestApi(): void {
   w.isPeacefulDayNode = (nodeId: string) => isPeacefulDayNode(nodeId);
   w.getN31RouteNodeByDay = (day: number) => getN31RouteNodeByDay(day);
   w.getN31TotalTimeCostDays = getN31TotalTimeCostDays;
+
+  // C3f.2：N3.1 路线测试重置函数
+  w.resetN31TutorialRouteForTest = (s: any) => resetN31TutorialRouteForTest(s);
 
   // C3b：N3.1 教学事件
   w.getN31TutorialEvents = getN31TutorialEvents;
