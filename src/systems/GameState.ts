@@ -219,6 +219,17 @@ export interface GameState {
     resolvedTutorialSpecialBattleIds: string[];
     tutorialSpecialBattleFlags: string[];
     tutorialSpecialBattleCargoIntegrityById: Record<string, number>;
+
+    // C3e：N3.1 可选精英战（灰烬母巢），跨局保留，不影响其他系统
+    // 胜利 / 救援 / 绕开 三种互斥且防重复
+    resolvedTutorialEliteBattleIds: string[];
+    tutorialEliteBattleFlags: string[];
+
+    // C3e：N3.1 精英战奖励资源 — 仅用于精英战奖励 / 后续高阶系统读取
+    // 不影响城市复兴 / 工具系统 / 订单系统
+    emberSeeds: number;
+    ancientMemoryFragments: number;
+    ashMaterials: number;
 }
 
 // 初始游戏状态
@@ -319,6 +330,13 @@ export function createInitialGameState(): GameState {
     resolvedTutorialSpecialBattleIds: [],
     tutorialSpecialBattleFlags: [],
     tutorialSpecialBattleCargoIntegrityById: {},
+
+    // C3e：N3.1 可选精英战（灰烬母巢；胜利 / 救援 / 绕开 三选一）
+    resolvedTutorialEliteBattleIds: [],
+    tutorialEliteBattleFlags: [],
+    emberSeeds: 0,
+    ancientMemoryFragments: 0,
+    ashMaterials: 0,
   };
 }
 
@@ -1076,6 +1094,22 @@ export function resetGameState(): void {
   if (oldCargoIntegrity) {
     globalGameState.tutorialSpecialBattleCargoIntegrityById = oldCargoIntegrity;
   }
+
+  // C3e：保留 N3.1 可选精英战（灰烬母巢）进度 + 奖励资源
+  const oldResolvedEliteIds = globalGameState?.resolvedTutorialEliteBattleIds;
+  const oldEliteFlags = globalGameState?.tutorialEliteBattleFlags;
+  const oldEmberSeeds = globalGameState?.emberSeeds ?? 0;
+  const oldAncientMemoryFragments = globalGameState?.ancientMemoryFragments ?? 0;
+  const oldAshMaterials = globalGameState?.ashMaterials ?? 0;
+  if (oldResolvedEliteIds) {
+    globalGameState.resolvedTutorialEliteBattleIds = oldResolvedEliteIds;
+  }
+  if (oldEliteFlags) {
+    globalGameState.tutorialEliteBattleFlags = oldEliteFlags;
+  }
+  globalGameState.emberSeeds = oldEmberSeeds;
+  globalGameState.ancientMemoryFragments = oldAncientMemoryFragments;
+  globalGameState.ashMaterials = oldAshMaterials;
 }
 
 /**

@@ -257,6 +257,24 @@ import {
   isTutorialSpecialBattleResolved,
 } from "./systems/tutorialSpecialBattleSystem";
 
+// C3e：N3.1 可选精英战（灰烬母巢；胜利 / 救援 / 绕开 三选一）
+import {
+  getN31TutorialEliteBattles,
+  getTutorialEliteBattleById,
+  getTutorialEliteBattleByNodeId,
+  isTutorialEliteBattleNode,
+} from "./data/tutorialEliteBattlesN31";
+import {
+  getTutorialEliteBattleEnemies,
+  getTutorialEliteBattleReward,
+  getTutorialEliteBattleRescuePenalty,
+  canResolveTutorialEliteBattle,
+  resolveTutorialEliteBattleVictory,
+  resolveTutorialEliteBattleRescue,
+  skipTutorialEliteBattle,
+  isTutorialEliteBattleResolved,
+} from "./systems/tutorialEliteBattleSystem";
+
 // 测试 API（仅开发/测试模式暴露）
 function exposeTestApi(): void {
   const w = window as any;
@@ -475,6 +493,30 @@ function exposeTestApi(): void {
     resolveTutorialSpecialBattleCargoLoss(s, specialBattleId, loss);
   w.isTutorialSpecialBattleResolved = (s: any, specialBattleId: string) =>
     isTutorialSpecialBattleResolved(s, specialBattleId);
+
+  // C3e：N3.1 可选精英战（灰烬母巢；胜利 / 救援 / 绕开 三选一，互斥且防重复）
+  w.getN31TutorialEliteBattles = getN31TutorialEliteBattles;
+  w.getTutorialEliteBattleById = (eliteBattleId: string) =>
+    getTutorialEliteBattleById(eliteBattleId);
+  w.getTutorialEliteBattleByNodeId = (nodeId: string) =>
+    getTutorialEliteBattleByNodeId(nodeId);
+  w.isTutorialEliteBattleNode = (nodeId: string) => isTutorialEliteBattleNode(nodeId);
+  w.getTutorialEliteBattleEnemies = (eliteBattleId: string) =>
+    getTutorialEliteBattleEnemies(eliteBattleId);
+  w.getTutorialEliteBattleReward = (eliteBattleId: string) =>
+    getTutorialEliteBattleReward(eliteBattleId);
+  w.getTutorialEliteBattleRescuePenalty = (eliteBattleId: string) =>
+    getTutorialEliteBattleRescuePenalty(eliteBattleId);
+  w.canResolveTutorialEliteBattle = (s: any, eliteBattleId: string) =>
+    canResolveTutorialEliteBattle(s, eliteBattleId);
+  w.resolveTutorialEliteBattleVictory = (s: any, eliteBattleId: string) =>
+    resolveTutorialEliteBattleVictory(s, eliteBattleId);
+  w.resolveTutorialEliteBattleRescue = (s: any, eliteBattleId: string) =>
+    resolveTutorialEliteBattleRescue(s, eliteBattleId);
+  w.skipTutorialEliteBattle = (s: any, eliteBattleId: string) =>
+    skipTutorialEliteBattle(s, eliteBattleId);
+  w.isTutorialEliteBattleResolved = (s: any, eliteBattleId: string) =>
+    isTutorialEliteBattleResolved(s, eliteBattleId);
 }
 
 // 只在开发/测试模式暴露测试 API
