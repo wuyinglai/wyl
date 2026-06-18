@@ -357,41 +357,33 @@ export class TutorialRouteScene extends Phaser.Scene {
   private handleEventChoice(node: TutorialRouteNode, eventId: string, choiceId: string) {
     const gs = getGameState();
 
+    // 事件数值变化仅由 tutorialEventSystem 负责
     const result = resolveTutorialEventChoice(gs, eventId, choiceId);
     Object.assign(gs, result);
 
-    // 额外：根据 effects 解释
+    // 仅显示 UI 文本提示，不做数值重复加减
     const event = getTutorialEventByNodeId(node.id);
     const choice = event?.choices.find((c) => c.id === choiceId);
     let summary = `处理事件：${node.title} — 选择“${choice?.label ?? choiceId}”`;
     if (choice) {
       for (const eff of choice.effects) {
-        if (eff.type === "food" && typeof eff.value === "number") {
-          gs.food = Math.max(0, (typeof gs.food === "number" ? gs.food : 0) + eff.value);
-        }
-        if (eff.type === "silver" && typeof eff.value === "number") {
-          gs.silver = Math.max(0, (typeof gs.silver === "number" ? gs.silver : 0) + eff.value);
-        }
-        if (eff.type === "morale" && typeof eff.value === "number") {
-          gs.morale = Math.max(0, Math.min(10, (typeof gs.morale === "number" ? gs.morale : 0) + eff.value));
-        }
-        if (eff.type === "vehicle_hp" && typeof eff.value === "number") {
-          gs.caravanHp = Math.max(0, (typeof gs.caravanHp === "number" ? gs.caravanHp : 100) + eff.value);
-        }
         if (eff.type === "hint" && eff.text) {
           summary += `\n提示：${eff.text}`;
         }
       }
-      // 处理用零件的情况：消耗 spareParts
+      // N3.1 特殊补丁：spareParts 目前未进入 tutorialEventSystem 的 effects type
+      // 由这里单独处理，且只有事件成功结算时才触发（resolveTutorialEventChoice 内部防重复）
       if (choice.id === "reinforce_with_spare") {
         if (typeof gs.spareParts === "number" && gs.spareParts >= 1) {
           gs.spareParts = gs.spareParts - 1;
         }
       }
-      // 处理商队残骸：自动 +2 food（上面已经加过）；同时保证资源事件的资源正确
-      // 遗弃工具箱：spareParts +1
       if (choice.id === "take_toolbox") {
-        gs.spareParts = (typeof gs.spareParts === "number" ? gs.spareParts : 0) + 1;
+        if (typeof gs.spareParts === "number") {
+          gs.spareParts = gs.spareParts + 1;
+        } else {
+          gs.spareParts = 1;
+        }
       }
     }
 

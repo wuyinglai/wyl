@@ -126,8 +126,7 @@ export const N31_TUTORIAL_EVENTS: TutorialEvent[] = [
         label: "搜索残骸",
         description: "在残骸中翻找有用的物品。",
         effects: [
-          { type: "food", value: 2 },
-          { type: "silver", value: 5 },
+          { type: "food", value: 4 },
           { type: "flag", flagId: "found_bandit_blade" },
           { type: "flag", flagId: "found_ash_corrosion_slime" },
           {
