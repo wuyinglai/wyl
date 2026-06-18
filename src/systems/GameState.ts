@@ -233,7 +233,13 @@ export interface GameState {
 
     // C3e.1：N3.1 备件数量（货车零件消耗品，不同于 caravanParts 货车模块/装备）
     spareParts: number;
-}
+
+    // C3f.1：N3.1 主线订单期限（剩余天数，初始 30）
+    mainOrderDeadlineDays: number;
+
+    // C3f.1：N3.1 敌人情报计数（例如：遭遇并处理过劫匪/灰烬兽后获得的情报）
+    enemyIntel: number;
+  }
 
 // 初始游戏状态
 export function createInitialGameState(): GameState {
@@ -341,6 +347,8 @@ export function createInitialGameState(): GameState {
     ancientMemoryFragments: 0,
     ashMaterials: 0,
     spareParts: 3,
+    mainOrderDeadlineDays: 30,
+    enemyIntel: 0,
   };
 }
 
@@ -1116,6 +1124,12 @@ export function resetGameState(): void {
   globalGameState.ancientMemoryFragments = oldAncientMemoryFragments;
   globalGameState.ashMaterials = oldAshMaterials;
   globalGameState.spareParts = oldSpareParts;
+
+  // C3f.1：保留主线订单期限与敌人情报
+  const oldDeadline = globalGameState?.mainOrderDeadlineDays ?? 30;
+  const oldEnemyIntel = globalGameState?.enemyIntel ?? 0;
+  globalGameState.mainOrderDeadlineDays = oldDeadline;
+  globalGameState.enemyIntel = oldEnemyIntel;
 }
 
 /**

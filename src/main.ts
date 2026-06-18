@@ -8,6 +8,7 @@ import { MapScene } from "./scenes/MapScene";
 import { ExpeditionResultScene } from "./scenes/ExpeditionResultScene";
 import { BattleScene } from "./scenes/BattleScene";
 import { WorldMapScene } from "./scenes/WorldMapScene";
+import { TutorialRouteScene } from "./scenes/TutorialRouteScene";
 import { isDevCheatEnabled } from "./systems/devConfig";
 import {
   getGameState,
@@ -74,7 +75,7 @@ const config: Phaser.Types.Core.GameConfig = {
   height: 720,
   parent: "app",
   backgroundColor: "#0a0a1a",
-  scene: [MainMenuScene, TownScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, BattleScene, WorldMapScene],
+  scene: [MainMenuScene, TownScene, RouteSelectScene, CharacterSelectScene, CargoPrepScene, MapScene, ExpeditionResultScene, BattleScene, WorldMapScene, TutorialRouteScene],
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
@@ -517,6 +518,9 @@ function exposeTestApi(): void {
     skipTutorialEliteBattle(s, eliteBattleId);
   w.isTutorialEliteBattleResolved = (s: any, eliteBattleId: string) =>
     isTutorialEliteBattleResolved(s, eliteBattleId);
+
+  // C3f.1：N3.1 路线推进（isTutorialRouteCompleted + tutorialRoute progress
+  w.isTutorialRouteCompleted = (s: any) => isTutorialRouteCompleted(s);
 }
 
 // 只在开发/测试模式暴露测试 API

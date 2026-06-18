@@ -42,11 +42,11 @@ export class MainMenuScene extends Phaser.Scene {
 
     // 开始按钮
     const startBtn = this.add
-      .text(w / 2, h * 0.6, "开始远征", {
-        fontSize: "32px",
+      .text(w / 2, h * 0.55, "开始远征", {
+        fontSize: "28px",
         color: "#ffffff",
         backgroundColor: "#2a4a8a",
-        padding: { x: 40, y: 15 },
+        padding: { x: 30, y: 12 },
         fontFamily: "monospace",
       })
       .setOrigin(0.5)
@@ -64,6 +64,31 @@ export class MainMenuScene extends Phaser.Scene {
     startBtn.on("pointerdown", () => {
       this.resetGameStateForNewRun();
       this.scene.start("TownScene");
+    });
+
+    // N3.1 教学路线入口
+    const tutorialBtn = this.add
+      .text(w / 2, h * 0.65, "开始 N3.1 教学路线（测试）", {
+        fontSize: "22px",
+        color: "#ffffff",
+        backgroundColor: "#6a4a2a",
+        padding: { x: 24, y: 12 },
+        fontFamily: "monospace",
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+
+    tutorialBtn.on("pointerover", () => {
+      tutorialBtn.setStyle({ backgroundColor: "#8a6a4a" });
+    });
+
+    tutorialBtn.on("pointerout", () => {
+      tutorialBtn.setStyle({ backgroundColor: "#6a4a2a" });
+    });
+
+    tutorialBtn.on("pointerdown", () => {
+      this.resetGameStateForNewRun();
+      this.scene.start("TutorialRouteScene");
     });
 
     // 版本信息
