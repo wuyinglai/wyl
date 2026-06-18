@@ -230,6 +230,9 @@ export interface GameState {
     emberSeeds: number;
     ancientMemoryFragments: number;
     ashMaterials: number;
+
+    // C3e.1：N3.1 备件数量（货车零件消耗品，不同于 caravanParts 货车模块/装备）
+    spareParts: number;
 }
 
 // 初始游戏状态
@@ -241,10 +244,10 @@ export function createInitialGameState(): GameState {
 
     day: 1,
     maxDay: 120, // 阶段3.1验收：延长测试期限
-    food: 8,
-    morale: 3,
-    caravanHp: 45,
-    caravanMaxHp: 45,
+    food: 22,
+    morale: 6,
+    caravanHp: 100,
+    caravanMaxHp: 100,
     gold: 0,
 
     mapWidth: 20,
@@ -270,7 +273,7 @@ export function createInitialGameState(): GameState {
 
     // 商队货物栏（阶段8.2）
     cargo: {},
-    silver: 50,
+    silver: 35,
     maxCargoWeight: 20,
 
     // 订单交付（阶段8.4）
@@ -337,6 +340,7 @@ export function createInitialGameState(): GameState {
     emberSeeds: 0,
     ancientMemoryFragments: 0,
     ashMaterials: 0,
+    spareParts: 3,
   };
 }
 
@@ -1095,12 +1099,13 @@ export function resetGameState(): void {
     globalGameState.tutorialSpecialBattleCargoIntegrityById = oldCargoIntegrity;
   }
 
-  // C3e：保留 N3.1 可选精英战（灰烬母巢）进度 + 奖励资源
+  // C3e：保留 N3.1 可选精英战（灰烬母巢）进度 + 奖励资源 + 备件
   const oldResolvedEliteIds = globalGameState?.resolvedTutorialEliteBattleIds;
   const oldEliteFlags = globalGameState?.tutorialEliteBattleFlags;
   const oldEmberSeeds = globalGameState?.emberSeeds ?? 0;
   const oldAncientMemoryFragments = globalGameState?.ancientMemoryFragments ?? 0;
   const oldAshMaterials = globalGameState?.ashMaterials ?? 0;
+  const oldSpareParts = globalGameState?.spareParts ?? 3;
   if (oldResolvedEliteIds) {
     globalGameState.resolvedTutorialEliteBattleIds = oldResolvedEliteIds;
   }
@@ -1110,6 +1115,7 @@ export function resetGameState(): void {
   globalGameState.emberSeeds = oldEmberSeeds;
   globalGameState.ancientMemoryFragments = oldAncientMemoryFragments;
   globalGameState.ashMaterials = oldAshMaterials;
+  globalGameState.spareParts = oldSpareParts;
 }
 
 /**

@@ -26,7 +26,8 @@ export interface TutorialEliteBattleGameStateSlice {
   emberSeeds?: number;
   ancientMemoryFragments?: number;
   ashMaterials?: number;
-  // 跨局保留：路线已完成节点列表（绕开母巢时写入 skippedOptionalTutorialNodeIds）
+  // 路线节点状态（rescue 时直接推进到 arrive_first_outpost）
+  currentTutorialNodeId?: string | null;
   completedTutorialNodeIds?: string[];
   skippedOptionalTutorialNodeIds?: string[];
   // 精英战专用
@@ -160,7 +161,8 @@ export function resolveTutorialEliteBattleVictory(
  * - 不给 emberSeeds / ancientMemoryFragments / ashMaterials
  * - 写入 ash_nest_rescued_by_passing_caravan flag
  * - 写入 resolvedTutorialEliteBattleIds（视为已处理，不再重复）
- * - 写入 completedTutorialNodeIds（表示路线节点已完成，推进至下一节点）
+ * - 写入 completedTutorialNodeIds（表示路线节点已完成）
+ * - currentTutorialNodeId 直接推进到 arrive_first_outpost
  *
  * 若已结算（无论何种方式），原样返回 state。
  */
@@ -201,12 +203,13 @@ export function resolveTutorialEliteBattleRescue(
     }
   }
 
-  // 写入 resolved + completedTutorialNodeIds
+  // 写入 resolved + completedTutorialNodeIds + currentTutorialNodeId 推进到 arrive_first_outpost
   next.resolvedTutorialEliteBattleIds.push(eliteBattleId);
   if (!next.completedTutorialNodeIds) next.completedTutorialNodeIds = [];
   if (!next.completedTutorialNodeIds.includes(battle.nodeId)) {
     next.completedTutorialNodeIds.push(battle.nodeId);
   }
+  next.currentTutorialNodeId = "arrive_first_outpost";
 
   return next;
 }
@@ -219,7 +222,7 @@ export function resolveTutorialEliteBattleRescue(
  * - 不惩罚
  * - 写入 skippedOptionalTutorialNodeIds（nodeId）
  * - 写入 resolvedTutorialEliteBattleIds（不再重复触发）
- * - 不写入 tutorialEliteBattleFlags（胜利/救援才会有 flag）
+ * - 写入 tutorialEliteBattleFlags: ash_nest_elite_skipped
  *
  * 若已结算（无论何种方式），原样返回 state。
  */
@@ -241,6 +244,11 @@ export function skipTutorialEliteBattle(
     next.skippedOptionalTutorialNodeIds.push(battle.nodeId);
   }
 
+  // 写入明确 skip flag（与 victory / rescue 的 flag 互斥）
+  if (!next.tutorialEliteBattleFlags.includes("ash_nest_elite_skipped")) {
+    next.tutorialEliteBattleFlags.push("ash_nest_elite_skipped");
+  }
+
   return next;
 }
 
@@ -257,6 +265,7 @@ function cloneState(
 ): TutorialEliteBattleGameStateSlice {
   return {
     ...state,
+    currentTutorialNodeId: state.currentTutorialNodeId ?? null,
     resolvedTutorialEliteBattleIds: [...(state.resolvedTutorialEliteBattleIds || [])],
     tutorialEliteBattleFlags: [...(state.tutorialEliteBattleFlags || [])],
     completedTutorialNodeIds: state.completedTutorialNodeIds

@@ -158,8 +158,8 @@ function sleep(ms) {
   assert(defaultCargoCheck.hasEnough, `默认 cargo 满足订单: ${JSON.stringify(defaultCargoCheck.cargo)}`);
 
   // ========== 7. 显示银币和载重 ==========
-  console.log("7. 显示银币 silver = 50，载重正确");
-  assert(orderInfo.silver === 50, `silver = 50 (实际: ${orderInfo.silver})`);
+  console.log("7. 显示银币 silver = 35，载重正确");
+  assert(orderInfo.silver === 35, `silver = 35 (实际: ${orderInfo.silver})`);
   assert(orderInfo.maxCargoWeight === 20, `maxCargoWeight = 20 (实际: ${orderInfo.maxCargoWeight})`);
 
   // ========== 8. 点击 [+] 粮食 ==========
